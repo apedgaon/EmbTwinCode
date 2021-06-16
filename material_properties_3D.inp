@@ -1,0 +1,91 @@
+**
+** Material definition for the user-defined elements
+**
+**
+*** Units:  [Mg,mm,s]
+**
+** Elastic and general properties (input)
+*PARAMETER
+density      =  7.86E-9
+Young        =  190.0E3
+Poisson      =  0.3
+bandwidth    =  40.0E-3
+bulkVisc1    =  0.0
+bulkVisc2    =  0.0
+StbEpsilon   =  0.05
+** Brown-Kim-Anand Material Model (input)
+*PARAMETER
+BKA_PLSLMT   =  0.01
+BKA_PHI      =  1.0
+BKA_OMEGA    =  0.0
+BKA_S0       =  35.0E6
+BKA_T0       =  295.0
+BKA_ALPHA    =  22.0E-6
+BKA_C        =  1.0E3
+BKA_A        =  1.906E7
+BKA_QoR      =  2.1086E4
+BKA_XP       =  4.2831
+BKA_PALPHA   =  0.0
+BKA_H0       =  1115.E6
+BKA_SB       =  18.9E6
+BKA_AN       =  0.07049
+BKA_B        =  0.0
+BKA_SA       =  35.E6
+BKA_P        =  1.0
+** J2 with linear isotropic hardening (input)
+*PARAMETER
+Y0           =  430.0
+H0           =  893.35
+Y1           =  800.0
+H1           = -500.0
+Y2           =  2.0
+** J2 with MTS strength model (input)
+*PARAMETER
+MTS_Mu0      =  71.46E3
+MTS_D0       =  2910.0
+MTS_T0       =  204.0
+MTS_k        =  1.38E-20
+MTS_b        =  2.48E-7
+MTS_Edot0i   =  1.0E7
+MTS_qi       =  1.5
+MTS_pi       =  0.5
+MTS_g0i      =  0.325
+MTS_Edot0e   =  1.0E7
+MTS_qe       =  1.0
+MTS_pe       =  2.0/3.0
+MTS_g0e      =  1.6
+MTS_sigmaa   =  40.0
+MTS_sigmai   =  450.0
+MTS_sigmae   =  275.0
+MTS_Edot0es  =  1.0E7
+MTS_g0es     =  0.165
+MTS_siges0   =  3475.0
+MTS_A0       =  4100.0
+MTS_A1       =  0.0
+MTS_A2       =  0.0
+MTS_A3       =  3.25
+MTS_A4       =  0.0
+MTS_A5       =  0.0
+MTS_Kappa    =  1.8
+MTS_Cp0      =  391.63E6
+MTS_Cp1      =  236.97E3
+MTS_Cp2      =  0.0
+MTS_Psi      =  0.95
+MTS_Tmelt    =  1670.0
+DRX_T        =  (BKA_T0+70)/MTS_Tmelt
+DRX_D0       =  0.04
+DRX_QoR      =  28.0E3/8.314462175
+DRX_d        =  5.0E-3
+iso_theta    =  0.2
+**
+** Subgrid element properties
+**
+** SG_kine  (1 -> 3D Brick 8-node Elmt )
+** SG_form  (0 -> displ. based, 1 -> displ. based + subgrid, 2 -> B-bar incomp., 3 -> B-bar + subgrid)
+** MatModel (0 -> elastic, 1 -> J2 linear hard. or MTS, 2 -> TEPLA, 3 -> BKA, 4 -> 1+3, 5-> 2+3)
+** GaussPts (1 -> single, 2 -> 2x2)
+*PARAMETER
+SG_kine      =  1
+SG_form      =  3
+MatModel     =  1
+GaussPts     =  2

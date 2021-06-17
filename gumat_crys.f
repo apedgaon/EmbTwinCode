@@ -2,12 +2,18 @@
      $                       nprops,iVelmType,
      $                       iVforType,iConsType,rTime,rDt,
      $                       rStress,rSigInc,rCmod,rGtan,rCd,iCvFlag)
+     
+          dimension rStrain(6), rSpin(3), svars(nstatev), props(nprops)
+          dimension rTime(2)
+          dimension rCmod(6,6), rGtan(6,3), rStress(6)
+          dimension rEstat(6),rScorot(6)
+          dimension rSigInc(6)    ! stress increment
 
-          call umat_crys(stress,  statev,  ddsdde,  sse,     spd,
+          call umat_crys(rStress,  svars,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,
-     &               nshr,    ntens,   nstatv,  props,   nprops,
+     &               nshr,    ntens,   nstatev,  props,   nprops,
      &               coords,  drot,    pnewdt,  celent,  dfgrd0,
      &               dfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)

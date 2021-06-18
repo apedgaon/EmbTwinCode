@@ -1,7 +1,7 @@
       subroutine pumat_crys(rStrain,rSpin,svars,nstatev,props,
-     $                       nprops,iVelmType,
-     $                       iVforType,iConsType,rTime,rDt,
-     $                       rStress,rSigInc,rCmod,rGtan,rCd,iCvFlag)
+     &                       nprops,iVelmType,
+     &                       iVforType,iConsType,rTime,rDt,
+     &                       rStress,rSigInc,rCmod,rGtan,rCd,iCvFlag)
      
           dimension rStrain(6), rSpin(3), svars(nstatev), props(nprops)
           dimension rTime(2)

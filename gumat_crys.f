@@ -1,11 +1,12 @@
       subroutine tumat_crys(rStress, svars, coords, rCoords, props,
-     &                      nprops, nstatev, nnode, mcrd, time, dtime)
+     &                      rXiEtaPt, nprops, nstatev, nnode, mcrd,
+     &                      time, dtime)
           
           include 'vaba_param.inc'
 
           dimension rStress(6), svars(nstatev), props(nprops)
-          dimension coords(nnode, mcrd), rCoords(mcrd,nnode)
-          dimension time(2)
+          dimension coords(nnode, mcrd), rCoords(mcrd, nnode)
+          dimension time(2), rXiEtaPt(3)
           ntens = 6
 
           call umat_crys(rStress,  svars,  ddsdde,  sse,     spd,

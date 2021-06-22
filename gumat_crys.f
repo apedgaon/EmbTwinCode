@@ -7,7 +7,21 @@
           dimension rStress(6), svars(nstatev), props(nprops)
           dimension coords(nnode, mcrd), rCoords(mcrd, nnode)
           dimension time(2), rXiEtaPt(3)
+
+          real*8 rRefCoords(mcrd, nnode)
+          real*8 rN(8),rdNdXRef(3, 8), rJdet, rF(3, 3)
+          
           ntens = 6
+          do idx = 1, nnode
+              do jdx = 1, mcrd 
+                  rRefCoords(jdx, idx) = coords(idx, jdx)
+              end do
+          end do
+
+          call SHP_FUNC_3D_8N(rXiEtaPt,rRefCoords, 1, rN, rdNdXRef,
+     &                        rJdet)
+          call GdefGrad_3D(rdNdXRef, rCoords, mcrd, nnode, 
+     &                     iVelmType, rF)
 
           call umat_crys(rStress,  svars,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,

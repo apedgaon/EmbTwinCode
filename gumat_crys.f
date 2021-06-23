@@ -1,26 +1,31 @@
-      subroutine tumat_crys(rStress, svars, coords, rCoords, props,
-     &                      rXiEtaPt, nprops, nstatev, nnode, mcrd,
-     &                      time, dtime)
+      subroutine tumat_crys(rStress, svars, rOrigCoords, rCurrCoords,
+     &                      props, rXiEtaPt, nprops, nstatev, nnode,
+     &                      mcrd, time, dtime)
           
           include 'vaba_param.inc'
 
           dimension rStress(6), svars(nstatev), props(nprops)
-          dimension coords(nnode, mcrd), rCoords(mcrd, nnode)
+          dimension rOrigCoords(nnode, mcrd), rCurrCoords(mcrd, nnode)
           dimension time(2), rXiEtaPt(3)
-
-          real*8 rRefCoords(mcrd, nnode)
+          
+          real*8 rRefCoords(mcrd, nnode), rGsCoords(3)
           real*8 rN(8),rdNdXRef(3, 8), rJdet, rF(3, 3)
           
+          rGsCoords(1) = 0.0
+          rGsCoords(2) = 0.0
+          rGsCoords(3) = 0.0
           ntens = 6
           do idx = 1, nnode
               do jdx = 1, mcrd 
-                  rRefCoords(jdx, idx) = coords(idx, jdx)
+                  rRefCoords(jdx, idx) = rOrigcoords(idx, jdx)
+                  rGsCoords(jdx) = rGsCoords(jdx) + 
+     &             rN(idx) * rCurrCoords(jdx, idx)
               end do
           end do
 
           call SHP_FUNC_3D_8N(rXiEtaPt,rRefCoords, 1, rN, rdNdXRef,
      &                        rJdet)
-          call GdefGrad_3D(rdNdXRef, rCoords, mcrd, nnode, 
+          call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode, 
      &                     iVelmType, rF)
 
           call umat_crys(rStress,  svars,  ddsdde,  sse,     spd,
@@ -28,7 +33,7 @@
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,
      &               nshr,    ntens,   nstatev,  props,   nprops,
-     &               coords,  drot,    pnewdt,  celent,  dfgrd0,
+     &               rGsCoords,  drot,    pnewdt,  celent,  dfgrd0,
      &               dfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)
 

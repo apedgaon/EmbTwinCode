@@ -11,15 +11,10 @@
           real*8 rRefCoords(mcrd, nnode), rGsCoords(3)
           real*8 rN(8),rdNdXRef(3, 8), rJdet, rF(3, 3)
           
-          rGsCoords(1) = 0.0
-          rGsCoords(2) = 0.0
-          rGsCoords(3) = 0.0
           ntens = 6
           do idx = 1, nnode
               do jdx = 1, mcrd 
                   rRefCoords(jdx, idx) = rOrigcoords(idx, jdx)
-                  rGsCoords(jdx) = rGsCoords(jdx) + 
-     &             rN(idx) * rCurrCoords(jdx, idx)
               end do
           end do
 
@@ -27,6 +22,16 @@
      &                        rJdet)
           call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode, 
      &                     iVelmType, rF)
+
+          rGsCoords(1) = 0.0
+          rGsCoords(2) = 0.0
+          rGsCoords(3) = 0.0
+          do idx = 1, nnode
+              do jdx = 1, mcrd
+                  rGsCoords(jdx) = rGsCoords(jdx) +
+     &                   rN(idx) * rCurrCoords(jdx, idx)
+              end do
+          end do
 
           call umat_crys(rStress,  svars,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,

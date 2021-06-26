@@ -77,7 +77,8 @@
      &               coords,  drot,    pnewdt,  celent,  dfgrd0,
      &               dfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)
-
+      
+      include 'vaba_param.inc'
       dimension
      &  coords(3),           ! Coordinates of Gauss point
      &  ddsdde(ntens,ntens), ! Tangent Stiffness Matrix

@@ -1049,8 +1049,8 @@ C               Select the correct state/history variables
                   hvars(i) = svars(kblock,((l-1)*nstatev(1))+i)
                 END DO
                 
-                call tumat_crys(rStress, svars, coords(kblock,:,:), rCoords,
-     &                           props, rXiEtaPt(:, l), nprops, nstatev,
+                call tumat_crys(rStress, hvars, coords(kblock,:,:), rCoords,
+     &                           props, rXiEtaPt(:, l), nprops, nstatev(1),
      &                           nnode, mcrd, time, dtimeCur)
 C               Compute the stress (now rStrain and rSpin are at mid-step)
                 CALL Gstress_3D(rStrain,rSpin,hvars,nstatev(1),props,

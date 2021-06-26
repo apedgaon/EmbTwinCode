@@ -1,15 +1,15 @@
-      subroutine tumat_crys(rStress, svars, rOrigCoords, rCurrCoords,
-     &                      props, rXiEtaPt, nprops, nstatev, nnode,
+      subroutine tumat_crys(rStress, hvars, rOrigCoords, rCurrCoords,
+     &                      props, rXiEtaPt, nprops, nsvars, nnode,
      &                      mcrd, time, dtime)
           
           include 'vaba_param.inc'
 
-          dimension rStress(6), svars(nstatev), props(nprops)
+          dimension rStress(6), hvars(nsvars), props(nprops)
           dimension rOrigCoords(nnode, mcrd), rCurrCoords(mcrd, nnode)
           dimension time(2), rXiEtaPt(3)
           
           real*8 rRefCoords(mcrd, nnode), rGsCoords(3)
-          real*8 rN(8),rdNdXRef(3, 8), rJdet, rF(3, 3)
+          real*8 rN(8), rdNdXRef(3, 8), rJdet, rF(3, 3)
           
           ntens = 6
           do idx = 1, nnode
@@ -33,11 +33,11 @@
               end do
           end do
 
-          call umat_crys(rStress,  svars,  ddsdde,  sse,     spd,
+          call umat_crys(rStress,  hvars,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,
-     &               nshr,    ntens,   nstatev,  props,   nprops,
+     &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  dfgrd0,
      &               dfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)

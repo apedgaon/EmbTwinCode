@@ -1,6 +1,6 @@
       subroutine tumat_crys(rStress, hvars, rOrigCoords, rCurrCoords,
      &                      props, rXiEtaPt, nprops, nsvars, nnode,
-     &                      mcrd, time, dtime)
+     &                      noel, npt, mcrd, time, dtime)
           
           include 'vaba_param.inc'
 

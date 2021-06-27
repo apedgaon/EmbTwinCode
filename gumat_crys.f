@@ -1,15 +1,17 @@
       subroutine tumat_crys(rStress, hvars, rOrigCoords, rCurrCoords,
-     &                      props, rXiEtaPt, nprops, nsvars, nnode,
-     &                      noel, npt, mcrd, time, dtime)
+     &                      rPrevCoords, props, rXiEtaPt, nprops,
+     &                      nsvars, nnode, noel, npt, mcrd, time,
+     &                      dtime)
           
           include 'vaba_param.inc'
 
           dimension rStress(6), hvars(nsvars), props(nprops)
           dimension rOrigCoords(nnode, mcrd), rCurrCoords(mcrd, nnode)
-          dimension time(2), rXiEtaPt(3)
+          dimension rPrevCoords(mcrd, nnode), time(2), rXiEtaPt(3)
           
           real*8 rRefCoords(mcrd, nnode), rGsCoords(3)
-          real*8 rN(8), rdNdXRef(3, 8), rJdet, rF(3, 3)
+          real*8 rN(8), rdNdXRef(3, 8), rJdet
+          real*8 rF0(3, 3), rF1(3, 3)
           
           ntens = 6
           do idx = 1, nnode
@@ -20,9 +22,11 @@
 
           call SHP_FUNC_3D_8N(rXiEtaPt,rRefCoords, 1, rN, rdNdXRef,
      &                        rJdet)
+          call GdefGrad_3D(rdNdXRef, rPrevCoords, mcrd, nnode, 
+     &                     iVelmType, rF0)
           call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode, 
-     &                     iVelmType, rF)
-
+     &                     iVelmType, rF1)
+          
           rGsCoords(1) = 0.0
           rGsCoords(2) = 0.0
           rGsCoords(3) = 0.0
@@ -38,8 +42,8 @@
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,
      &               nshr,    ntens,   nsvars,  props,   nprops,
-     &               rGsCoords,  drot,    pnewdt,  celent,  dfgrd0,
-     &               dfgrd1,  noel,    npt,     layer,   kspt,
+     &               rGsCoords,  drot,    pnewdt,  celent,  rF0, 
+     &               rF1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)
 
 

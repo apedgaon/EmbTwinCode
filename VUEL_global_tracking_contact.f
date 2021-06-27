@@ -264,7 +264,7 @@ C     Default safety factor for stable time step estimate
 
 
       real*8 rCoords(mcrd,nnode) ! Nodal coordinates (initial or current)
-
+      real*8 rPrevCoords(mcrd, nnode) ! Previous coordinates
 
       real*8 rdOmega             ! Jacobian * Gauss_Weight
       real*8 rMSCoor(mcrd,nnode) ! Mid-step nodal coords (initial or current)
@@ -688,9 +688,12 @@ C>>>        Get nodal coordinates, finite deformation
      $                         + u( kblock, (n-1)*mcrd + i )
                   rMSCoor(i,n) = rCoords(i,n)                   ! mid-step coords
      $                         - 0.5d0 * du(kblock, (n-1)*mcrd + i )
+                  rPrevCoords(i,n) = rCoords(i,n)
+     &                            - du(kblock, (n-1)*mcrd + i )
                 ELSE
                   rCoords(i,n) = coords(kblock,n,i)       ! original coords
                   rMSCoor(i,n) = coords(kblock,n,i)       ! original coords
+                  rPrevCoords(i,n) = coords(kblock, n, i)
                 END IF
               END DO
             END DO
@@ -1049,9 +1052,11 @@ C               Select the correct state/history variables
                   hvars(i) = svars(kblock,((l-1)*nstatev(1))+i)
                 END DO
                 
-                call tumat_crys(rStress, hvars, coords(kblock,:,:), rCoords,
-     &                           props, rXiEtaPt(:, l), nprops, nstatev(1),
-     &                           nnode, elmt_number, l, mcrd, time, dtimeCur)
+                call tumat_crys(rStress, hvars, coords(kblock,:,:),
+     &                          rCoords, rPrevCoords, props,
+     &                          rXiEtaPt(:, l), nprops, nstatev(1),
+     &                          nnode, elmt_number, l, mcrd, time,
+     &                          dtimeCur)
 C               Compute the stress (now rStrain and rSpin are at mid-step)
                 CALL Gstress_3D(rStrain,rSpin,hvars,nstatev(1),props,
      $                          nprops,iVelmType,iVforType,iConsType,

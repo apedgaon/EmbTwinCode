@@ -230,7 +230,7 @@ C     Default safety factor for stable time step estimate
 
       integer n,i,j,l,k
       integer kblock,iVelmType,iVforType,iConsType
-      integer nstatev(4)       ! # of state vars at Gauss pt
+      integer nstatev(5)       ! # of state vars at Gauss pt
                                ! (1) - # of state vars at Gauss pt for Matrix
                                ! (2) - # of state vars at Gauss pt for Shear Band
                                ! (3) - # of state vars related with localization 
@@ -401,6 +401,8 @@ C     Face4: 2,6,7,3; Face5: 3,7,8,4; Face6: 4,5,8,1;
       real*8 elmt_SDV(10,*)
       pointer(ptr_elmt_SDV,elmt_SDV)
 
+      integer iumatsvst, iumatsven      ! umat_crys state variable start and stop index
+
 
 C     READ the theta value for the iso-surface from input
       theta_0 = props(76)
@@ -567,7 +569,8 @@ C       If formulation w/ localization, we need extra memory space
           nstatev(2) = 0
           nstatev(3) = 0
         END IF
-
+        
+        nstatev(5) = 106
         iIntPt = jprops(4)  ! Number of integration points per direction for MATRIX
 
         IF (iIntPt.NE.2) THEN
@@ -1052,11 +1055,13 @@ C               Select the correct state/history variables
                   hvars(i) = svars(kblock,((l-1)*nstatev(1))+i)
                 END DO
                 
-                call tumat_crys(rStress, hvars, coords(kblock,:,:),
-     &                          rCoords, rPrevCoords, props,
-     &                          rXiEtaPt(:, l), nprops, nstatev(1),
-     &                          nnode, elmt_number, l, mcrd, time,
-     &                          dtimeCur)
+                iumatsvst = 540 + (l - 1) * nstatev(5) 
+                iumatsven = 539 + l * nstatev(5) 
+                call tumat_crys(rStress, svars(kblock, iumatsvst:iumatsven),
+     &                          coords(kblock,:,:), rCoords,
+     &                          rPrevCoords, props, rXiEtaPt(:, l),
+     &                          nprops, nstatev(5), nnode, elmt_number,
+     &                          l, mcrd, time, dtimeCur)
 C               Compute the stress (now rStrain and rSpin are at mid-step)
                 CALL Gstress_3D(rStrain,rSpin,hvars,nstatev(1),props,
      $                          nprops,iVelmType,iVforType,iConsType,

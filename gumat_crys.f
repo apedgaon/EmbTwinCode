@@ -1,19 +1,31 @@
       subroutine tumat_crys(rStress, hvars, rOrigCoords, rCurrCoords,
      &                      rPrevCoords, props, rXiEtaPt, nprops,
      &                      nsvars, nnode, noel, npt, mcrd, time,
-     &                      dtime)
+     &                      dtime, kstep, kinc)
           
-          include 'vaba_param.inc'
+          implicit none
+          ! input arguments declaration
+          integer nprops, nsvars, nnode, noel, npt, mcrd
+          integer kstep, kinc
+          real*8 rStress(6), hvars(nsvars), props(nprops)
+          real*8 rOrigCoords(nnode, mcrd), rCurrCoords(mcrd, nnode)
+          real*8 rPrevCoords(mcrd, nnode), time(2), rXiEtaPt(3)
+          real*8 dtime
 
-          dimension rStress(6), hvars(nsvars), props(nprops)
-          dimension rOrigCoords(nnode, mcrd), rCurrCoords(mcrd, nnode)
-          dimension rPrevCoords(mcrd, nnode), time(2), rXiEtaPt(3)
-          
+          ! required to be computed for umat
           real*8 rRefCoords(mcrd, nnode), rGsCoords(3)
           real*8 rN(8), rdNdXRef(3, 8), rJdet
           real*8 rF0(3, 3), rF1(3, 3)
+          integer idx, jdx
+
+          ! additional arguments for umat
+          real*8 ddsdde(6, 6), ddsddt(6), drplde(6), stran(6)
+          real*8 dstran(6), drot(3, 3)
+          real*8 sse, spd, scd, rpl, drpldt, temp, dtemp
+          real*8 predef, dpred, pnewdt, celent
+          character*80 cmname
+          integer ndi, nshr, ntens, layer, kspt
           
-          ntens = 6
           do idx = 1, nnode
               do jdx = 1, mcrd 
                   rRefCoords(jdx, idx) = rOrigcoords(idx, jdx)
@@ -23,9 +35,9 @@
           call SHP_FUNC_3D_8N(rXiEtaPt,rRefCoords, 1, rN, rdNdXRef,
      &                        rJdet)
           call GdefGrad_3D(rdNdXRef, rPrevCoords, mcrd, nnode, 
-     &                     iVelmType, rF0)
+     &                     1, rF0)
           call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode, 
-     &                     iVelmType, rF1)
+     &                     1, rF1)
           
           rGsCoords(1) = 0.0
           rGsCoords(2) = 0.0
@@ -37,6 +49,9 @@
               end do
           end do
 
+          ndi = 3
+          nshr = 3
+          ntens = ndi + nshr
           call umat_crys(rStress,  hvars,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,

@@ -1061,7 +1061,7 @@ C               Select the correct state/history variables
      &                          coords(kblock,:,:), rCoords,
      &                          rPrevCoords, props, rXiEtaPt(:, l),
      &                          nprops, nstatev(5), nnode, elmt_number,
-     &                          l, mcrd, time, dtimeCur)
+     &                          l, mcrd, time, dtimeCur, kstep, kinc)
 C               Compute the stress (now rStrain and rSpin are at mid-step)
                 CALL Gstress_3D(rStrain,rSpin,hvars,nstatev(1),props,
      $                          nprops,iVelmType,iVforType,iConsType,

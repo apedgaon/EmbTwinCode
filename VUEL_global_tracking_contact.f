@@ -3643,6 +3643,4 @@ C   Dummy VUMAT subroutine for post-processing ISVs
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       include 'ppvumat_3D.f'
       include 'gumat_crys.f'
-
-
-
+      include 'fcc_umat_lbl34_test.f'

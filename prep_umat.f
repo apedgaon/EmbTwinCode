@@ -1,4 +1,4 @@
-      subroutine tumat_crys(rStress, hvars, rOrigCoords, rCurrCoords,
+      subroutine umat_stress(rStress, hvars, rOrigCoords, rCurrCoords,
      &                      rPrevCoords, props, rXiEtaPt, nprops,
      &                      nsvars, nnode, noel, npt, mcrd, time,
      &                      dtime, kstep, kinc)

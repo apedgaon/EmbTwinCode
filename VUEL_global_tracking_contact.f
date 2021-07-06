@@ -1057,7 +1057,7 @@ C               Select the correct state/history variables
                 
                 iumatsvst = 540 + (l - 1) * nstatev(5) 
                 iumatsven = 539 + l * nstatev(5) 
-                call tumat_crys(rStress, svars(kblock, iumatsvst:iumatsven),
+                call umat_stress(rStress, svars(kblock, iumatsvst:iumatsven),
      &                          coords(kblock,:,:), rCoords,
      &                          rPrevCoords, props, rXiEtaPt(:, l),
      &                          nprops, nstatev(5), nnode, elmt_number,

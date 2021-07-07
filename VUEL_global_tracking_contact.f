@@ -265,6 +265,7 @@ C     Default safety factor for stable time step estimate
 
       real*8 rCoords(mcrd,nnode) ! Nodal coordinates (initial or current)
       real*8 rPrevCoords(mcrd, nnode) ! Previous coordinates
+      real*8 rOrigCoords(mcrd, nnode) ! Original coordinates
 
       real*8 rdOmega             ! Jacobian * Gauss_Weight
       real*8 rMSCoor(mcrd,nnode) ! Mid-step nodal coords (initial or current)
@@ -687,13 +688,15 @@ C>>>        Get nodal coordinates, finite deformation
             DO n = 1, nnode
               DO i = 1, mcrd
                 IF ( (kstep.GT.1).OR.(kinc.GT.1) ) THEN
-                  rCoords(i,n) = coords(kblock,n,i)             ! current coords
+                  rOrigCoords(i,n) = coords(kblock,n,i)
+                  rCoords(i,n) = rOrigCoords(i,n)               ! current coords
      $                         + u( kblock, (n-1)*mcrd + i )
                   rMSCoor(i,n) = rCoords(i,n)                   ! mid-step coords
      $                         - 0.5d0 * du(kblock, (n-1)*mcrd + i )
                   rPrevCoords(i,n) = rCoords(i,n)
      &                            - du(kblock, (n-1)*mcrd + i )
                 ELSE
+                  rOrigCoords(i,n) = coords(kblock,n,i)
                   rCoords(i,n) = coords(kblock,n,i)       ! original coords
                   rMSCoor(i,n) = coords(kblock,n,i)       ! original coords
                   rPrevCoords(i,n) = coords(kblock, n, i)
@@ -1058,7 +1061,7 @@ C               Select the correct state/history variables
                 iumatsvst = 540 + (l - 1) * nstatev(5) 
                 iumatsven = 539 + l * nstatev(5) 
                 call umat_stress(rStress, svars(kblock, iumatsvst:iumatsven),
-     &                          coords(kblock,:,:), rCoords,
+     &                          rOrigCoords, rCoords,
      &                          rPrevCoords, props, rXiEtaPt(:, l),
      &                          nprops, nstatev(5), nnode, elmt_number,
      &                          l, mcrd, time, dtimeCur, kstep, kinc)

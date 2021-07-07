@@ -1,4 +1,4 @@
-      subroutine umat_stress(rStress, hvars, rOrigCoords, rCurrCoords,
+      subroutine umat_stress(rStress, hvars, rRefCoords, rCurrCoords,
      &                      rPrevCoords, props, rXiEtaPt, nprops,
      &                      nsvars, nnode, noel, npt, mcrd, time,
      &                      dtime, kstep, kinc)
@@ -8,13 +8,12 @@
           integer nprops, nsvars, nnode, noel, npt, mcrd
           integer kstep, kinc
           real*8 rStress(6), hvars(nsvars), props(nprops)
-          real*8 rOrigCoords(nnode, mcrd), rCurrCoords(mcrd, nnode)
+          real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
           real*8 rPrevCoords(mcrd, nnode), time(2), rXiEtaPt(3)
           real*8 dtime
 
           ! required to be computed for umat
-          real*8 rRefCoords(mcrd, nnode), rGsCoords(3)
-          real*8 rN(8), rdNdXRef(3, 8), rJdet
+          real*8 rGsCoords(3), rN(8), rdNdXRef(3, 8), rJdet
           real*8 rF0(3, 3), rF1(3, 3)
           integer idx, jdx
 
@@ -26,13 +25,7 @@
           character*80 cmname
           integer ndi, nshr, ntens, layer, kspt
           
-          do idx = 1, nnode
-              do jdx = 1, mcrd 
-                  rRefCoords(jdx, idx) = rOrigcoords(idx, jdx)
-              end do
-          end do
-
-          call SHP_FUNC_3D_8N(rXiEtaPt,rRefCoords, 1, rN, rdNdXRef,
+          call SHP_FUNC_3D_8N(rXiEtaPt, rRefCoords, 1, rN, rdNdXRef,
      &                        rJdet)
           call GdefGrad_3D(rdNdXRef, rPrevCoords, mcrd, nnode, 
      &                     1, rF0)

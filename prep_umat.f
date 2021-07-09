@@ -1,3 +1,44 @@
+      subroutine dfgrd_prep(iTIntPt, rRefCoords, rCurrCoords, rPrevCoords,
+     &                      rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1)
+          implicit none
+          integer iTIntPt, mcrd, nnode
+          real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
+          real*8 rPrevCoords(mcrd, nnode), rXiEtaPt(3, iTIntPt)
+          real*8 rDfgrd0(3, 3, iTIntPt), rDfgrd1(3, 3, iTIntPt)
+
+          integer l
+          real*8 rN(8), rdNdXRef(3, iTIntPt), rJdet
+          real*8 rDetF0Bar, rDetF1Bar, rSelRedIntConst
+          real*8 rDetF0(iTIntPt), rDetF1(iTIntPt)
+          real*8, external :: determinant
+
+          rDetF0Bar = 0.0
+          rDetF1Bar = 0.0
+          do l = 1, iTIntPt
+               call SHP_FUNC_3D_8N(rXiEtaPt(:, l), rRefCoords, 1, rN, rdNdXRef,
+     &                        rJdet)
+               call GdefGrad_3D(rdNdXRef, rPrevCoords, mcrd, nnode,
+     &                     1, rDfgrd0(:, :, l))
+               call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode,
+     &                     1, rDfgrd1(:, :, l))
+               rDetF0(l) = determinant(rDfgrd0(:,:,l))
+               rDetF1(l) = determinant(rDfgrd1(:,:,l))
+               rDetF0Bar = rDetF0Bar + rDetF0(l)
+               rDetF1Bar = rDetF1Bar + rDetF1(l)
+          end do
+
+          rDetF0Bar = rDetF0Bar / iTIntPt
+          rDetF1Bar = rDetF1Bar / iTIntPt
+
+          do l = 1, iTIntPt
+               rSelRedIntConst = (rDetF0Bar / rDetF0(l))**(1.0/3)
+               rDfgrd0(:, :, l) = rDfgrd0(:, :, l) * rSelRedIntConst
+               rSelRedIntConst = (rDetF1Bar / rDetF1(l))**(1.0/3)
+               rDfgrd1(:, :, l) = rDfgrd1(:, :, l) * rSelRedIntConst
+          end do
+
+      end subroutine
+
       subroutine umat_stress(rStress, hvars, rRefCoords, rCurrCoords,
      &                      rPrevCoords, props, rXiEtaPt, nprops,
      &                      nsvars, nnode, noel, npt, mcrd, time,

@@ -403,6 +403,7 @@ C     Face4: 2,6,7,3; Face5: 3,7,8,4; Face6: 4,5,8,1;
       pointer(ptr_elmt_SDV,elmt_SDV)
 
       integer iumatsvst, iumatsven      ! umat_crys state variable start and stop index
+      real*8 rDfgrd0(3, 3, 8), rDfgrd1(3, 3, 8)
 
 
 C     READ the theta value for the iso-surface from input
@@ -732,6 +733,9 @@ C             Integration element (dOmega)
 C             Element surface area (even for axisymmetric elements)
               rElmtVol = rElmtVol + rdOmega
             END DO
+
+            call dfgrd_prep(iTIntPt, rOrigCoords, rCoords, rPrevCoords,
+     &                      rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1)
 
 C           Compute element size h
             rElmtSize = rElmtVol**(1.d0/3.d0)      !   h = cubic root of vol

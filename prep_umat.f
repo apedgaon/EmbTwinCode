@@ -1,12 +1,14 @@
       subroutine dfgrd_prep(iTIntPt, rRefCoords, rCurrCoords, rPrevCoords,
-     &                      rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1)
+     &                      rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1,
+     &                      rGsCoords)
           implicit none
           integer iTIntPt, mcrd, nnode
           real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
           real*8 rPrevCoords(mcrd, nnode), rXiEtaPt(3, iTIntPt)
           real*8 rDfgrd0(3, 3, iTIntPt), rDfgrd1(3, 3, iTIntPt)
+          real*8 rGsCoords(3, iTIntPt)
 
-          integer l
+          integer l, idx, jdx
           real*8 rN(8), rdNdXRef(3, iTIntPt), rJdet
           real*8 rDetF0Bar, rDetF1Bar, rSelRedIntConst
           real*8 rDetF0(iTIntPt), rDetF1(iTIntPt)
@@ -25,6 +27,14 @@
                rDetF1(l) = determinant(rDfgrd1(:,:,l))
                rDetF0Bar = rDetF0Bar + rDetF0(l)
                rDetF1Bar = rDetF1Bar + rDetF1(l)
+
+               rGsCoords(:, l) = 0.0
+               do idx = 1, nnode
+                   do jdx = 1, mcrd
+                       rGsCoords(jdx, l) = rGsCoords(jdx, l) +
+     &                        rN(idx) * rCurrCoords(jdx, idx)
+                   end do
+               end do
           end do
 
           rDetF0Bar = rDetF0Bar / iTIntPt

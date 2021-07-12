@@ -1,24 +1,39 @@
       subroutine dfgrd_prep(iTIntPt, rRefCoords, rCurrCoords, rPrevCoords,
      &                      rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1,
      &                      rGsCoords)
+C         This subroutine prepares deformation gradient and gauss point
+C         coordinates for UMAT type function.
           implicit none
+
+C         Integer inputs
           integer iTIntPt, mcrd, nnode
+
+C         Reference, Current and Previous Coordinates
           real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
           real*8 rPrevCoords(mcrd, nnode), rXiEtaPt(3, iTIntPt)
+
+C         Initalize Deformation Gradient at each Gass Pt
+C         and Gauss Pt Coordinates
           real*8 rDfgrd0(3, 3, iTIntPt), rDfgrd1(3, 3, iTIntPt)
           real*8 rGsCoords(3, iTIntPt)
 
+C         Additional variables for computations
           integer l, idx, jdx
           real*8 rN(8), rdNdXRef(3, iTIntPt), rJdet
           real*8 rDetF0Bar, rDetF1Bar, rSelRedIntConst
           real*8 rDetF0(iTIntPt), rDetF1(iTIntPt)
-          real*8, external :: determinant
+          real*8, external :: determinant ! external determinant function
 
+C         Compute Deformation Gradients and Gauss Pt Coordinates
           rDetF0Bar = 0.0
           rDetF1Bar = 0.0
           do l = 1, iTIntPt
+C              Shape Functions and Derivatives w.r.t Reference Coordinates
                call SHP_FUNC_3D_8N(rXiEtaPt(:, l), rRefCoords, 1, rN, rdNdXRef,
      &                        rJdet)
+
+C              Deformation Gradients of previous and current coords
+C              and their determinants
                call GdefGrad_3D(rdNdXRef, rPrevCoords, mcrd, nnode,
      &                     1, rDfgrd0(:, :, l))
                call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode,
@@ -28,6 +43,7 @@
                rDetF0Bar = rDetF0Bar + rDetF0(l)
                rDetF1Bar = rDetF1Bar + rDetF1(l)
 
+C              Compute Guass Pt Coordinates
                rGsCoords(:, l) = 0.0
                do idx = 1, nnode
                    do jdx = 1, mcrd
@@ -37,9 +53,10 @@
                end do
           end do
 
+C         Scale Deformation Gradient for Selective Reduced Integration
+C         See UMAT Deformation Gradient Documentation for more details
           rDetF0Bar = rDetF0Bar / iTIntPt
           rDetF1Bar = rDetF1Bar / iTIntPt
-
           do l = 1, iTIntPt
                rSelRedIntConst = (rDetF0Bar / rDetF0(l))**(1.0/3)
                rDfgrd0(:, :, l) = rDfgrd0(:, :, l) * rSelRedIntConst
@@ -55,7 +72,7 @@
      &                      dtime, kstep, kinc)
           
           implicit none
-          ! input arguments declaration
+C         input arguments declaration
           integer nprops, nsvars, nnode, noel, npt, mcrd
           integer kstep, kinc
           real*8 rStress(6), hvars(nsvars), props(nprops)
@@ -64,7 +81,7 @@
           real*8 dtime
           integer idx, jdx
 
-          ! additional arguments for umat
+C         additional arguments for umat
           real*8 ddsdde(6, 6), ddsddt(6), drplde(6), stran(6)
           real*8 dstran(6), drot(3, 3)
           real*8 sse, spd, scd, rpl, drpldt, temp, dtemp

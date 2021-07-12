@@ -735,6 +735,8 @@ C             Element surface area (even for axisymmetric elements)
               rElmtVol = rElmtVol + rdOmega
             END DO
 
+C           Prepare Deformation Gradients and Coordinates for all Gauss Pts
+C           Required for UMAT type function
             call dfgrd_prep(iTIntPt, rOrigCoords, rCoords, rPrevCoords,
      &                      rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1,
      &                      rGsCoords)

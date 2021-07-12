@@ -49,8 +49,8 @@
 
       end subroutine
 
-      subroutine umat_stress(rStress, hvars, rRefCoords, rCurrCoords,
-     &                      rPrevCoords, props, rXiEtaPt, nprops,
+      subroutine umat_stress(rStress, hvars, rGsCoords, rDfgrd0,
+     &                      rDfgrd1, props, rXiEtaPt, nprops,
      &                      nsvars, nnode, noel, npt, mcrd, time,
      &                      dtime, kstep, kinc)
           
@@ -59,13 +59,9 @@
           integer nprops, nsvars, nnode, noel, npt, mcrd
           integer kstep, kinc
           real*8 rStress(6), hvars(nsvars), props(nprops)
-          real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
-          real*8 rPrevCoords(mcrd, nnode), time(2), rXiEtaPt(3)
+          real*8 rGsCoords(3), rDfgrd0(3, 3), rDfgrd1(3, 3)
+          real*8 time(2), rXiEtaPt(3)
           real*8 dtime
-
-          ! required to be computed for umat
-          real*8 rGsCoords(3), rN(8), rdNdXRef(3, 8), rJdet
-          real*8 rF0(3, 3), rF1(3, 3)
           integer idx, jdx
 
           ! additional arguments for umat
@@ -76,23 +72,6 @@
           character*80 cmname
           integer ndi, nshr, ntens, layer, kspt
           
-          call SHP_FUNC_3D_8N(rXiEtaPt, rRefCoords, 1, rN, rdNdXRef,
-     &                        rJdet)
-          call GdefGrad_3D(rdNdXRef, rPrevCoords, mcrd, nnode, 
-     &                     1, rF0)
-          call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode, 
-     &                     1, rF1)
-          
-          rGsCoords(1) = 0.0
-          rGsCoords(2) = 0.0
-          rGsCoords(3) = 0.0
-          do idx = 1, nnode
-              do jdx = 1, mcrd
-                  rGsCoords(jdx) = rGsCoords(jdx) +
-     &                   rN(idx) * rCurrCoords(jdx, idx)
-              end do
-          end do
-
           ndi = 3
           nshr = 3
           ntens = ndi + nshr
@@ -101,8 +80,8 @@
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,
      &               nshr,    ntens,   nsvars,  props,   nprops,
-     &               rGsCoords,  drot,    pnewdt,  celent,  rF0, 
-     &               rF1,  noel,    npt,     layer,   kspt,
+     &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0, 
+     &               rDfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)
 
 

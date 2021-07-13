@@ -1070,8 +1070,8 @@ C               Select the correct state/history variables
                 iumatsven = 539 + l * nstatev(5) 
                 call umat_stress(rStress, svars(kblock, iumatsvst:iumatsven),
      &                          rGsCoords(:, l), rDfgrd0(:, :, l),
-     &                          rDfgrd1(:, :, l), props, rXiEtaPt(:, l),
-     &                          nprops, nstatev(5), nnode, elmt_number,
+     &                          rDfgrd1(:, :, l), props(77:118), rXiEtaPt(:, l),
+     &                          42, nstatev(5), nnode, elmt_number,
      &                          l, mcrd, time, dtimeCur, kstep, kinc)
 C               Compute the stress (now rStrain and rSpin are at mid-step)
                 CALL Gstress_3D(rStrain,rSpin,hvars,nstatev(1),props,

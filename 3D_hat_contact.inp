@@ -11,7 +11,7 @@
 *Node
 *Include, input=Input_node.inp
 ** User-defined Sub-grid Elements
-*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=76, Coordinates=3, Variables=1441
+*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=118, Coordinates=3, Variables=1441
 1, 2, 3
 **
 **
@@ -38,7 +38,13 @@
 <MTS_g0i>,<MTS_Edot0e>,<MTS_qe>,<MTS_pe>,<MTS_g0e>,<MTS_sigmaa>,<MTS_sigmai>,<MTS_sigmae>
 <MTS_Edot0es>,<MTS_g0es>,<MTS_siges0>,<MTS_A0>,<MTS_A1>,<MTS_A2>,<MTS_A3>,<MTS_A4>
 <MTS_A5>,<MTS_Kappa>,<MTS_Cp0>,<MTS_Cp1>,<MTS_Cp2>,<MTS_Psi>,<MTS_Tmelt>,<DRX_T>
-<DRX_D0>,<DRX_QoR>,<DRX_d>,<iso_theta>,<SG_kine>,<SG_form>,<MatModel>,<GaussPts>
+<DRX_D0>,<DRX_QoR>,<DRX_d>,<iso_theta>, 298.00, 8.960e-09, 3.800e+08, 1.770e-05
+0.30, -36.30, 179500.00, -16.40, 126400.00, -25.70, 82500.00, 0.05
+2.57e-07, 2.00e+06, 0.182, 0.25, 0.122, 0.122, 0.070, 0.625
+0.137, 0.122, 1.000, 0.000, 1.00e-12, 40800.00, 1.38e-23, 0.00
+5.00, 0.000, 79.82, 45.54, 30.53, 12, 1615.38, 2.50e-02
+20.00, 12.0, 180.0, 2.00, 0.0, 6.00e+03,<SG_kine>,<SG_form>
+<MatModel>,<GaussPts>
 **
 *Nset, nset=TOP_NODES
   263,  264,  265,  360,  361,  362,  363,  364,  626,  627,  628,  629,  630,  631,  632,  633

@@ -18,7 +18,7 @@
 !  Uses a more moderate shear modulus
 !------------------------------------------------------------------
 
-      subroutine umat_crys2 (stress,  statev,  ddsdde,  sse,  spd,
+      subroutine umat_crys(stress,  statev,  ddsdde,  sse,  spd,
      &          scd,     rpl,     ddsddt,  drplde,  drpldt,
      &          stran,  dstran, time,    dtime,   temp,
      &          dtemp,   predef,  dpred,   cmname,  ndi,

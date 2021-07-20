@@ -405,6 +405,7 @@ C     Face4: 2,6,7,3; Face5: 3,7,8,4; Face6: 4,5,8,1;
       integer iumatsvst, iumatsven      ! umat_crys state variable start and stop index
       real*8 rDfgrd0(3, 3, 8), rDfgrd1(3, 3, 8)
       real*8 rGsCoords(3, 8)
+      real*8 rDfgrd0Ct(3, 3), rDfgrd1Ct(3, 3), rCtCoords(3)
 
 
 C     READ the theta value for the iso-surface from input
@@ -816,6 +817,19 @@ C               Select the correct state/history variables for elmt centroid
      $                                   + iTIntPt * nstatev(3)
      $                                   + i  )
                 END DO
+
+                iumatsvst = 540 + iTIntPt * nstatev(5)
+                iumatsven = 539 + (iTIntPt + 1) * nstatev(5)
+                call calc_dfgrd(rXiEtaCt, rOrigCoords, rPrevCoords,
+     &                         rCoords, mcrd, nnode, rDfgrd0Ct,
+     &                         rDfgrd1Ct, rCtCoords)
+
+                call umat_stress(rStressCt,
+     &                           svars(kblock, iumatsvst:iumatsven),
+     &                           rCtCoords, rDfgrd0Ct, rDfgrd1Ct,
+     &                           props(77:118), rXiEtaPt(:, l), 42,
+     &                           nstatev(5), nnode, elmt_number, 0,
+     &                           mcrd, time, dtimeCur, kstep, kinc)
 
 C               Compute the stress at elmt centroid
 C               (now rStrain and rSpin are at mid-step)

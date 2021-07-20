@@ -827,9 +827,9 @@ C               Select the correct state/history variables for elmt centroid
                 call umat_stress(rStressCt,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rCtCoords, rDfgrd0Ct, rDfgrd1Ct,
-     &                           props(77:118), rXiEtaPt(:, l), 42,
-     &                           nstatev(5), nnode, elmt_number, 0,
-     &                           mcrd, time, dtimeCur, kstep, kinc)
+     &                           props(77:118), 42, nstatev(5), nnode,
+     &                           elmt_number, 0, mcrd, time, dtimeCur,
+     &                           kstep, kinc)
 
 C               Compute the stress at elmt centroid
 C               (now rStrain and rSpin are at mid-step)
@@ -1082,9 +1082,10 @@ C               Select the correct state/history variables
                 
                 iumatsvst = 540 + (l - 1) * nstatev(5) 
                 iumatsven = 539 + l * nstatev(5) 
-                call umat_stress(rStress, svars(kblock, iumatsvst:iumatsven),
-     &                          rGsCoords(:, l), rDfgrd0(:, :, l),
-     &                          rDfgrd1(:, :, l), props(77:118), rXiEtaPt(:, l),
+                call umat_stress(rStress,
+     &                           svars(kblock, iumatsvst:iumatsven),
+     &                           rGsCoords(:, l), rDfgrd0(:, :, l),
+     &                           rDfgrd1(:, :, l), props(77:118),
      &                          42, nstatev(5), nnode, elmt_number,
      &                          l, mcrd, time, dtimeCur, kstep, kinc)
 C               Compute the stress (now rStrain and rSpin are at mid-step)

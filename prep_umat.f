@@ -95,9 +95,8 @@ C         See UMAT Deformation Gradient Documentation for more details
       end subroutine
 
       subroutine umat_stress(rStress, hvars, rGsCoords, rDfgrd0,
-     &                      rDfgrd1, props, rXiEtaPt, nprops,
-     &                      nsvars, nnode, noel, npt, mcrd, time,
-     &                      dtime, kstep, kinc)
+     &                      rDfgrd1, props, nprops, nsvars, nnode, noel,
+     &                      npt, mcrd, time, dtime, kstep, kinc)
           
           implicit none
 C         input arguments declaration
@@ -105,7 +104,7 @@ C         input arguments declaration
           integer kstep, kinc
           real*8 rStress(6), hvars(nsvars), props(nprops)
           real*8 rGsCoords(3), rDfgrd0(3, 3), rDfgrd1(3, 3)
-          real*8 time(2), rXiEtaPt(3)
+          real*8 time(2)
           real*8 dtime
           integer idx, jdx
 

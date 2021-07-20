@@ -1,6 +1,50 @@
-      subroutine dfgrd_prep(iTIntPt, rRefCoords, rCurrCoords, rPrevCoords,
-     &                      rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1,
-     &                      rGsCoords)
+      subroutine calc_dfgrd(rXiEtaPt, rRefCoords, rPrevCoords,
+     &                      rCurrCoords, mcrd, nnode, rDfgrd0,
+     &                      rDfgrd1, rPtCoords)
+          implicit none
+
+C         integer inputs
+          integer mcrd, nnode
+
+C         Reference, Current and Previous Coordinates and Natural Coords
+          real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
+          real*8 rPrevCoords(mcrd, nnode), rXiEtaPt(3)
+
+C         Deformation Gradients(previous and current) and Point Coords
+          real*8 rDfgrd0(3, 3), rDfgrd1(3, 3), rPtCoords(3)
+
+C         Shape fcns, Derivatives and Determinant
+          real*8 rN(8), rdNdXRef(3, nnode), rJdet
+
+C         loop integers
+          integer idx, jdx
+
+C         Construct Shape Functions and Derivatives
+C         // w.r.t Reference Coordinates
+          call SHP_FUNC_3D_8N(rXiEtaPt, rRefCoords, 1, rN, rdNdXRef,
+     &                        rJdet)
+
+C         Deformation Gradients of previous and current coords
+C         and their determinants
+          call GdefGrad_3D(rdNdXRef, rPrevCoords, mcrd, nnode, 1,
+     &                     rDfgrd0)
+          call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode, 1,
+     &                     rDfgrd1)
+
+C         Compute Point Coordinates
+          rPtCoords = 0.0
+          do idx = 1, nnode
+               do jdx = 1, mcrd
+                    rPtCoords(jdx) = rPtCoords(jdx) +
+     &                        rN(idx) * rCurrCoords(jdx, idx)
+               end do
+          end do
+
+      end subroutine
+
+      subroutine dfgrd_prep(iTIntPt, rRefCoords, rCurrCoords,
+     &                      rPrevCoords, rXiEtaPt, mcrd, nnode, rDfgrd0,
+     &                      rDfgrd1, rGsCoords)
 C         This subroutine prepares deformation gradient and gauss point
 C         coordinates for UMAT type function.
           implicit none
@@ -12,45 +56,29 @@ C         Reference, Current and Previous Coordinates
           real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
           real*8 rPrevCoords(mcrd, nnode), rXiEtaPt(3, iTIntPt)
 
-C         Initalize Deformation Gradient at each Gass Pt
+C         Initalize Deformation Gradient at each Gauss Pt
 C         and Gauss Pt Coordinates
           real*8 rDfgrd0(3, 3, iTIntPt), rDfgrd1(3, 3, iTIntPt)
           real*8 rGsCoords(3, iTIntPt)
 
 C         Additional variables for computations
-          integer l, idx, jdx
-          real*8 rN(8), rdNdXRef(3, iTIntPt), rJdet
+          integer l
           real*8 rDetF0Bar, rDetF1Bar, rSelRedIntConst
           real*8 rDetF0(iTIntPt), rDetF1(iTIntPt)
-          real*8, external :: determinant ! external determinant function
+          real*8, external :: determinant ! external determinant fcn
 
 C         Compute Deformation Gradients and Gauss Pt Coordinates
+C         at each guass pt
           rDetF0Bar = 0.0
           rDetF1Bar = 0.0
           do l = 1, iTIntPt
-C              Shape Functions and Derivatives w.r.t Reference Coordinates
-               call SHP_FUNC_3D_8N(rXiEtaPt(:, l), rRefCoords, 1, rN, rdNdXRef,
-     &                        rJdet)
-
-C              Deformation Gradients of previous and current coords
-C              and their determinants
-               call GdefGrad_3D(rdNdXRef, rPrevCoords, mcrd, nnode,
-     &                     1, rDfgrd0(:, :, l))
-               call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode,
-     &                     1, rDfgrd1(:, :, l))
+               call calc_dfgrd(rXiEtaPt(:, l), rRefCoords, rPrevCoords,
+     &                         rCurrCoords, mcrd, nnode, rDfgrd0(:,:,l),
+     &                         rDfgrd1(:, :, l), rGsCoords(:, l))
                rDetF0(l) = determinant(rDfgrd0(:,:,l))
                rDetF1(l) = determinant(rDfgrd1(:,:,l))
                rDetF0Bar = rDetF0Bar + rDetF0(l)
                rDetF1Bar = rDetF1Bar + rDetF1(l)
-
-C              Compute Guass Pt Coordinates
-               rGsCoords(:, l) = 0.0
-               do idx = 1, nnode
-                   do jdx = 1, mcrd
-                       rGsCoords(jdx, l) = rGsCoords(jdx, l) +
-     &                        rN(idx) * rCurrCoords(jdx, idx)
-                   end do
-               end do
           end do
 
 C         Scale Deformation Gradient for Selective Reduced Integration
@@ -137,7 +165,7 @@ C         additional arguments for umat
      &               dfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)
       
-      include 'vaba_param.inc'
+      implicit real*8(a-h,o-z)
       dimension
      &  coords(3),           ! Coordinates of Gauss point
      &  ddsdde(ntens,ntens), ! Tangent Stiffness Matrix

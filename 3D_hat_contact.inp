@@ -11,7 +11,7 @@
 *Node
 *Include, input=Input_node.inp
 ** User-defined Sub-grid Elements
-*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=118, Coordinates=3, Variables=1441
+*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=118, Coordinates=3, Variables=1387
 1, 2, 3
 **
 **

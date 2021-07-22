@@ -230,11 +230,6 @@ C       Compute the current dilatational wave speed
           svars(9) = Se
           svars(10)= S0
           svars(11)= rF
-C          call pumat_crys(rStrain,rSpin,svars,nstatev,props,
-C     &                    nprops,iVelmType,
-C     &                    iVforType,iConsType,rTime,rDt,
-C     &                    rStress,rSigInc,rCmod,rGtan,rCd,iCvFlag)
-
         endif
 
         do i = 1, 6

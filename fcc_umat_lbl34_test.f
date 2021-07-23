@@ -342,7 +342,7 @@
 
 !  Compute the total strain, needed for hardening
        call inverse_3x3(dfgrd0,dfgrdinv0)
-       Fe_n = matmul(dfgrd0,FpInv)
+       Fe_n = matmul(dfgrd0,FpInv_n)
        call inverse_3x3(Fe_n,FeInv_n)
        rLBar = matmul(dfgrd1-dfgrd0,dfgrdinv0)
        rLBartemp = matmul(rLBar,Fe_n)

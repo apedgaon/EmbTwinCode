@@ -119,6 +119,10 @@ C         additional arguments for umat
           ndi = 3
           nshr = 3
           ntens = ndi + nshr
+          if (((kstep.eq.0).or.(kstep.eq.1)).and.(kinc.eq.0)) then
+              dtime = 1.d-9
+          end if
+
           call umat_crys(rStress,  hvars,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,

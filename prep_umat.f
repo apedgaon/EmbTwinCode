@@ -32,7 +32,7 @@ C         and their determinants
      &                     rDfgrd1)
 
 C         Compute Point Coordinates
-          rPtCoords = 0.0
+          rPtCoords = 0.d0
           do idx = 1, nnode
                do jdx = 1, mcrd
                     rPtCoords(jdx) = rPtCoords(jdx) +
@@ -69,8 +69,8 @@ C         Additional variables for computations
 
 C         Compute Deformation Gradients and Gauss Pt Coordinates
 C         at each guass pt
-          rDetF0Bar = 0.0
-          rDetF1Bar = 0.0
+          rDetF0Bar = 0.d0
+          rDetF1Bar = 0.d0
           do l = 1, iTIntPt
                call calc_dfgrd(rXiEtaPt(:, l), rRefCoords, rPrevCoords,
      &                         rCurrCoords, mcrd, nnode, rDfgrd0(:,:,l),

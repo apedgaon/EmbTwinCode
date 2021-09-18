@@ -42,6 +42,24 @@ C         Compute Point Coordinates
 
       end subroutine
 
+      subroutine dfgrd_next(dfgrd0, dfgrd1, rdL)
+          implicit none
+          real*8 dfgrd0(3, 3), dfgrd1(3, 3), rdL(3, 3), rImat(3, 3)
+          integer :: i, j
+
+          do i = 1, 3
+              do j = 1, 3
+                  if (i.eq.j) then
+                      rImat(i, j) = 1.0d0;
+                  else
+                      rImat(i, j) = 0.0d0;
+                  end if
+              end do
+          end do
+
+          dfgrd1 = matmul(rImat + rdL, dfgrd0)
+      end subroutine
+
       subroutine dfgrd_prep(iTIntPt, rRefCoords, rCurrCoords,
      &                      rPrevCoords, rXiEtaPt, mcrd, nnode, rDfgrd0,
      &                      rDfgrd1, rGsCoords)

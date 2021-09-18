@@ -230,7 +230,7 @@ C     Default safety factor for stable time step estimate
 
       integer n,i,j,l,k
       integer kblock,iVelmType,iVforType,iConsType
-      integer nstatev(5)       ! # of state vars at Gauss pt
+      integer nstatev(6)       ! # of state vars at Gauss pt
                                ! (1) - # of state vars at Gauss pt for Matrix
                                ! (2) - # of state vars at Gauss pt for Shear Band
                                ! (3) - # of state vars related with localization 
@@ -575,6 +575,7 @@ C       If formulation w/ localization, we need extra memory space
         END IF
         
         nstatev(5) = 106
+        nstatev(6) = 9 
         iIntPt = jprops(4)  ! Number of integration points per direction for MATRIX
 
         IF (iIntPt.NE.2) THEN
@@ -1204,6 +1205,16 @@ C                 b) Save localization flag and initial band vectors (n0 & m0) t
      $                         +  (l-1)* nstatev(3) + 7) = rMvect(2)
                   svars(kblock, iTIntPt*(nstatev(1)+nstatev(2))
      $                         +  (l-1)* nstatev(3) + 8) = rMvect(3)
+
+                  iumatsvst = 1494 + (l - 1) * nstatev(6)
+                  iumatsven = 1493 + l * nstatev(6)
+                  svars(kblock, iumatsvst : iumatsven) = 
+     &                                  reshape(rDfgrd1(:, :, l), (/9/))
+
+                  iumatsvst = 1566 + (l - 1) * nstatev(6)
+                  iumatsven = 1565 + l * nstatev(6)
+                  svars(kblock, iumatsvst : iumatsven) = 
+     &                                  reshape(rDfgrd1(:, :, l), (/9/))
 
 C                 c) Save current config (X*) to history (finite deformation case)
                   j = 9

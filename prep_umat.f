@@ -42,22 +42,104 @@ C         Compute Point Coordinates
 
       end subroutine
 
-      subroutine dfgrd_next(dfgrd0, dfgrd1, rdL)
+      subroutine calc_dfgrd2(rXiEtaPt, rRefCoords, rCurrCoords, mcrd,
+     &                       nnode, rDfgrd1, rPtCoords)
           implicit none
-          real*8 dfgrd0(3, 3), dfgrd1(3, 3), rdL(3, 3), rImat(3, 3)
-          integer :: i, j
 
-          do i = 1, 3
-              do j = 1, 3
-                  if (i.eq.j) then
-                      rImat(i, j) = 1.0d0;
-                  else
-                      rImat(i, j) = 0.0d0;
-                  end if
-              end do
+C         integer inputs
+          integer mcrd, nnode
+
+C         Reference, Current and Previous Coordinates and Natural Coords
+          real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
+          real*8 rXiEtaPt(3)
+
+C         Deformation Gradients(previous and current) and Point Coords
+          real*8 rDfgrd1(3, 3), rPtCoords(3)
+
+C         Shape fcns, Derivatives and Determinant
+          real*8 rN(8), rdNdXRef(3, nnode), rJdet
+
+C         loop integers
+          integer idx, jdx
+
+C         Construct Shape Functions and Derivatives
+C         // w.r.t Reference Coordinates
+          call SHP_FUNC_3D_8N(rXiEtaPt, rRefCoords, 1, rN, rdNdXRef,
+     &                        rJdet)
+
+C         Deformation Gradients of previous and current coords
+C         and their determinants
+          call GdefGrad_3D(rdNdXRef, rCurrCoords, mcrd, nnode, 1,
+     &                     rDfgrd1)
+
+C         Compute Point Coordinates
+          rPtCoords = 0.d0
+          do idx = 1, nnode
+               do jdx = 1, mcrd
+                    rPtCoords(jdx) = rPtCoords(jdx) +
+     &                        rN(idx) * rCurrCoords(jdx, idx)
+               end do
           end do
 
-          dfgrd1 = matmul(rImat + rdL, dfgrd0)
+      end subroutine
+
+      subroutine dfgrd_prep2(iTIntPt, rRefCoords, rCurrCoords,
+     &                       rXiEtaPt, mcrd, nnode, rDfgrd1, rGsCoords)
+C         This subroutine prepares deformation gradient and gauss point
+C         coordinates for UMAT type function.
+          implicit none
+
+C         Integer inputs
+          integer iTIntPt, mcrd, nnode
+
+C         Reference, Current and Previous Coordinates
+          real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
+          real*8 rXiEtaPt(3, iTIntPt)
+
+C         Initalize Deformation Gradient at each Gauss Pt
+C         and Gauss Pt Coordinates
+          real*8 rDfgrd1(3, 3, iTIntPt)
+          real*8 rGsCoords(3, iTIntPt)
+
+C         Additional variables for computations
+          integer l
+          real*8 rDetF1Bar, rSelRedIntConst
+          real*8 rDetF1(iTIntPt)
+          real*8, external :: determinant ! external determinant fcn
+
+C         Compute Deformation Gradients and Gauss Pt Coordinates
+C         at each guass pt
+          rDetF1Bar = 0.d0
+          do l = 1, iTIntPt
+               call calc_dfgrd2(rXiEtaPt(:, l), rRefCoords, rCurrCoords,
+     &                          mcrd, nnode, rDfgrd1(:, :, l),
+     &                          rGsCoords(:, l))
+               rDetF1(l) = determinant(rDfgrd1(:,:,l))
+               rDetF1Bar = rDetF1Bar + rDetF1(l)
+          end do
+
+C         Scale Deformation Gradient for Selective Reduced Integration
+C         See UMAT Deformation Gradient Documentation for more details
+          rDetF1Bar = rDetF1Bar / iTIntPt
+          do l = 1, iTIntPt
+               rSelRedIntConst = (rDetF1Bar / rDetF1(l))**(1.0/3)
+               rDfgrd1(:, :, l) = rDfgrd1(:, :, l) * rSelRedIntConst
+          end do
+      end subroutine
+
+      subroutine comp_vel_gr(rdVelGrd, rStrainInc, rSpinInc)
+          implicit none
+          real*8 rdVelGrd(3, 3), rStrainInc(6), rSpinInc(3)
+
+          rdVelGrd(1, 1) = rStrainInc(1)
+          rdVelGrd(2, 1) = 0.5 * rStrainInc(6) + rSpinInc(3)
+          rdVelGrd(3, 1) = 0.5 * rStrainInc(5) - rSpinInc(2)
+          rdVelGrd(1, 2) = 0.5 * rStrainInc(6) - rSpinInc(3)
+          rdVelGrd(2, 2) = rStrainInc(2)
+          rdVelGrd(3, 2) = 0.5 * rStrainInc(4) + rSpinInc(1)
+          rdVelGrd(1, 3) = 0.5 * rStrainInc(5) + rSpinInc(2)
+          rdVelGrd(2, 3) = 0.5 * rStrainInc(4) - rSpinInc(1)
+          rdVelGrd(3, 3) = rStrainInc(3)
       end subroutine
 
       subroutine dfgrd_prep(iTIntPt, rRefCoords, rCurrCoords,
@@ -141,7 +223,7 @@ C         additional arguments for umat
               dtime = 1.d-9
           end if
 
-          call umat_crys(rStress,  hvars,  ddsdde,  sse,     spd,
+          call umat_crys2(rStress,  hvars,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,

@@ -406,6 +406,7 @@ C     Face4: 2,6,7,3; Face5: 3,7,8,4; Face6: 4,5,8,1;
       real*8 rDfgrd0(3, 3, 8), rDfgrd1(3, 3, 8)
       real*8 rGsCoords(3, 8)
       real*8 rDfgrd0Ct(3, 3), rDfgrd1Ct(3, 3), rCtCoords(3)
+      real*8 rImat(3, 3), rdVelGrd(3, 3)
 
 
 C     READ the theta value for the iso-surface from input
@@ -612,6 +613,23 @@ C       Constants, etc.
 C       Get natural coordinates and weights for 8 Gauss points for MATRIX and SHEAR BAND
         CALL GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
 
+C       Initialize Identity Matrix(3x3)
+        do i = 1, 3
+            do j = 1, 3
+                if (i.eq.j) then
+                    rImat(i, j) = 1.0d0;
+                else
+                    rImat(i, j) = 0.0d0;
+                end if
+            end do
+        end do
+
+C       Initialize Deformation Gradients
+        do i = 1, iTIntPt 
+            rDfgrd0(:, :, i) = rImat
+            rDfgrd1(:, :, i) = rImat
+        end do
+
 C       The amount of memory reserved for element state variables must be sufficient
 C       The elmt centroid has one extra slot to store the localization flag
         iOutPr(1) = iTIntPt * ( nstatev(1) + nstatev(2) + nstatev(3) )
@@ -739,9 +757,9 @@ C             Element surface area (even for axisymmetric elements)
 
 C           Prepare Deformation Gradients and Coordinates for all Gauss Pts
 C           Required for UMAT type function
-            call dfgrd_prep(iTIntPt, rOrigCoords, rCoords, rPrevCoords,
-     &                      rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1,
-     &                      rGsCoords)
+C           call dfgrd_prep(iTIntPt, rOrigCoords, rCoords, rPrevCoords,
+C                           rXiEtaPt, mcrd, nnode, rDfgrd0, rDfgrd1,
+C                           rGsCoords)
 
 C           Compute element size h
             rElmtSize = rElmtVol**(1.d0/3.d0)      !   h = cubic root of vol
@@ -1060,8 +1078,26 @@ C               If first increment of first step, initialize localization flag i
                 IF ( ( kstep .EQ. 1) .AND. ( kinc .EQ. 1) ) THEN
                   svars(kblock, iTIntPt*(nstatev(1)+nstatev(2))
      $                         +  (l-1)* nstatev(3) + 1) = 0.d0
+
+                  iumatsvst = 1494 + (l - 1) * nstatev(6)
+                  iumatsven = 1493 + l * nstatev(6)
+                  svars(kblock, iumatsvst : iumatsven) = 
+     &                                  reshape(rImat, (/9/))
                 END IF
 
+                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
+C               Retrieve previous Def Grad and form next
+                if (kinc.gt.1) then
+                  iumatsvst = 1494 + (l - 1) * nstatev(6)
+                  iumatsven = 1493 + l * nstatev(6)
+                  rDfgrd0(:, :, l) =
+     &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
+                  rDfgrd1(:, :, l) =
+     &            matmul(rImat + rdVelGrd, rDfgrd0(:, :, l))
+                end if
+
+                svars(kblock, iumatsvst : iumatsven) = 
+     &                                  reshape(rDfgrd1(:, :, l), (/9/))
 C               Read localization status from history
                 iLocalFlg = nint( svars(kblock,
      $                            iTIntPt*(nstatev(1)+nstatev(2))

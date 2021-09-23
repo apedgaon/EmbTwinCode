@@ -403,7 +403,7 @@ C     Face4: 2,6,7,3; Face5: 3,7,8,4; Face6: 4,5,8,1;
       pointer(ptr_elmt_SDV,elmt_SDV)
 
       integer iumatsvst, iumatsven      ! umat_crys state variable start and stop index
-      real*8 rDfgrd0(3, 3, 8), rDfgrd1(3, 3, 8)
+      real*8 rDfgrd0(3, 3), rDfgrd1(3, 3)
       real*8 rGsCoords(3, 8)
       real*8 rDfgrd0Ct(3, 3), rDfgrd1Ct(3, 3), rCtCoords(3)
       real*8 rImat(3, 3), rdVelGrd(3, 3)
@@ -625,10 +625,8 @@ C       Initialize Identity Matrix(3x3)
         end do
 
 C       Initialize Deformation Gradients
-        do i = 1, iTIntPt 
-            rDfgrd0(:, :, i) = rImat
-            rDfgrd1(:, :, i) = rImat
-        end do
+        rDfgrd0 = rImat
+        rDfgrd1 = rImat
 
 C       The amount of memory reserved for element state variables must be sufficient
 C       The elmt centroid has one extra slot to store the localization flag
@@ -1090,14 +1088,14 @@ C               Retrieve previous Def Grad and form next
                 if (kinc.gt.1) then
                   iumatsvst = 1494 + (l - 1) * nstatev(6)
                   iumatsven = 1493 + l * nstatev(6)
-                  rDfgrd0(:, :, l) =
+                  rDfgrd0 =
      &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
-                  rDfgrd1(:, :, l) =
-     &            matmul(rImat + rdVelGrd, rDfgrd0(:, :, l))
+                  rDfgrd1 =
+     &            matmul(rImat + rdVelGrd, rDfgrd0)
                 end if
 
                 svars(kblock, iumatsvst : iumatsven) = 
-     &                                  reshape(rDfgrd1(:, :, l), (/9/))
+     &                                  reshape(rDfgrd1, (/9/))
 C               Read localization status from history
                 iLocalFlg = nint( svars(kblock,
      $                            iTIntPt*(nstatev(1)+nstatev(2))
@@ -1121,8 +1119,8 @@ C               Select the correct state/history variables
                 iumatsven = 539 + l * nstatev(5) 
                 call umat_stress(rStress,
      &                           svars(kblock, iumatsvst:iumatsven),
-     &                           rGsCoords(:, l), rDfgrd0(:, :, l),
-     &                           rDfgrd1(:, :, l), props(77:118),
+     &                           rGsCoords(:, l), rDfgrd0,
+     &                           rDfgrd1, props(77:118),
      &                          42, nstatev(5), nnode, elmt_number,
      &                          l, mcrd, time, dtimeCur, kstep, kinc)
 C               Compute the stress (now rStrain and rSpin are at mid-step)
@@ -1245,12 +1243,12 @@ C                 b) Save localization flag and initial band vectors (n0 & m0) t
                   iumatsvst = 1494 + (l - 1) * nstatev(6)
                   iumatsven = 1493 + l * nstatev(6)
                   svars(kblock, iumatsvst : iumatsven) = 
-     &                                  reshape(rDfgrd1(:, :, l), (/9/))
+     &                                  reshape(rDfgrd1, (/9/))
 
                   iumatsvst = 1566 + (l - 1) * nstatev(6)
                   iumatsven = 1565 + l * nstatev(6)
                   svars(kblock, iumatsvst : iumatsven) = 
-     &                                  reshape(rDfgrd1(:, :, l), (/9/))
+     &                                  reshape(rDfgrd1, (/9/))
 
 C                 c) Save current config (X*) to history (finite deformation case)
                   j = 9

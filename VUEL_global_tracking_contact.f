@@ -407,7 +407,7 @@ C     Face4: 2,6,7,3; Face5: 3,7,8,4; Face6: 4,5,8,1;
       real*8 rGsCoords(3, 8)
       real*8 rDfgrd0Ct(3, 3), rDfgrd1Ct(3, 3), rCtCoords(3)
       real*8 rImat(3, 3), rdVelGrd(3, 3)
-
+      real*8 Smat(3, 3, 12), F_tw(3, 3, 12) ! Schmid Tensor and twin dfgrd
 
 C     READ the theta value for the iso-surface from input
       theta_0 = props(76)
@@ -627,6 +627,9 @@ C       Initialize Identity Matrix(3x3)
 C       Initialize Deformation Gradients
         rDfgrd0 = rImat
         rDfgrd1 = rImat
+
+C       Compute Schmid Tensor and Deformation gradient for Twinning        
+        call comp_twin_dfgrd(rImat, Smat, F_tw)
 
 C       The amount of memory reserved for element state variables must be sufficient
 C       The elmt centroid has one extra slot to store the localization flag

@@ -287,7 +287,7 @@ C         additional arguments for umat
           real*8 ddsdde(6, 6), ddsddt(6), drplde(6), stran(6)
           real*8 dstran(6), drot(3, 3)
           real*8 sse, spd, scd, rpl, drpldt, temp, dtemp
-          real*8 predef, dpred, pnewdt, celent
+          real*8 predef(1), dpred(1), pnewdt, celent
           character*80 cmname
           integer ndi, nshr, ntens, layer, kspt
           
@@ -336,6 +336,6 @@ C         additional arguments for umat
      &  stran(ntens),        ! Strain vector at beginning of increment
      &  stress(ntens),       ! Cauchy stress vector
      &  time(2)              ! Step time (1) and total time (2)
-
+        character*80 cmname
 
       end subroutine

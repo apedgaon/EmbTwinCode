@@ -283,7 +283,8 @@
       Fe_tr = matmul(dfgrd1,FpInv_n)
       Ce_tr = matmul(transpose(Fe_tr),Fe_tr)
       Ee_tr = 0.5d0*(Ce_tr-del) - a11*(theta - theta0)*del
-      Spk2_tr = reshape( (/((sum(C(i,j,:,:)*Ee_tr), i = 1,3), j=1,3)/), (/3,3/))
+      Spk2_tr = reshape( (/((sum(C(i,j,:,:)*Ee_tr), 
+     &          i = 1,3), j=1,3)/), (/3,3/))
 
       do i = 1,3
         do j = 1,3
@@ -362,9 +363,10 @@
 !  Call solver      
       dgamma = 0.d0 
 
-      call SOLVCRYS(nslip,props,nprops,theta,dfgrd0,dfgrd1,spk2v_n,s_n,amat,dmat,
-     &  rhossd_n,rhomf_n,chi_n,spk2v_tr,pmatr,cmatr,Pmat,DTIME,spk2v,s,
-     &  rhossd,drhossd,rhomf,xnu,dgamma,DGT,DGMAX,tau,DOMPSC,ITERK,ITERL,ITERERR,xmC)
+      call SOLVCRYS(nslip,props,nprops,theta,dfgrd0,dfgrd1,spk2v_n,s_n,
+     &  amat,dmat,rhossd_n,rhomf_n,chi_n,spk2v_tr,pmatr,cmatr,Pmat,
+     &  DTIME,spk2v,s,rhossd,drhossd,rhomf,xnu,dgamma,DGT,DGMAX,tau,
+     &  DOMPSC,ITERK,ITERL,ITERERR,xmC)
 
 !  Solver did not converge - cut back and repeat time step
         if (iterErr == 1) then
@@ -804,7 +806,7 @@ c
 
         DIMENSION Q(3,3)
 
-        TOL=1.0D-3
+        TOL=1.0D-5
         ICHK = 0
 
         A = DCOS(PHI)*DCOS(OM)-DSIN(PHI)*DSIN(OM)*DCOS(TH)
@@ -824,7 +826,7 @@ C **********************************************************************
 
         DIMENSION Q(3,3)
 
-        TOL=1.0D-3
+        TOL=1.0D-5
         ICHK = 0
 
         Q(3,3) = 1.0*Q(3,3)/DABS(Q(3,3))
@@ -1230,8 +1232,9 @@ C
 !///////////////////////////////////////////////////////////////////////
 !  Subroutine for Calculating the Const. Jacobian
 !///////////////////////////////////////////////////////////////////////
-       SUBROUTINE calc_jac(nslip,props,nprops,elmat,ft,ftau,fpit,tstartau,
-     & gammadot,rss,stau,rhossd,rhomf,q,smatc,theta,del,DTIME,wjmatr)
+       SUBROUTINE calc_jac(nslip,props,nprops,elmat,ft,ftau,fpit,
+     & tstartau,gammadot,rss,stau,rhossd,rhomf,q,smatc,theta,del,DTIME,
+     & wjmatr)
 
         IMPLICIT REAL*8(A-H,O-Z)     
         
@@ -1325,7 +1328,8 @@ C
         ENDDO
         ENDDO
 
-        calpha = reshape( (/((sum(elmat(i,j,:,:)*aux2), i = 1,3), j=1,3)/), (/3,3/))
+        calpha = reshape( (/((sum(elmat(i,j,:,:)*aux2), 
+     &           i = 1,3), j=1,3)/), (/3,3/))
 
         CALL SMATVEC(CALPHA,CALPHAV)
         DO I=1,6
@@ -1942,9 +1946,10 @@ C
         END  
 C **************************************************************
 C*************************************************************************
-        SUBROUTINE SOLVCRYS(nslip,props,nprops,theta,dfgrd0,dfgrd1,TSTV,ST,amat,dmat,
-     &  rhossd_n,rhomf_n,chi_n,TSTRV,PMAT,CMAT,PMAT0,DTIME,TSTAUV,STAU,
-     &  rhossd,drhossd,rhomf,xnu,DGAMMA,DGT,DGMAX,RSS,DOMPSC,ITERK,ITERL,ITERERR,xmC)
+        SUBROUTINE SOLVCRYS(nslip,props,nprops,theta,dfgrd0,dfgrd1,TSTV,
+     &  ST,amat,dmat,rhossd_n,rhomf_n,chi_n,TSTRV,PMAT,CMAT,PMAT0,DTIME,
+     &  TSTAUV,STAU,rhossd,drhossd,rhomf,xnu,DGAMMA,DGT,DGMAX,RSS,
+     &  DOMPSC,ITERK,ITERL,ITERERR,xmC)
 C
 C       THIS SUBROUTINE SOLVES FOR  (TSTARTAU,STAU)
 C       HERE, WE ARE SETTING
@@ -1977,7 +1982,7 @@ C --------------------------------------------------------------------
         ITERK    = 0
         ITERL    = 0
         ITERLNEW = 0
-        TOL      = 1.d-4
+        TOL      = 1.d-5
         DGMAXTOL = 0.50
         CORRBETA = 4.0
 C
@@ -2203,7 +2208,7 @@ C
          ERRRES = DMAX1(DABS(RESNEW(ISLIP)-RESOLD(ISLIP)),ERRRES)
         ENDDO
 C
-        TOLS = 1.D-4
+        TOLS = 1.D-5
         IF (ERRRES .LT. TOLS) THEN
 C
 C  ITERATIVE PROCEDURE HAS CONVERGED
@@ -2278,18 +2283,22 @@ C **********************************************************************
            gfunc = burg*(RHOALPHA/SQRT(RMFALPHA))*
      &             (DEXP(-(THETAP/THETA)*DEXP(-TAUALPHA/RESALPHA)) -
      &             DEXP(-(THETAP/THETA)*DEXP(TAUALPHA/RESALPHA)))
-           GDOTALPHA = gfunc*rx/(t0*(1.d0 + eta*gfunc/(TAUALPHA*(burg**2)*RHOALPHA)))
+           GDOTALPHA = gfunc*rx/(t0*(1.d0 + eta*gfunc/(TAUALPHA*
+     &                 (burg**2)*RHOALPHA)))
     !       DgfuncDTAU = 2.d0*burg*SQRT(RHOALPHA)*
     ! &                  DEXP(-(THETAP/THETA)*DCOSH(TAUALPHA/RESALPHA))*
     ! &                  (THETAP/(THETA*RESALPHA))*
-    ! &               DCOSH((THETAP/THETA)*DSINH(TAUALPHA/RESALPHA)-TAUALPHA/RESALPHA)
-           DgfuncDTAU = burg*(RHOALPHA/SQRT(RMFALPHA))*(THETAP/(THETA*RESALPHA))*
+    ! &               DCOSH((THETAP/THETA)*DSINH(TAUALPHA/RESALPHA)-
+    ! &                    TAUALPHA/RESALPHA)
+           DgfuncDTAU = burg*(RHOALPHA/SQRT(RMFALPHA))*
+     &                  (THETAP/(THETA*RESALPHA))*
      &                  (DEXP(-(THETAP/THETA)*DEXP(-TAUALPHA/RESALPHA))*
      &                  DEXP(-TAUALPHA/RESALPHA) +
      &                  DEXP(-(THETAP/THETA)*DEXP(TAUALPHA/RESALPHA))*
      &                  DEXP(TAUALPHA/RESALPHA))
-           DGDTAU = rx*(DgfuncDTAU + eta*((gfunc/(TAUALPHA*burg))**2)/RHOALPHA)/
-     &               (t0*((1.d0 + eta*gfunc/(TAUALPHA*(burg**2)*RHOALPHA))**2))
+           DGDTAU = rx*(DgfuncDTAU + eta*((gfunc/(TAUALPHA*burg))**2)
+     &              /RHOALPHA)/(t0*((1.d0 + eta*gfunc/
+     &               (TAUALPHA*(burg**2)*RHOALPHA))**2))
         ENDIF
 
     !    WRITE(*,*) gfunc, DGDTAU
@@ -2423,15 +2432,16 @@ c **********************************************************************
         end subroutine calc_dmat
 
 C **********************************************************************
-        SUBROUTINE calc_HARDENING(props,nprops,nslip,theta,chi,amat,dmat,
-     &  s,tau,rhossd,xnu,DGAMMA,DGT,DTIME,ds,drhossd)
+        SUBROUTINE calc_HARDENING(props,nprops,nslip,theta,chi,amat,
+     &  dmat,s,tau,rhossd,xnu,DGAMMA,DGT,DTIME,ds,drhossd)
 
         IMPLICIT REAL*8(A-H,O-Z)
 C
-        DIMENSION DGAMMA(nslip),props(nprops),ds(nslip),s(nslip),tau(nslip),
-     &            rhossd(nslip),drhossd(nslip),rhossd_s(nslip),dmat(nslip,nslip),
-     &            fab(nslip,nslip),rhossd_f(nslip),rhossd_d(nslip),rhossd_i(nslip),
-     &            amat(nslip,nslip),xnu(nslip),DGT(nslip)
+        DIMENSION DGAMMA(nslip),props(nprops),ds(nslip),s(nslip),
+     &       tau(nslip),rhossd(nslip),drhossd(nslip),rhossd_s(nslip),
+     &       dmat(nslip,nslip),fab(nslip,nslip),rhossd_f(nslip),
+     &       rhossd_d(nslip),rhossd_i(nslip),amat(nslip,nslip),
+     &       xnu(nslip),DGT(nslip)
 
 !  Initialize props needed for the calculation
 
@@ -2469,17 +2479,19 @@ C
         drhossd = 0.d0
         do ia = 1,nslip
           xkappa1 = xkappa0 + 
-     &             xkappa2*(1.d0 + dabs(dgamma(ia)/dtime)/gdotr)/DSQRT(d_gr)
+     &         xkappa2*(1.d0 + dabs(dgamma(ia)/dtime)/gdotr)/DSQRT(d_gr)
           if (DGT(ia) == 0) then
              xnu(ia) = 0.
           else
              xnu(ia) = DLOG(THETAP/theta) - 
-     &           DLOG(DLOG(rx*burg*rhossd(ia)/(t0*rhossd_d(ia)*DABS(DGT(ia)/dtime))))
+     &           DLOG(DLOG(rx*burg*rhossd(ia)/(t0*rhossd_d(ia)*
+     &           DABS(DGT(ia)/dtime))))
           endif
           rhossd_s(ia) = (1.d0/(rx*burg)**2)*
      &             DEXP(-(e_D + e_copl*(burg**2)*rhossd_i(ia))/chi)
           drhossd(ia) = (1.d0/rx**2)*xkappa1*tau(ia)*dgamma(ia)*
-     &             (1.d0 - rhossd(ia)/rhossd_s(ia))/(alphaT*xmu*((xnu(ia))**2)*(burg**2))
+     &             (1.d0 - rhossd(ia)/rhossd_s(ia))/(alphaT*xmu*
+     &             ((xnu(ia))**2)*(burg**2))
         enddo
         
         DO ia = 1, NSLIP

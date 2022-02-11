@@ -18,7 +18,7 @@
 !  Uses a more moderate shear modulus
 !------------------------------------------------------------------
 
-      subroutine umat_crys(stress,  statev,  ddsdde,  sse,  spd,
+      subroutine umat_crys (stress,  statev,  ddsdde,  sse,     spd,
      &          scd,     rpl,     ddsddt,  drplde,  drpldt,
      &          stran,  dstran, time,    dtime,   temp,
      &          dtemp,   predef,  dpred,   cmname,  ndi,
@@ -112,14 +112,16 @@
      &  xnu(props(34)),      ! Hardening factor xnu for debugging
      &  DGT(props(34)),      ! Resolved shear strain
      &  amat(props(34),props(34)), ! Slip interaction matrix appearing in definition of CRSS
-     &  dmat(props(34),props(34)) ! Slip interaction matrix appearing in definition of mean free path
+     &  dmat(props(34),props(34)), ! Slip interaction matrix appearing in definition of mean free path
+     &  burg_vec(props(34)),  ! Array containing Burgers vector for all slip systems
+     &  dGamdTau(props(34)),  ! Derivative of dgamma with respect to resolved shear stress
+     &  rW(3,3,3,3)           ! Jacobian dT^e/dF
 
       pi = 4.d0 * atan(1.d0)
 
 !------------------------------------------------------------------
 !  Assign props() array to logical variable names
 !------------------------------------------------------------------
-
         THETA0=PROPS(1)              ! Initial temperature [K]
         RHO=PROPS(2)                 ! Initial density [Mg/mm^3]
         CP=PROPS(3)                  ! Specific Heat [mJ/(Mg.K)]
@@ -166,7 +168,7 @@
         rs = props(40)               ! Scaling factor for Taylor stress
         xkappar = props(41)          ! Dislocation energy scaling for chi recovery [mJ]
         xmu0 = props(42)             ! Polycrystal shear modulus adjustment [MPa]
-   
+
 !------------------------------------------------------------------
 !  Initialize identity matrices/tensors
 !------------------------------------------------------------------
@@ -188,18 +190,56 @@
 !           plane normal           slip direction
 !------------------------------------------------------------------
 
-        xmC(:,1)= (/-1,  1,  1/);  xsC(:,1)=(/0, -1, 1/)   !A2
-        xmC(:,2)= (/-1, 1, 1/);    xsC(:,2)=(/1, 0, 1/)    !A3
-        xmC(:,3)= (/-1,  1,  1/);  xsC(:,3)=(/1, 1, 0/)    !A6
-        xmC(:,4)= (/1,  1,  1/);   xsC(:,4)=(/0, -1,  1/)  !B2
-        xmC(:,5)= (/1,  1,  1/);   xsC(:,5)=(/-1,  0, 1/)  !B4   
-        xmC(:,6)= (/1 , 1,  1/);   xsC(:,6)=(/-1,  1, 0/)  !B5
-        xmC(:,7)= (/-1,  -1, 1/);  xsC(:,7)=(/0, 1,  1/)   !C1
-        xmC(:,8)= (/-1,  -1, 1/);  xsC(:,8)=(/1,  0,  1/)  !C3
-        xmC(:,9)= (/-1,  -1, 1/);  xsC(:,9)=(/-1,  1,  0/) !C5
-        xmC(:,10)=(/1, -1,  1/);   xsC(:,10)=(/0,  1,  1/) !D1
-        xmC(:,11)=(/1, -1,  1/);   xsC(:,11)=(/-1,  0, 1/) !D4
-        xmC(:,12)=(/1, -1,  1/);   xsC(:,12)=(/1,  1,  0/) !D6
+         xmC(:,1)  = (/ 0.0000, 1.5856, 0.866/)
+         xmC(:,2)  = (/ 0.0000, 1.5856, 0.866/)
+         xmC(:,3)  = (/ 0.0000,-1.5856, 0.866/)
+         xmC(:,4)  = (/ 0.0000,-1.5856, 0.866/)
+         xmC(:,5)  = (/ 1.3731, 0.7928, 0.866/)
+         xmC(:,6)  = (/ 1.3731, 0.7928, 0.866/)
+         xmC(:,7)  = (/-1.3731,-0.7928, 0.866/)
+         xmC(:,8)  = (/-1.3731,-0.7928, 0.866/)
+         xmC(:,9)  = (/ 1.3731,-0.7928, 0.866/)
+         xmC(:,10) = (/ 1.3731,-0.7928, 0.866/)
+         xmC(:,11) = (/-1.3731, 0.7928, 0.866/)
+         xmC(:,12) = (/-1.3731, 0.7928, 0.866/)
+         xmC(:,13) = (/ 0.0000, 1.0000, 0.000/)
+         xmC(:,14) = (/ 0.8660,-0.5000, 0.000/)
+         xmC(:,15) = (/ 0.8660, 0.5000, 0.000/)
+         xmC(:,16) = (/0.000, 0.000, 1.000/)
+         xmC(:,17) = (/0.000, 0.000, 1.000/)
+         xmC(:,18) = (/0.000, 0.000, 1.000/)
+
+         xsC(:,1)  = (/ 0.500,-0.866, 1.5856/)
+         xsC(:,2)  = (/-0.500,-0.866, 1.5856/)
+         xsC(:,3)  = (/ 0.500, 0.866, 1.5856/)
+         xsC(:,4)  = (/-0.500, 0.866, 1.5856/)
+         xsC(:,5)  = (/-0.500,-0.866, 1.5856/)
+         xsC(:,6)  = (/-1.000, 0.000, 1.5856/)
+         xsC(:,7)  = (/ 1.000, 0.000, 1.5856/)
+         xsC(:,8)  = (/ 0.500, 0.866, 1.5856/)
+         xsC(:,9)  = (/-1.000, 0.000, 1.5856/)
+         xsC(:,10) = (/-0.500, 0.866, 1.5856/)
+         xsC(:,11) = (/ 1.000, 0.000, 1.5856/)
+         xsC(:,12) = (/ 0.500,-0.866, 1.5856/)
+         xsC(:,13) = (/-1.000, 0.000, 0.0000/)
+         xsC(:,14) = (/ 0.500, 0.866, 0.0000/)
+         xsC(:,15) = (/ 0.500,-0.866, 0.0000/)
+         xsC(:,16) = (/-0.500, 0.866, 0.000/)
+         xsC(:,17) = (/ 0.500, 0.866, 0.000/)
+         xsC(:,18) = (/ 1.000, 0.000, 0.000/)
+
+C        xmC(:,1)= (/-1,  1,  1/);  xsC(:,1)=(/0, -1, 1/)   !A2
+C        xmC(:,2)= (/-1, 1, 1/);    xsC(:,2)=(/1, 0, 1/)    !A3
+C        xmC(:,3)= (/-1,  1,  1/);  xsC(:,3)=(/1, 1, 0/)    !A6
+C        xmC(:,4)= (/1,  1,  1/);   xsC(:,4)=(/0, -1,  1/)  !B2
+C        xmC(:,5)= (/1,  1,  1/);   xsC(:,5)=(/-1,  0, 1/)  !B4
+C        xmC(:,6)= (/1 , 1,  1/);   xsC(:,6)=(/-1,  1, 0/)  !B5
+C        xmC(:,7)= (/-1,  -1, 1/);  xsC(:,7)=(/0, 1,  1/)   !C1
+C        xmC(:,8)= (/-1,  -1, 1/);  xsC(:,8)=(/1,  0,  1/)  !C3
+C        xmC(:,9)= (/-1,  -1, 1/);  xsC(:,9)=(/-1,  1,  0/) !C5
+C        xmC(:,10)=(/1, -1,  1/);   xsC(:,10)=(/0,  1,  1/) !D1
+C        xmC(:,11)=(/1, -1,  1/);   xsC(:,11)=(/-1,  0, 1/) !D4
+C        xmC(:,12)=(/1, -1,  1/);   xsC(:,12)=(/1,  1,  0/) !D6
 
 !  Normalize the vectors
       do i = 1,nslip
@@ -251,12 +291,13 @@
           rhossd_n(i) = statev(n)
         end do
 
-        chi_n = statev(46)
+        chi_n = statev(58)
 
       end if ! state initialization block
 
 !  Initialize 4th rank elastic stiffness tensor
-      call compute_elastConst(props,nprops,theta,c11,c12,c44)
+      call compute_elastconst_hcp(props,nprops,theta,c11,c12,c44,
+     &                            c33, c55, c13)
       
       C_c(:,:,:,:) = 0.d0
       do i = 1,3
@@ -271,7 +312,19 @@
       end do
       C_c(1,1,1,1) = C11
       C_c(2,2,2,2) = C11
-      C_c(3,3,3,3) = C11
+      C_c(3,3,3,3) = C33
+      C_c(1,1,3,3) = c13
+      C_c(3,3,1,1) = c13
+      C_c(2,2,3,3) = c13
+      C_c(3,3,2,2) = c13
+      C_c(1,3,1,3) = c55
+      C_c(1,3,3,1) = c55
+      C_c(3,1,1,3) = c55
+      C_c(3,1,3,1) = c55
+      C_c(2,3,2,3) = c55
+      C_c(2,3,3,2) = c55
+      C_c(3,2,2,3) = c55
+      C_c(3,2,3,2) = c55
 
 !  Rotate stiffness tensor and slip vectors from crystal to reference configuration
       call ROTMAT(TH,PHI,OM,q_0)
@@ -337,7 +390,8 @@
       xmu = sqrt((c11-c12)/2.d0*c44) + xmu0
       call calc_amat(nslip,props,nprops,xsC,xmC,amat)
       call calc_dmat(nslip,props,nprops,xmC,amat,dmat)
-      s_n = (xmu/rs)*burg*sqrt(matmul(amat,rhossd_n))
+      call get_burgvec(props, burg_vec)
+      s_n = (xmu/rs)*burg_vec*sqrt(matmul(amat,rhossd_n))
       rhomf_n = matmul(dmat,rhossd_n)
       rhossd_i = matmul(dmat,rhossd_n)
 
@@ -366,7 +420,7 @@
       call SOLVCRYS(nslip,props,nprops,theta,dfgrd0,dfgrd1,spk2v_n,s_n,
      &  amat,dmat,rhossd_n,rhomf_n,chi_n,spk2v_tr,pmatr,cmatr,Pmat,
      &  DTIME,spk2v,s,rhossd,drhossd,rhomf,xnu,dgamma,DGT,DGMAX,tau,
-     &  DOMPSC,ITERK,ITERL,ITERERR,xmC)
+     &  DOMPSC,ITERK,ITERL,ITERERR,xmC,dGamdTau)
 
 !  Solver did not converge - cut back and repeat time step
         if (iterErr == 1) then
@@ -412,13 +466,16 @@
       call calc_jac(nslip,props,nprops,C,dfgrd0,dfgrd1,FpInv_n,Spk2,
      & gammadot,tau,s,rhossd,rhomf,q_0,smatc,theta,del,dtime,array4)
 
+      call calc_new_jac(dfgrd1, FpInv_n, props, nprops, C, nslip, Smat,
+     &                    dGamdTau, Cmat, dgamma, Fe, spk2, rW)
+
 !  Compute the updated temperature and effective temperature
 !  Include recovery term for chi here
       dWp = dot_product(tau,dgamma)
       dTheta = (chi_n/chi_ss)*dWp/(rho*cp)
       theta = theta + dTheta
       dchi = xkappax*dWp*(1.d0 - chi_n/chi_ss)/(alphaT*xmu)
-      dchi2 = - dot_product(e_D+e_copl*(burg**2)*rhossd_i,drhossd)
+      dchi2 = - dot_product(e_D+e_copl*(burg_vec**2)*rhossd_i,drhossd)
      &          *xkappax*xkappar/(rx*burg*alphaT*xmu)
       chi = chi_n + dchi + dchi2
       ! WRITE(*,*) dchi2
@@ -584,9 +641,9 @@
       implicit real*8(a-h,o-z)
 c
       character*80 cmname,orname
-      character*3 flgray(106)
+      character*3 flgray(148)
       dimension uvar(nuvarm),direct(3,3),t(3,3),time(2)
-      dimension array(106),jarray(106),jmac(*),jmatyp(*),coord(*)
+      dimension array(148),jarray(148),jmac(*),jmatyp(*),coord(*)
 
       call getvrm('SDV',array,jarray,flgray,jrcd,jmac,jmatyp,matlayo,
      &            laccfla)
@@ -1268,12 +1325,12 @@ C            arrays for analytical jacobian
 
         dimension  gammadot(nslip),rhossd(nslip),rhomf(nslip)
         dimension  smatc(nslip,3,3),del(3,3)
-        dimension  props(nprops)
+        dimension  props(nprops), burg_vec(nslip)
 C
 C----------------------------------------------------------------
 C             CALCULATE THE JACOBIAN
 C----------------------------------------------------------------
-
+        call get_burgvec(props, burg_vec)
 !  Intitialization
         dgamma = gammadot*dtime
 
@@ -1471,7 +1528,8 @@ C  STEP J6. CALCULATE THE NSLIP MATRICES B_IJ^{\ALPHA}
         DO ISLIP = 1,NSLIP
 
           call calc_GAMMADOT(props,nprops,theta,rhossd(islip),
-     &      rss(islip),stau(islip),rhomf(islip),gdotalpha,dgdtau)
+     &      rss(islip),stau(islip),rhomf(islip),gdotalpha,dgdtau,
+     &      burg_vec(islip))
 
           DO I     = 1,3
           DO J     = 1,3
@@ -1949,7 +2007,7 @@ C*************************************************************************
         SUBROUTINE SOLVCRYS(nslip,props,nprops,theta,dfgrd0,dfgrd1,TSTV,
      &  ST,amat,dmat,rhossd_n,rhomf_n,chi_n,TSTRV,PMAT,CMAT,PMAT0,DTIME,
      &  TSTAUV,STAU,rhossd,drhossd,rhomf,xnu,DGAMMA,DGT,DGMAX,RSS,
-     &  DOMPSC,ITERK,ITERL,ITERERR,xmC)
+     &  DOMPSC,ITERK,ITERL,ITERERR,xmC,DGAMDTAU)
 C
 C       THIS SUBROUTINE SOLVES FOR  (TSTARTAU,STAU)
 C       HERE, WE ARE SETTING
@@ -1976,7 +2034,7 @@ C --------------------------------------------------------------------
         dimension  drhossd(nslip),ds(nslip),rhomf_n(nslip),rhomf(nslip)
         dimension  amat(nslip,nslip), dmat(nslip,nslip)
         dimension  xmC(3,nslip)
-        dimension  xnu(nslip),DGT(nslip)
+        dimension  xnu(nslip),DGT(nslip), burg_vec(nslip)
 
 !  Initialize iteration counters and other parameters
         ITERK    = 0
@@ -2001,6 +2059,8 @@ C
 C
 C  START THE LOOP FOR SOLVING FOR THE COMPONENTS OF TSTAUV
 C
+
+        call get_burgvec(props, burg_vec)
         DO K=1,MAXIT1
 
 !        if (K>5) then
@@ -2028,7 +2088,8 @@ C
              RMFALPHA   = rhomf_n(ISLIP)
 
              call calc_GAMMADOT(props,nprops,theta,RHOALPHA,
-     &         TAUALPHA,RESALPHA,RMFALPHA,GDOTALPHA,DGDTAU)
+     &         TAUALPHA,RESALPHA,RMFALPHA,GDOTALPHA,DGDTAU,
+     &         burg_vec(islip))
 
              DGAMMA(ISLIP) = DTIME*GDOTALPHA
              DGAMDTAU(ISLIP) = DTIME*DGDTAU
@@ -2146,7 +2207,8 @@ C
              RMFALPHA   = rhomf_n(ISLIP)
 
              call calc_GAMMADOT(props,nprops,theta,RHOALPHA,
-     &  TAUALPHA,RESALPHA,RMFALPHA,GDOTALPHA,DGDTAU)
+     &       TAUALPHA,RESALPHA,RMFALPHA,GDOTALPHA,DGDTAU,
+     &       burg_vec(islip))
 
              DGAMMA(ISLIP) = DTIME*GDOTALPHA
              DGAMDTAU(ISLIP) = DTIME*DGDTAU
@@ -2242,7 +2304,7 @@ C
         END
 C **********************************************************************
         SUBROUTINE calc_GAMMADOT(props,nprops,theta,RHOALPHA,
-     &  TAUALPHA,RESALPHA,RMFALPHA,GDOTALPHA,DGDTAU)
+     &  TAUALPHA,RESALPHA,RMFALPHA,GDOTALPHA,DGDTAU,burg)
 
 !  RESALPHA is the CRSS
 !  TAUALPHA is the resolved shear stress
@@ -2261,7 +2323,6 @@ C **********************************************************************
         ! xmu = SQRT((c11-c12)/2.d0*c44)
         ! xmu0 = SQRT((c11_0-c12_0)/2.d0*c44_0)
 
-        burg   = props(13)
         t0     = props(25)
         THETAP = props(26)
         bk     = props(27)
@@ -2443,6 +2504,8 @@ C
      &       rhossd_d(nslip),rhossd_i(nslip),amat(nslip,nslip),
      &       xnu(nslip),DGT(nslip)
 
+        real*8 burg_vec(nslip)
+
 !  Initialize props needed for the calculation
 
         alphaT = props(12)
@@ -2460,7 +2523,9 @@ C
         rs      = props(40)
         xmu0    = props(42)
 
-        call compute_elastConst(props,nprops,theta,c11,c12,c44)
+        call get_burgvec(props, burg_vec)
+        call compute_elastconst_hcp(props,nprops,theta,c11,c12,c44,c33,
+     &                              c55,c13)
         ! xmu = sqrt((c11-c12)/2.d0*c44)
         xmu = sqrt((c11-c12)/2.d0*c44) + xmu0
 
@@ -2472,7 +2537,8 @@ C
         rhossd_d = sqrt(rhossd_i)
         do ia = 1,nslip
           do ib = 1,nslip
-            fab(ia,ib) = (xmu/rs)*burg*amat(ia,ib)/2.d0/rhossd_f(ia)
+            fab(ia,ib) = (xmu/rs)*burg_vec(ia)*amat(ia,ib)
+     &                   /2.d0/rhossd_f(ia)
           enddo
         enddo
 
@@ -2488,7 +2554,7 @@ C
      &           DABS(DGT(ia)/dtime))))
           endif
           rhossd_s(ia) = (1.d0/(rx*burg)**2)*
-     &             DEXP(-(e_D + e_copl*(burg**2)*rhossd_i(ia))/chi)
+     &          DEXP(-(e_D + e_copl*(burg_vec(ia)**2)*rhossd_i(ia))/chi)
           drhossd(ia) = (1.d0/rx**2)*xkappa1*tau(ia)*dgamma(ia)*
      &             (1.d0 - rhossd(ia)/rhossd_s(ia))/(alphaT*xmu*
      &             ((xnu(ia))**2)*(burg**2))
@@ -2504,6 +2570,42 @@ C
         RETURN 
         END      
 C**************************************************************
+      subroutine compute_elastconst_hcp(props, nprops, theta, c11,
+     &                                  c12, c44, c33, c55, c13)
+
+      implicit none
+! Global Variables
+      integer :: nprops
+      real*8  :: theta
+      real*8  :: props(nprops)
+      real*8  :: c11, c12, c44, c33, c55, c13
+
+! Local Variables
+      real*8  :: rm11, rm12, rm44, rm33, rm55, rm13
+      real*8  :: c11_0, c12_0, c44_0, c33_0, c55_0, c13_0
+
+      rm11  = props(6)
+      c11_0 = props(7)
+      rm12  = props(8)
+      c12_0 = props(9)
+      rm44  = props(10)
+      c44_0 = props(11)
+      rm33  = props(45)
+      c33_0 = props(46)
+      rm55  = props(47)
+      c55_0 = props(48)
+      rm13  = props(49)
+      c13_0 = props(50)
+
+      c11 = c11_0 + rm11 * theta
+      c12 = c12_0 + rm12 * theta
+      c44 = c44_0 + rm44 * theta
+      c33 = c33_0 + rm33 * theta
+      c55 = c55_0 + rm55 * theta
+      c13 = c13_0 + rm13 * theta
+
+      end subroutine
+
       subroutine compute_elastConst(props,nprops,theta,c11,c12,c44)
 
       implicit none
@@ -2533,6 +2635,264 @@ C**************************************************************
 
       return
       end subroutine
+
+      subroutine get_burgvec(props, burg_vec)
+        implicit none
+        real*8 :: props(50), burg1, burg2, burg3
+        real*8 :: burg_vec(props(34))
+        integer :: idx
+        
+        burg1 = props(13)
+        burg2 = props(43)
+        burg3 = props(44)
+        do idx = 1, 12
+          burg_vec(idx) = burg1
+        end do
+        do idx = 13, 15
+          burg_vec(idx) = burg2
+        end do
+        do idx = 16, 18
+          burg_vec(idx) = burg3
+        end do
+
+      end subroutine
+
+      subroutine calc_new_jac(dfgrd1, FpInv_n, props, nprops, C, nslip,
+     &                     Smat, dGamdTau, Cmat, dgamma, Fe, spk2, rW)
+        implicit none
+        integer :: nprops, nslip, i, j, k, l, m, n, p, q, islp
+        real*8 :: dfgrd1(3, 3), FpInv_n(3, 3), props(nprops)
+        real*8 :: Smat(3, 3, nslip), dGamdTau(nslip)
+        real*8 :: dgamma(nslip), Fe(3, 3), spk2(3, 3)
+        real*8 :: rL(3, 3, 3, 3), temp, temp2, C(3, 3, 3, 3)
+        real*8 :: rD(3, 3, 3, 3), rJ(3, 3, 3, 3, nslip), rB(3, 3, nslip)
+        real*8 :: del(3, 3), rK(3, 3, 3, 3), Cmat(3, 3, nslip)
+        real*8 :: rQ(3, 3, 3, 3), rR(3, 3, nslip), rT(3, 3, 3, 3)
+        real*8 :: rW(3, 3, 3, 3), detF, determinant, FeInv(3, 3)
+        real*8 :: rK2(9, 9), rK2Inv(9, 9)
+
+        integer :: map(9, 2), indx(6)
+
+        del = reshape( (/1.,0.,0.,0.,1.,0.,0.,0.,1. /), (/3,3/) )
+
+        ! Compute L_ijkl
+        do l = 1, 3
+          do k = 1, 3
+            do j = 1, 3
+              do i = 1, 3
+                rL(i,j,k,l) = 0.0d0
+                do m = 1, 3
+                  rL(i,j,k,l) = rL(i,j,k,l) +
+     &              FpInv_n(l,i) * dfgrd1(k,m) * FpInv_n(m,j) +
+     &              FpInv_n(m,i) * dfgrd1(k,m) * FpInv_n(l,j)
+                end do
+              end do
+            end do
+          end do
+        end do
+
+        ! Compute D_ijkl
+        do l = 1, 3
+          do k = 1, 3
+            do j = 1, 3
+              do i = 1, 3
+                rD(i,j,k,l) = 0.0d0
+                do n = 1, 3
+                  do m = 1, 3
+                    rD(i,j,k,l) = rD(i,j,k,l) +
+     &                0.5 * C(i,j,m,n) * rL(m,n,k,l)
+                  end do
+                end do
+              end do
+            end do
+          end do
+        end do
+
+        ! Compute J^alpha_ijkl
+        do islp = 1, nslip
+          do l = 1, 3
+            do k = 1, 3
+              do j = 1, 3
+                do i = 1, 3
+                  rJ(i,j,k,l,islp) = 0.0d0
+                  do n = 1, 3
+                    do m = 1, 3
+                      temp = 0.0d0
+                      do p = 1, 3
+                        temp = temp + rL(m,p,k,l) * Smat(p,n,islp) +
+     &                         Smat(p,m,islp) * rL(n,p,k,l)
+                      end do
+
+                      rJ(i,j,k,l,islp) = rJ(i,j,k,l,islp) +
+     &                                   0.5d0 * C(i,j,m,n) * temp
+                    end do
+                  end do
+                end do
+              end do
+            end do
+          end do
+        end do
+
+        ! Compute B^alpha_ij
+        do islp = 1, nslip
+          do j = 1, 3
+            do i = 1, 3
+              rB(i,j,islp) = dGamdTau(islp) * 0.5 * (Smat(i,j,islp) +
+     &                   Smat(j, i, islp))
+            end do
+          end do
+        end do
+
+
+        ! Compute K_ijkl
+        do l = 1, 3
+          do k = 1, 3
+            do j = 1, 3
+              do i = 1, 3
+                temp = 0.0d0
+                do islp = 1, nslip
+                  temp = temp + Cmat(i,j,islp) * rB(k,l,islp)
+                end do
+
+                rK(i,j,k,l) = del(i,k) * del(j,l) + temp
+              end do
+            end do
+          end do
+        end do
+
+        ! Compute Q_ijkl
+        call compute_Q(rK, rD, dgamma, nslip, rJ, rQ)
+
+        ! Compute R^alpha_ij
+        do islp = 1, nslip
+          do j = 1, 3
+            do i = 1, 3
+              rR(i,j,islp) = 0.0d0
+              do l = 1, 3
+                do k = 1, 3
+                  rR(i,j,islp) = rR(i,j,islp) +
+     &                           rB(k,l,islp) * rQ(k,l,i,j)
+                end do
+              end do
+            end do
+          end do
+        end do
+
+        ! Compute T_ijkl
+        do l = 1, 3
+          do k = 1, 3
+            do j = 1, 3
+              do i = 1, 3
+                rT(i,j,k,l) = 0.0d0
+                do n = 1, 3
+                  temp = 0.0d0
+                  do islp = 1, nslip
+                    temp = temp + dgamma(islp) * Smat(n,j,islp)
+                  end do
+
+                  rT(i,j,k,l) = rT(i,j,k,l) + del(i,k) * FpInv_n(l,n) *
+     &                          (del(n,j) - temp)
+                  temp = 0.0d0
+                  do islp = 1, nslip
+                    temp = temp + rR(k,l,islp) * Smat(n,j,islp)
+                  end do
+
+                  do m = 1, 3
+                    rT(i,j,k,l) = rT(i,j,k,l) - dfgrd1(i,m) *
+     &                            FpInv_n(m,n) * temp
+                  end do
+                end do
+              end do
+            end do
+          end do
+        end do
+
+        ! Compute W_ijkl
+        detF = determinant(Fe)
+        call inverse_3x3(Fe, FeInv)
+        do l = 1, 3
+          do k = 1, 3
+            temp2 = 0.0d0
+            do q = 1, 3
+              do p = 1, 3
+                temp2 = temp2 + rT(p,q,k,l) * FeInv(q,p)
+              end do
+            end do
+
+            do j = 1, 3
+              do i = 1, 3
+                temp = 0.0d0
+                do n = 1, 3
+                  do m = 1, 3
+                    temp = temp + rT(i,m,k,l) * spk2(m,n) * Fe(j,n) +
+     &                     Fe(i,m) * rQ(m,n,k,l) * Fe(j,n) +
+     &                     Fe(i,m) * spk2(m,n) * rT(j,n,k,l) -
+     &                     Fe(i,m) * spk2(m,n) * Fe(j,n) * temp2
+
+                  end do
+                end do
+
+                rW(i,j,k,l) = 1.0 / detF * temp
+              end do
+            end do
+          end do
+        end do
+
+        ! TODO Construct 6x9 W_ij = dT/dF
+
+      end subroutine
+
+      subroutine compute_Q(rK, rD, dgamma, nslip, rJ, rQ)
+        implicit none
+        integer :: nslip, map(9,2), i, j, k, l, indx(9)
+        real*8 :: rK(3,3,3,3), rD(3,3,3,3), dgamma(nslip)
+        real*8 :: rJ(3,3,3,3,nslip), rQ(3,3,3,3), rhs(3,3,3,3)
+        real*8 :: rhs2(9,9), rK2(9,9), rQ2(9,9), rk2Inv(9,9)
+
+        ! Compute rhs = D - Summation dgamma(slp) * J(slp)
+        rhs = rD
+        do i = 1, nslip
+          rhs = rhs - dgamma(i) * rJ(:,:,:,:,i)
+        end do
+
+        ! Stacking [11, 22, 33, 23, 13, 12, 32, 31, 21]^T
+        map(1, 1) = 1
+        map(1, 2) = 1
+        map(2, 1) = 2
+        map(2, 2) = 2
+        map(3, 1) = 3
+        map(3, 2) = 3
+        map(4, 1) = 2
+        map(4, 2) = 3
+        map(5, 1) = 1
+        map(5, 2) = 3
+        map(6, 1) = 1
+        map(6, 2) = 2
+        map(7, 1) = 3
+        map(7, 2) = 2
+        map(8, 1) = 3
+        map(8, 2) = 1
+        map(9, 1) = 2
+        map(9, 2) = 1
+        do j = 1, 9
+          do i = 1, 9
+            rK2(i, j) = rK(map(i,1), map(i,2), map(j,1), map(j,2))
+            rhs2(i,j) = rhs(map(i,1), map(i,2), map(j,1), map(j,2))
+          end do
+        end do
+
+        ! Compute Q = K^-1 rhs
+        call matinv(rK2, 9, 9, indx, rK2Inv)
+        rQ2 = matmul(rK2Inv, rhs2)
+
+        ! Restack rQ2 to fourth order rQ
+        do j = 1, 9
+          do i = 1, 9
+            rQ(map(i,1), map(i,2), map(j,1), map(j,2)) = rQ2(i,j)
+          end do
+        end do
+      end subroutine
+
 C************************************************************************
        SUBROUTINE DISP(U,KSTEP,KINC,TIME,NODE,NOEL,JDOF,COORDS)
 C

@@ -575,7 +575,7 @@ C       If formulation w/ localization, we need extra memory space
           nstatev(3) = 0
         END IF
         
-        nstatev(5) = 106
+        nstatev(5) = 148
         nstatev(6) = 9 
         iIntPt = jprops(4)  ! Number of integration points per direction for MATRIX
 
@@ -847,7 +847,7 @@ C               Select the correct state/history variables for elmt centroid
                 call umat_stress(rStressCt,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rCtCoords, rDfgrd0Ct, rDfgrd1Ct,
-     &                           props(77:118), 42, nstatev(5), nnode,
+     &                           props(77:126), 50, nstatev(5), nnode,
      &                           elmt_number, 0, mcrd, time, dtimeCur,
      &                           kstep, kinc)
 
@@ -1080,8 +1080,8 @@ C               If first increment of first step, initialize localization flag i
                   svars(kblock, iTIntPt*(nstatev(1)+nstatev(2))
      $                         +  (l-1)* nstatev(3) + 1) = 0.d0
 
-                  iumatsvst = 1494 + (l - 1) * nstatev(6)
-                  iumatsven = 1493 + l * nstatev(6)
+                  iumatsvst = 1872 + (l - 1) * nstatev(6)
+                  iumatsven = 1871 + l * nstatev(6)
                   svars(kblock, iumatsvst : iumatsven) = 
      &                                  reshape(rImat, (/9/))
                 END IF
@@ -1089,16 +1089,15 @@ C               If first increment of first step, initialize localization flag i
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 C               Retrieve previous Def Grad and form next
                 if (kinc.gt.1) then
-                  iumatsvst = 1494 + (l - 1) * nstatev(6)
-                  iumatsven = 1493 + l * nstatev(6)
+                  iumatsvst = 1872 + (l - 1) * nstatev(6)
+                  iumatsven = 1871 + l * nstatev(6)
                   rDfgrd0 =
      &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
-                  rDfgrd1 =
-     &            matmul(rImat + rdVelGrd, rDfgrd0)
+                  rDfgrd1 = matmul(rImat + rdVelGrd, rDfgrd0)
+                  svars(kblock, iumatsvst : iumatsven) = 
+     &                                  reshape(rDfgrd1, (/9/))
                 end if
 
-                svars(kblock, iumatsvst : iumatsven) = 
-     &                                  reshape(rDfgrd1, (/9/))
 C               Read localization status from history
                 iLocalFlg = nint( svars(kblock,
      $                            iTIntPt*(nstatev(1)+nstatev(2))
@@ -1123,8 +1122,8 @@ C               Select the correct state/history variables
                 call umat_stress(rStress,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords(:, l), rDfgrd0,
-     &                           rDfgrd1, props(77:118),
-     &                          42, nstatev(5), nnode, elmt_number,
+     &                           rDfgrd1, props(77:126),
+     &                          50, nstatev(5), nnode, elmt_number,
      &                          l, mcrd, time, dtimeCur, kstep, kinc)
 C               Compute the stress (now rStrain and rSpin are at mid-step)
                 CALL Gstress_3D(rStrain,rSpin,hvars,nstatev(1),props,
@@ -1243,13 +1242,13 @@ C                 b) Save localization flag and initial band vectors (n0 & m0) t
                   svars(kblock, iTIntPt*(nstatev(1)+nstatev(2))
      $                         +  (l-1)* nstatev(3) + 8) = rMvect(3)
 
-                  iumatsvst = 1494 + (l - 1) * nstatev(6)
-                  iumatsven = 1493 + l * nstatev(6)
+                  iumatsvst = 1872 + (l - 1) * nstatev(6)
+                  iumatsven = 1871 + l * nstatev(6)
                   svars(kblock, iumatsvst : iumatsven) = 
      &                                  reshape(rDfgrd1, (/9/))
 
-                  iumatsvst = 1566 + (l - 1) * nstatev(6)
-                  iumatsven = 1565 + l * nstatev(6)
+                  iumatsvst = 1944 + (l - 1) * nstatev(6)
+                  iumatsven = 1943 + l * nstatev(6)
                   svars(kblock, iumatsvst : iumatsven) = 
      &                                  reshape(rDfgrd1, (/9/))
 

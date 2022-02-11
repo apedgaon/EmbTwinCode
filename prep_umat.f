@@ -298,7 +298,7 @@ C         additional arguments for umat
               dtime = 1.d-9
           end if
 
-          call umat_crys2(rStress,  hvars,  ddsdde,  sse,     spd,
+          call umat_crys(rStress,  hvars,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,

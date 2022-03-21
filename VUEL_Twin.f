@@ -227,47 +227,56 @@ C     Twin Code Implementation Started
       real*8 rdOmega             ! Jacobian * Gauss_Weight
       real*8 rRho              ! Initial mass density (rho_0)
 
-      !CALL GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
-      call sleep(20)
+      !call sleep(20)
+      rRho = props(78)
       call GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
 
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-C                 MASS MATRIX CONSTRUCTION                     C
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-      do kblock = 1, nblock
-C       Material coordinates (integrate mass terms over INITIAL config.)
-        DO n = 1, nnode
-          DO i = 1, mcrd
-                rCoords(i,n) = coords(kblock,n,i)
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C                      MASS MATRIX CONSTRUCTION                        C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+      IF ( lflags(iOpCode) .EQ. jMassCalc ) THEN
+        do kblock = 1, nblock
+C         Material coordinates (integrate mass terms over INITIAL config.)
+          DO n = 1, nnode
+            DO i = 1, mcrd
+              rCoords(i,n) = coords(kblock,n,i)
+            END DO
           END DO
-        END DO
 
-C       Initialize the lumped mass matrix amass
-        DO i = 1, ndofel
-          DO j = 1, ndofel
-            amass( kblock, i, j ) = 0.d0
+C         Initialize the lumped mass matrix amass
+          DO i = 1, ndofel
+            DO j = 1, ndofel
+              amass( kblock, i, j ) = 0.d0
+            END DO
           END DO
-        END DO
 
-        do l = 1, iTIntPt
-C         Compute shape functions and Jacobian determinant
-          CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,0,rNn,rdNndXi,rJdet)
+          do l = 1, iTIntPt
+C           Compute shape functions and Jacobian determinant
+            CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,0,rNn,rdNndXi,
+     &                          rJdet)
 
-C          Compute integration element (dOmega)
-           rdOmega = rJdet * rWeightPt(l)
+C            Compute integration element (dOmega)
+             rdOmega = rJdet * rWeightPt(l)
 
 C             Assemble lumped mass matrix
-           DO n = 1, nnode
-             DO i = 1, mcrd
-               amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
-     $            = amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
-     $              + rRho * rNn(n) * rdOmega
+             DO n = 1, nnode
+               DO i = 1, mcrd
+                 amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
+     $              = amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
+     $                + rRho * rNn(n) * rdOmega
+               END DO
              END DO
-           END DO
+          end do
         end do
-      end do
 
-
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CCCCCCCCCCCC            Define rhs, dtimeStable, svars, energy            CCCCCCCCCCCC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C       Define internal force (rhs), stable time step
+C       (dtimeStable), history variables (svars), and energy
+      ELSE IF ( lflags(iOpCode) .EQ. jIntForceAndDtStable ) THEN
+        rRho = props(1)
+      ENDIF
       END  ! Subroutine VUEL
 
 

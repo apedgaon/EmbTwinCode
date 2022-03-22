@@ -219,6 +219,9 @@ C       integer Array variables passed from VUEL interface
 C       Twin Code Implementation Started
         integer kblock, i, j, l, n
         integer iTIntPt          ! Total # of Gauss PTS (=8) for MATRIX
+        integer elmt_number      ! elmt global number
+        integer iTwinFlg_Ct      ! Twinned flag at elmt centroid
+
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
         real*8 rCoords(mcrd,nnode) ! Nodal coordinates (initial or current)
@@ -230,6 +233,7 @@ C       Twin Code Implementation Started
         real*8 rdOmega             ! Jacobian * Gauss_Weight
         real*8 rRho              ! Initial mass density (rho_0)
         real*8 rElmtVol            ! Elmt volume
+        real*8 rElmtSize           ! Elmt size = (Elmt volume)**1/3
 
         !call sleep(20)
         rRho = props(78)
@@ -280,6 +284,9 @@ C       Define internal force (rhs), stable time step
 C       (dtimeStable), history variables (svars), and energy
         ELSE IF ( lflags(iOpCode) .EQ. jIntForceAndDtStable ) THEN
           do kblock = 1,nblock
+
+            elmt_number = jElem(kblock)
+
 C>>>        Get nodal coordinates, finite deformation
             DO n = 1, nnode
               DO i = 1, mcrd
@@ -311,6 +318,16 @@ C             Integration element (dOmega)
 C             Element surface area (even for axisymmetric elements)
               rElmtVol = rElmtVol + rdOmega
             END DO
+
+C           Compute element size h
+            rElmtSize = rElmtVol**(1.d0/3.d0)      !   h = cubic root of vol
+
+C           If first increment of first step, initialize elmt centroid
+C           twinning flag in history
+            IF ( ( kstep .EQ. 1) .AND. ( kinc .EQ. 1) ) THEN
+              svars(kblock, 1) = 0.d0
+            END IF
+            iTwinFlg_Ct = int(svars(kblock, 1))
           end do
         ENDIF
       END  ! Subroutine VUEL

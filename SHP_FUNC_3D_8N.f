@@ -3,7 +3,8 @@ C     Evaluate interpolation functions, their derivatives and
 C     Jacobians at Gauss point (Xi1,Xi2,Xi3) for
 C     8-node brick elmt
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-      SUBROUTINE SHP_FUNC_3D_8N(rXiEtaPt,COORDS,iDeriv,SHP,DEV_SHP,JACOB)
+      SUBROUTINE SHP_FUNC_3D_8N(rXiEtaPt,COORDS,iDeriv,SHP,DEV_SHP,
+     &                          JACOB)
 
 C     INPUT:
 C          rXiEtaPt: Natural (element) coordinates of a Gauss point

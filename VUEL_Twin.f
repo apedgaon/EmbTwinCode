@@ -144,139 +144,175 @@ C     75        |    d        DRX grain size
 C     76        | iso_theta   the theta value for the isosurface
 
 
-      IMPLICIT NONE
+        IMPLICIT NONE
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-C     PREDEFINED PARAMETERS & FLAGS
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-
-C     operational code keys
-      integer jMassCalc,jIntForceAndDtStable,jExternForce
-      parameter ( jMassCalc            = 1,
-     *            jIntForceAndDtStable = 2,
-     *            jExternForce         = 3)
-
-C     flag indices
-      integer iProcedure,iNlgeom,iOpCode,nFlags
-      parameter (iProcedure = 1,
-     *           iNlgeom    = 2,
-     *           iOpCode    = 3,
-     *           nFlags     = 3)
-
-C     energy array indices
-      integer iElPd,iElCd,iElIe,iElTs,iElDd,iElBv,
-     *        iElDe,iElHe,iElKe,iElTh,iElDmd,iElDc,
-     *        nElEnergy
-      parameter ( iElPd = 1,
-     *            iElCd = 2,
-     *            iElIe = 3,
-     *            iElTs = 4,
-     *            iElDd = 5,
-     *            iElBv = 6,
-     *            iElDe = 7,
-     *            iElHe = 8,
-     *            iElKe = 9,
-     *            iElTh = 10,
-     *            iElDmd = 11,
-     *            iElDc = 12,
-     *            nElEnergy = 12)
-
-C     predefined variables indices
-      integer iPredValueNew,iPredValueOld,nPred
-      parameter ( iPredValueNew = 1,
-     *            iPredValueOld = 2,
-     *            nPred         = 2)
-
-C     time indices
-      integer iStepTime,iTotalTime,nTime
-      parameter (iStepTime  = 1,
-     *           iTotalTime = 2,
-     *           nTime      = 2)
-
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-C     PARAMETERS PASSED FROM THE INTERFACE
+C       PREDEFINED PARAMETERS & FLAGS
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
-C     real scalar variables passed from VUEL interface
-      real*8 period,dtimeCur,dtimePrev
+C       operational code keys
+        integer jMassCalc,jIntForceAndDtStable,jExternForce
+        parameter ( jMassCalc            = 1,
+     *              jIntForceAndDtStable = 2,
+     *              jExternForce         = 3)
 
-C     integer scalar variables passed from VUEL interface
-      integer nblock,nsvars,nnode,ndofel,nprops,njprops,mcrd,
-     1        jtype,kstep,kinc,npredef,jdltyp
+C       flag indices
+        integer iProcedure,iNlgeom,iOpCode,nFlags
+        parameter (iProcedure = 1,
+     *             iNlgeom    = 2,
+     *             iOpCode    = 3,
+     *             nFlags     = 3)
 
-C     real Array variables passed from VUEL interface
-      real*8 rhs(nblock,ndofel),amass(nblock,ndofel,ndofel),
-     1       dtimeStable(nblock),
-     2       svars(nblock,nsvars),energy(nblock,nElEnergy),
-     3       props(nprops),time(nTime),coords(nblock,nnode,mcrd),
-     4       u(nblock,ndofel), du(nblock,ndofel),
-     5       v(nblock,ndofel), a(nblock, ndofel),
-     6       dMassScaleFactor(nblock),  
-     7       predef(nblock,nnode,npredef,nPred),adlmag(nblock)
+C       energy array indices
+        integer iElPd,iElCd,iElIe,iElTs,iElDd,iElBv,
+     *          iElDe,iElHe,iElKe,iElTh,iElDmd,iElDc,
+     *          nElEnergy
+        parameter ( iElPd = 1,
+     *              iElCd = 2,
+     *              iElIe = 3,
+     *              iElTs = 4,
+     *              iElDd = 5,
+     *              iElBv = 6,
+     *              iElDe = 7,
+     *              iElHe = 8,
+     *              iElKe = 9,
+     *              iElTh = 10,
+     *              iElDmd = 11,
+     *              iElDc = 12,
+     *              nElEnergy = 12)
 
-C     integer Array variables passed from VUEL interface
-      integer jprops(njprops),jElem(nblock),lflags(nFlags)
+C       predefined variables indices
+        integer iPredValueNew,iPredValueOld,nPred
+        parameter ( iPredValueNew = 1,
+     *              iPredValueOld = 2,
+     *              nPred         = 2)
 
-C     Twin Code Implementation Started
-      integer kblock, i, j, l, n
-      integer iTIntPt          ! Total # of Gauss PTS (=8) for MATRIX
-      real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
-      real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
-      real*8 rCoords(mcrd,nnode) ! Nodal coordinates (initial or current)
-      real*8 rNn(nnode),rdNndXi(mcrd,nnode) ! Eight Shape funcs and derivatives at one Gauss PT
-      real*8 rJdet                          ! Jacobian at one Gauss PT
-      real*8 rdOmega             ! Jacobian * Gauss_Weight
-      real*8 rRho              ! Initial mass density (rho_0)
+C       time indices
+        integer iStepTime,iTotalTime,nTime
+        parameter (iStepTime  = 1,
+     *             iTotalTime = 2,
+     *             nTime      = 2)
 
-      !call sleep(20)
-      rRho = props(78)
-      call GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C       PARAMETERS PASSED FROM THE INTERFACE
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+C       real scalar variables passed from VUEL interface
+        real*8 period,dtimeCur,dtimePrev
+
+C       integer scalar variables passed from VUEL interface
+        integer nblock,nsvars,nnode,ndofel,nprops,njprops,mcrd,
+     1          jtype,kstep,kinc,npredef,jdltyp
+
+C       real Array variables passed from VUEL interface
+        real*8 rhs(nblock,ndofel),amass(nblock,ndofel,ndofel),
+     1         dtimeStable(nblock),
+     2         svars(nblock,nsvars),energy(nblock,nElEnergy),
+     3         props(nprops),time(nTime),coords(nblock,nnode,mcrd),
+     4         u(nblock,ndofel), du(nblock,ndofel),
+     5         v(nblock,ndofel), a(nblock, ndofel),
+     6         dMassScaleFactor(nblock),  
+     7         predef(nblock,nnode,npredef,nPred),adlmag(nblock)
+
+C       integer Array variables passed from VUEL interface
+        integer jprops(njprops),jElem(nblock),lflags(nFlags)
+
+C       Twin Code Implementation Started
+        integer kblock, i, j, l, n
+        integer iTIntPt          ! Total # of Gauss PTS (=8) for MATRIX
+        real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
+        real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
+        real*8 rCoords(mcrd,nnode) ! Nodal coordinates (initial or current)
+        real*8 rMSCoor(mcrd,nnode) ! Mid-step nodal coords (initial or current)
+        real*8 rPrevCoords(mcrd, nnode) ! Previous coordinates
+        real*8 rOrigCoords(mcrd, nnode) ! Original coordinates
+        real*8 rNn(nnode),rdNndXi(mcrd,nnode) ! Eight Shape funcs and derivatives at one Gauss PT
+        real*8 rJdet                          ! Jacobian at one Gauss PT
+        real*8 rdOmega             ! Jacobian * Gauss_Weight
+        real*8 rRho              ! Initial mass density (rho_0)
+        real*8 rElmtVol            ! Elmt volume
+
+        !call sleep(20)
+        rRho = props(78)
+        call GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-      IF ( lflags(iOpCode) .EQ. jMassCalc ) THEN
-        do kblock = 1, nblock
-C         Material coordinates (integrate mass terms over INITIAL config.)
-          DO n = 1, nnode
-            DO i = 1, mcrd
-              rCoords(i,n) = coords(kblock,n,i)
+        IF ( lflags(iOpCode) .EQ. jMassCalc ) THEN
+          do kblock = 1, nblock
+C           Material coordinates (integrate mass terms over INITIAL config.)
+            DO n = 1, nnode
+              DO i = 1, mcrd
+                rCoords(i,n) = coords(kblock,n,i)
+              END DO
             END DO
-          END DO
 
-C         Initialize the lumped mass matrix amass
-          DO i = 1, ndofel
-            DO j = 1, ndofel
-              amass( kblock, i, j ) = 0.d0
+C           Initialize the lumped mass matrix amass
+            DO i = 1, ndofel
+              DO j = 1, ndofel
+                amass( kblock, i, j ) = 0.d0
+              END DO
             END DO
-          END DO
 
-          do l = 1, iTIntPt
-C           Compute shape functions and Jacobian determinant
-            CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,0,rNn,rdNndXi,
-     &                          rJdet)
+            do l = 1, iTIntPt
+C             Compute shape functions and Jacobian determinant
+              CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,0,rNn,rdNndXi,
+     &                            rJdet)
 
-C            Compute integration element (dOmega)
-             rdOmega = rJdet * rWeightPt(l)
+C             Compute integration element (dOmega)
+              rdOmega = rJdet * rWeightPt(l)
 
 C             Assemble lumped mass matrix
-             DO n = 1, nnode
-               DO i = 1, mcrd
-                 amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
-     $              = amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
-     $                + rRho * rNn(n) * rdOmega
-               END DO
-             END DO
+              DO n = 1, nnode
+                DO i = 1, mcrd
+                  amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
+     $               = amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
+     $                 + rRho * rNn(n) * rdOmega
+                END DO
+              END DO
+            end do
           end do
-        end do
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 CCCCCCCCCCCC            Define rhs, dtimeStable, svars, energy            CCCCCCCCCCCC
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C       Define internal force (rhs), stable time step
 C       (dtimeStable), history variables (svars), and energy
-      ELSE IF ( lflags(iOpCode) .EQ. jIntForceAndDtStable ) THEN
-        rRho = props(1)
-      ENDIF
+        ELSE IF ( lflags(iOpCode) .EQ. jIntForceAndDtStable ) THEN
+          do kblock = 1,nblock
+C>>>        Get nodal coordinates, finite deformation
+            DO n = 1, nnode
+              DO i = 1, mcrd
+                IF ( (kstep.GT.1).OR.(kinc.GT.1) ) THEN
+                  rOrigCoords(i,n) = coords(kblock,n,i)
+                  rCoords(i,n) = rOrigCoords(i,n)               ! current coords
+     $                         + u( kblock, (n-1)*mcrd + i )
+                  rMSCoor(i,n) = rCoords(i,n)                   ! mid-step coords
+     $                         - 0.5d0 * du(kblock, (n-1)*mcrd + i )
+                  rPrevCoords(i,n) = rCoords(i,n)
+     &                            - du(kblock, (n-1)*mcrd + i )
+                ELSE
+                  rOrigCoords(i,n) = coords(kblock,n,i)
+                  rCoords(i,n) = coords(kblock,n,i)       ! original coords
+                  rMSCoor(i,n) = coords(kblock,n,i)       ! original coords
+                  rPrevCoords(i,n) = coords(kblock, n, i)
+                END IF
+              END DO
+            END DO
+
+C           Compute element volume
+            rElmtVol = 0.d0
+            DO l = 1, iTIntPt
+C             Jacobian determinant
+              CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,0,
+     &                            rNn,rdNndXi,rJdet)
+C             Integration element (dOmega)
+              rdOmega = rJdet * rWeightPt(l)
+C             Element surface area (even for axisymmetric elements)
+              rElmtVol = rElmtVol + rdOmega
+            END DO
+          end do
+        ENDIF
       END  ! Subroutine VUEL
 
 

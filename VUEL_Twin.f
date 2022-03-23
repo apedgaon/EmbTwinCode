@@ -221,6 +221,8 @@ C       Twin Code Implementation Started
         integer iTIntPt          ! Total # of Gauss PTS (=8) for MATRIX
         integer elmt_number      ! elmt global number
         integer iTwinFlg_Ct      ! Twinned flag at elmt centroid
+        integer iumatsvst        ! umat start index for svars
+        integer iumatsven        ! umat end index of svars
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -234,10 +236,21 @@ C       Twin Code Implementation Started
         real*8 rRho              ! Initial mass density (rho_0)
         real*8 rElmtVol            ! Elmt volume
         real*8 rElmtSize           ! Elmt size = (Elmt volume)**1/3
+        real*8 rXiEtaCt(3)       ! element centroid natural coords
+        real*8 rNnCt(nnode),rdNndXiCt(mcrd,nnode) ! Eight Shape funcs and derivatives at Elmt centroid
+        real*8 rJdetCt             ! Jacobian at Elmt centroid
+        real*8 rDfgrd0Ct(3, 3), rDfgrd1Ct(3, 3) ! Previous and Current Def grd at Elmt centroid
+        real*8 rCtCoords(3)      ! Current Coordinates of element centroid
+        real*8 rStressCt(6)      ! Cauchy Stress at Elmt Centroid
 
         !call sleep(20)
         rRho = props(78)
         call GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
+
+C       Natural coordinates of element centroid
+        rXiEtaCt(1) = 0.d0
+        rXiEtaCt(2) = 0.d0
+        rXiEtaCt(3) = 0.d0
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
@@ -328,6 +341,27 @@ C           twinning flag in history
               svars(kblock, 1) = 0.d0
             END IF
             iTwinFlg_Ct = int(svars(kblock, 1))
+
+C           Element with no twins
+            if (iTwinFlg_Ct.eq.0) then
+
+              call SHP_FUNC_3D_8N(rXiEtaCt,rCoords,1,rNnCt,
+     &                            rdNndXiCt,rJdetCt)
+
+              iumatsvst = 540 + iTIntPt * 142
+              iumatsven = 539 + (iTIntPt + 1) * 142
+              call calc_dfgrd(rXiEtaCt, rOrigCoords, rPrevCoords,
+     &                         rCoords, mcrd, nnode, rDfgrd0Ct,
+     &                         rDfgrd1Ct, rCtCoords)
+
+              call umat_stress(rStressCt,
+     &                         svars(kblock, iumatsvst:iumatsven),
+     &                         rCtCoords, rDfgrd0Ct, rDfgrd1Ct,
+     &                         props(77:126), 50, 142, nnode,
+     &                         elmt_number, 0, mcrd, time, dtimeCur,
+     &                         kstep, kinc)
+
+            end if
           end do
         ENDIF
       END  ! Subroutine VUEL
@@ -335,3 +369,6 @@ C           twinning flag in history
 
       include 'GSPT_3D_8N.f'
       include 'SHP_FUNC_3D_8N.f'
+      include 'prep_umat.f'
+      include 'gdefgrad_3D.f'
+      include 'fcc_umat_lbl34_test.f'

@@ -345,15 +345,18 @@ C           twinning flag in history
 C           Element with no twins
             if (iTwinFlg_Ct.eq.0) then
 
+              ! Shp fcn at elmt centroid
               call SHP_FUNC_3D_8N(rXiEtaCt,rCoords,1,rNnCt,
      &                            rdNndXiCt,rJdetCt)
 
+              ! Def Grd at elmt centroid
               iumatsvst = 540 + iTIntPt * 142
               iumatsven = 539 + (iTIntPt + 1) * 142
               call calc_dfgrd(rXiEtaCt, rOrigCoords, rPrevCoords,
      &                         rCoords, mcrd, nnode, rDfgrd0Ct,
      &                         rDfgrd1Ct, rCtCoords)
-
+              
+              ! Stress using umat at elmt centroid
               call umat_stress(rStressCt,
      &                         svars(kblock, iumatsvst:iumatsven),
      &                         rCtCoords, rDfgrd0Ct, rDfgrd1Ct,

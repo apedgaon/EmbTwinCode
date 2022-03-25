@@ -227,9 +227,9 @@ C         See UMAT Deformation Gradient Documentation for more details
           rm(:, 18) = (/0.41477905129774d0, -0.23947279692096776d0,
      &                -0.8778445865524238d0/)
 
-          gamma1 = 0.218d0
-          gamma2 = 0.175d0
-          gamma3 = 0.098d0
+          gamma1 = 0.17475083284085197d0
+          gamma2 = 0.218d0 ! Need more accuracy
+          gamma3 = 0.098d0 ! Need more accuracy
           Smat = 0.0d0
           do i = 1, 3
             do j = 1, 3

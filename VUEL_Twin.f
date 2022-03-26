@@ -260,6 +260,8 @@ C       Twin Code Implementation Started
         real*8 rImat(3, 3)        ! 2nd Order Identity Tensor
         real*8 rDfgrd0(3, 3)      ! Previous Deformation Gradient
         real*8 rDfgrd1(3, 3)      ! Current Deformation Gradient
+        real*8 rGsCoords(3)       ! Quadrature Point Current coordinates
+        real*8 rStress(6)         ! Cauchy Stress
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -452,6 +454,14 @@ C             Compute shape functs, their derivs (wrt global coords), and the Ja
               CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,1,
      &                            rNn,rdNndXi,rJdet)
 
+C             Compute Quadrature Point Current Coordinates
+              rGsCoords = 0.d0
+              do i = 1, mcrd
+                do j = 1, nnode
+                  rGsCoords(i) = rGsCoords(i) + rNn(j) * rCoords(i, j)
+                end do
+              end do
+
 C             Check Jacobian
               IF ( rJdet .LE. 0.d0) THEN
                 CALL XPLB_ABQERR(-3,'Non-positive'//
@@ -476,7 +486,7 @@ C             Until now, rStrain and rSpin are quantities wrt to mid-step
               ! Step 1, Inc 1, set def gradient to identity
               iumatsvst = 1872 + (l - 1) * nstatev(6)
               iumatsven = 1871 + l * nstatev(6)
-              if ((kstep.eq.1).and.(kinc.eq.1)) then
+              if ((kstep.eq.1).and.(kinc.le.1)) then
                 svars(kblock, iumatsvst : iumatsven) =
      &                                  reshape(rImat, (/9/))
               end if
@@ -487,6 +497,16 @@ C             Until now, rStrain and rSpin are quantities wrt to mid-step
               rDfgrd1 = matmul(rImat + rdVelGrd, rDfgrd0)
               svars(kblock, iumatsvst : iumatsven) =
      &                                reshape(rDfgrd1, (/9/))
+
+              ! Compute Stress from existing UMAT
+              iumatsvst = 540 + (l - 1) * nstatev(5)
+              iumatsven = 539 + l * nstatev(5)
+              call umat_stress(rStress,
+     &                         svars(kblock, iumatsvst:iumatsven),
+     &                         rGsCoords, rDfgrd0, rDfgrd1,
+     &                         props(77:126), 50, nstatev(5), nnode,
+     &                         elmt_number, l, mcrd, time, dtimeCur,
+     &                         kstep, kinc)
             end do
 
           end do

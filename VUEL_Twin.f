@@ -226,6 +226,7 @@ C       Twin Code Implementation Started
         integer iVelmType
         integer iVforType
         integer iConsType
+        integer nstatev(6)
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -256,6 +257,9 @@ C       Twin Code Implementation Started
         real*8 rSpin(3)            ! spin axial vector increment
         real*8 rue(mcrd,nnode)     ! local array for passing displacements increment to strain routine
         real*8 rdVelGrd(3, 3)     ! Velocity Gradient Increment
+        real*8 rImat(3, 3)        ! 2nd Order Identity Tensor
+        real*8 rDfgrd0(3, 3)      ! Previous Deformation Gradient
+        real*8 rDfgrd1(3, 3)      ! Current Deformation Gradient
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -286,6 +290,24 @@ C       Natural coordinates of element centroid
         rXiEtaCt(1) = 0.d0
         rXiEtaCt(2) = 0.d0
         rXiEtaCt(3) = 0.d0
+
+        nstatev(1) = 14
+        nstatev(2) = 14
+        nstatev(3) = 36
+        nstatev(4) = 14
+        nstatev(5) = 148
+        nstatev(6) = 9
+
+C       Initialize Identity Matrix(3x3)
+        do i = 1, 3
+          do j = 1, 3
+            if (i.eq.j) then
+                rImat(i, j) = 1.0d0;
+            else
+                rImat(i, j) = 0.0d0;
+            end if
+          end do
+        end do
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
@@ -393,8 +415,8 @@ C           Only for elements in forward set (not implemented)
      &                            rdNndXiCt,rJdetCt)
 
               ! Def Grd at elmt centroid
-              iumatsvst = 540 + iTIntPt * 148
-              iumatsven = 539 + (iTIntPt + 1) * 148
+              iumatsvst = 540 + iTIntPt * nstatev(5)
+              iumatsven = 539 + (iTIntPt + 1) * nstatev(5)
               call calc_dfgrd(rXiEtaCt, rOrigCoords, rPrevCoords,
      &                         rCoords, mcrd, nnode, rDfgrd0Ct,
      &                         rDfgrd1Ct, rCtCoords)
@@ -403,7 +425,7 @@ C           Only for elements in forward set (not implemented)
               call umat_stress(rStressCt,
      &                         svars(kblock, iumatsvst:iumatsven),
      &                         rCtCoords, rDfgrd0Ct, rDfgrd1Ct,
-     &                         props(77:126), 50, 148, nnode,
+     &                         props(77:126), 50, nstatev(5), nnode,
      &                         elmt_number, 0, mcrd, time, dtimeCur,
      &                         kstep, kinc)
 
@@ -437,7 +459,23 @@ C             (Mid-step) strain increment and B or B-bar operator for constituti
      $                        rMSBs)
 C             Until now, rStrain and rSpin are quantities wrt to mid-step
 
+              ! Compute Velocity Gradient
               call comp_vel_gr(rdVelGrd, rStrain, rSpin)
+
+              ! Step 1, Inc 1, set def gradient to identity
+              iumatsvst = 1872 + (l - 1) * nstatev(6)
+              iumatsven = 1871 + l * nstatev(6)
+              if ((kstep.eq.1).and.(kinc.eq.1)) then
+                svars(kblock, iumatsvst : iumatsven) =
+     &                                  reshape(rImat, (/9/))
+              end if
+
+              ! Get previous def gradients from svars and form current def grd
+              rDfgrd0 =
+     &          reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
+              rDfgrd1 = matmul(rImat + rdVelGrd, rDfgrd0)
+              svars(kblock, iumatsvst : iumatsven) =
+     &                                reshape(rDfgrd1, (/9/))
             end do
 
           end do

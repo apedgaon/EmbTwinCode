@@ -377,6 +377,17 @@ C>>>        Get nodal coordinates, finite deformation
               END DO
             END DO
 
+C           We must pass the displacement INCREMENT "du" into GSTRAIN
+            DO n = 1, nnode
+              DO i = 1, mcrd
+                IF ( (kstep.GT.1).OR.(kinc.GT.1) ) THEN
+                  rue(i,n) = du(kblock, (n-1)*mcrd+i )
+                ELSE
+                  rue(i,n) = 0.d0
+                END IF
+              END DO
+            END DO
+
 C           Compute element volume
             rElmtVol = 0.d0
             DO l = 1, iTIntPt

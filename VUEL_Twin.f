@@ -223,6 +223,9 @@ C       Twin Code Implementation Started
         integer iTwinFlg_Ct      ! Twinned flag at elmt centroid
         integer iumatsvst        ! umat start index for svars
         integer iumatsven        ! umat end index of svars
+        integer iVelmType
+        integer iVforType
+        integer iConsType
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -242,6 +245,38 @@ C       Twin Code Implementation Started
         real*8 rDfgrd0Ct(3, 3), rDfgrd1Ct(3, 3) ! Previous and Current Def grd at Elmt centroid
         real*8 rCtCoords(3)      ! Current Coordinates of element centroid
         real*8 rStressCt(6)      ! Cauchy Stress at Elmt Centroid
+        real*8 rEpsilon          ! Pressure mode stabilization parameter; see Ortiz et al (1987), Eq. (21).
+        real*8 rMSBm(6,mcrd*nnode) ! B (or B-bar) operator at mid-step
+        real*8 rMSBs(3,mcrd*nnode) ! skew-symmetric matrix operator at mid-step
+        real*8 rMSdNndXiCt(mcrd,nnode)   ! Shape func derivatives at Elmt centroid at Mid-step
+        real*8 rMSJdetCt                 ! jacobian at Elmt centroid at Mid-step
+        real*8 rMSdNndXi(mcrd,nnode)     ! Shape func derivatives at one Gauss PT at Mid-step 
+        real*8 rMSJdet                   ! Jacobian at one Gauss PT at Mid-step
+        real*8 rStrain(6)          ! strain increment
+        real*8 rSpin(3)            ! spin axial vector increment
+        real*8 rue(mcrd,nnode)     ! local array for passing displacements increment to strain routine
+        real*8 rdVelGrd(3, 3)     ! Velocity Gradient Increment
+
+        iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
+
+
+        iVforType = jprops(2)  ! Formulation type: 0 --> displacement based
+                               !                   1 --> displacement based with localization behavior
+                               !                   2 --> B-bar incompressible
+                               !                   3 --> B-bar incompressible with localization behavior
+
+        iConsType = jprops(3)  ! Constitution:     0 --> isotropic elastic
+                               !                   1 --> isotropic J2 plasticity or MTS
+                               !                   2 --> TEPLA
+                               !                         (NOT IMPLEMENTED)
+                               !                   3 --> Brown-Kim-Anand model
+                               !                         (NOT IMPLEMENTED)
+                               !                   4 --> models (1) outside and (3) inside localization band 
+                               !                         (NOT IMPLEMENTED)
+                               !                   5 --> models (2) outside and (3) inside localization band 
+                               !                         (NOT IMPLEMENTED)
+
+        rEpsilon  = props(10)  ! Pressure mode stabilization parameter; see Ortiz et al (1987), Eq. (21).
 
         !call sleep(20)
         rRho = props(78)
@@ -335,6 +370,13 @@ C             Element surface area (even for axisymmetric elements)
 C           Compute element size h
             rElmtSize = rElmtVol**(1.d0/3.d0)      !   h = cubic root of vol
 
+C           a) shape functions and their derivatives wrt global coords
+            CALL SHP_FUNC_3D_8N(rXiEtaCt,rCoords,1,rNnCt,
+     1                          rdNndXiCt,rJdetCt)
+C           b) shape functions and their derivatives wrt mid-step global coords
+            CALL SHP_FUNC_3D_8N(rXiEtaCt,rMSCoor,1,rNnCt,
+     1                          rMSdNndXiCt,rMSJdetCt)
+
 C           If first increment of first step, initialize elmt centroid
 C           twinning flag in history
             IF ( ( kstep .EQ. 1) .AND. ( kinc .EQ. 1) ) THEN
@@ -342,7 +384,8 @@ C           twinning flag in history
             END IF
             iTwinFlg_Ct = int(svars(kblock, 1))
 
-C           Element with no twins
+C           Element with no twins, check for twinning
+C           Only for elements in forward set (not implemented)
             if (iTwinFlg_Ct.eq.0) then
 
               ! Shp fcn at elmt centroid
@@ -350,8 +393,8 @@ C           Element with no twins
      &                            rdNndXiCt,rJdetCt)
 
               ! Def Grd at elmt centroid
-              iumatsvst = 540 + iTIntPt * 142
-              iumatsven = 539 + (iTIntPt + 1) * 142
+              iumatsvst = 540 + iTIntPt * 148
+              iumatsven = 539 + (iTIntPt + 1) * 148
               call calc_dfgrd(rXiEtaCt, rOrigCoords, rPrevCoords,
      &                         rCoords, mcrd, nnode, rDfgrd0Ct,
      &                         rDfgrd1Ct, rCtCoords)
@@ -360,11 +403,43 @@ C           Element with no twins
               call umat_stress(rStressCt,
      &                         svars(kblock, iumatsvst:iumatsven),
      &                         rCtCoords, rDfgrd0Ct, rDfgrd1Ct,
-     &                         props(77:126), 50, 142, nnode,
+     &                         props(77:126), 50, 148, nnode,
      &                         elmt_number, 0, mcrd, time, dtimeCur,
      &                         kstep, kinc)
 
+              ! Twinning Criterion (Not Implemented)
+
+              ! Update twinning elements (Not Implemented)
+
             end if
+
+            ! Quadrature Loop
+            do l = 1, iTIntPt
+C             Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
+              CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,1,
+     &                            rNn,rdNndXi,rJdet)
+
+C             Check Jacobian
+              IF ( rJdet .LE. 0.d0) THEN
+                CALL XPLB_ABQERR(-3,'Non-positive'//
+     $            'Jacobian determinant in element VU1',0,0.d0,' ')
+              END IF
+
+C             Compute integration element (dOmega)
+              rdOmega = rJdet * rWeightPt(l)
+
+C             (Mid-step) strain increment and B or B-bar operator for constitutive update
+              CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rMSCoor,1,rNn,
+     $                            rMSdNndXi,rMSJdet)
+              CALL Gstrain_3D(rue,rEpsilon,rNn,rNnCt,rMSdNndXi,
+     $                        rMSdNndXiCt,mcrd,nnode,iVelmType,
+     $                        iVforType,1, rStrain,rSpin,rMSBm,
+     $                        rMSBs)
+C             Until now, rStrain and rSpin are quantities wrt to mid-step
+
+              call comp_vel_gr(rdVelGrd, rStrain, rSpin)
+            end do
+
           end do
         ENDIF
       END  ! Subroutine VUEL
@@ -375,3 +450,4 @@ C           Element with no twins
       include 'prep_umat.f'
       include 'gdefgrad_3D.f'
       include 'fcc_umat_lbl34_test.f'
+      include 'Gstrain_3D.f'

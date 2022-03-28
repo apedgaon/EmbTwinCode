@@ -322,6 +322,9 @@ C         additional arguments for umat
           real*8 predef(1), dpred(1), pnewdt, celent
           character*80 cmname
           integer ndi, nshr, ntens, layer, kspt
+
+C         for umat stress to vuel stress
+          real*8 rUmatStress(6)
           
           ndi = 3
           nshr = 3
@@ -330,7 +333,7 @@ C         additional arguments for umat
               dtime = 1.d-9
           end if
 
-          call umat_crys(rStress,  hvars,  ddsdde,  sse,     spd,
+          call umat_crys(rUmatStress,  hvars,  ddsdde,  sse,  spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,
@@ -339,7 +342,12 @@ C         additional arguments for umat
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)
 
-
+          rStress(1) = rUmatStress(1)
+          rStress(2) = rUmatStress(2)
+          rStress(3) = rUmatStress(3)
+          rStress(4) = rUmatStress(6)
+          rStress(5) = rUmatStress(5)
+          rStress(6) = rUmatStress(4)
       end subroutine
       
       subroutine umat_crys2(stress,  statev,  ddsdde,  sse,     spd,

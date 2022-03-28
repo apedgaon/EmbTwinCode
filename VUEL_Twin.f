@@ -262,6 +262,8 @@ C       Twin Code Implementation Started
         real*8 rDfgrd1(3, 3)      ! Current Deformation Gradient
         real*8 rGsCoords(3)       ! Quadrature Point Current coordinates
         real*8 rStress(6)         ! Cauchy Stress
+        real*8 rBmat(6,mcrd*nnode) ! current B (or B-bar) operator
+        real*8 rBskw(3,mcrd*nnode) ! current skew-symmetric matrix operator
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -471,6 +473,12 @@ C             Check Jacobian
 C             Compute integration element (dOmega)
               rdOmega = rJdet * rWeightPt(l)
 
+C             Finite deformation
+C             Current value of the B or B-bar operator for internal force calculation
+              CALL Gstrain_3D(rue,rEpsilon,rNn,rNnCt,rdNndXi,rdNndXiCt,
+     $                        mcrd,nnode,iVelmType,iVforType,1,rStrain,
+     $                        rSpin,rBmat,rBskw)
+
 C             (Mid-step) strain increment and B or B-bar operator for constitutive update
               CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rMSCoor,1,rNn,
      $                            rMSdNndXi,rMSJdet)
@@ -507,6 +515,17 @@ C             Until now, rStrain and rSpin are quantities wrt to mid-step
      &                         props(77:126), 50, nstatev(5), nnode,
      &                         elmt_number, l, mcrd, time, dtimeCur,
      &                         kstep, kinc)
+
+C             Compute the internal force vector
+              DO n = 1, nnode
+                DO i = 1, mcrd
+                  DO j = 1, 6
+                    rhs( kblock , (n-1)*mcrd + i ) =
+     $              rhs( kblock , (n-1)*mcrd + i )
+     $              + rBmat( j , (n-1)*mcrd + i ) * rStress(j) * rdOmega
+                  END DO
+                END DO
+              END DO
             end do
 
           end do

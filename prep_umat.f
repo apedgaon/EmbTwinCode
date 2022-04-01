@@ -379,3 +379,48 @@ C         for umat stress to vuel stress
         character*80 cmname
 
       end subroutine
+
+      subroutine check_twin_nucleation(stress, Smat, iTwinFlag)
+        implicit none
+
+        integer :: iTwinFlag, i ! Twinning nucleation flag
+        real*8 stress(6)      ! Input stress vector
+        real*8 Smat(3, 3, 18) ! Twinning Schmid Tensor
+        real*8 sigma(3, 3)    ! Stress Tensor (3, 3)
+        real*8 tau            ! Twinning Resolved shear stress
+        real*8 Lambda_tau     ! Twinning Probability Distribution
+        real*8 tau_c          ! Characteristic Resolved shear stress
+        real*8 beta           ! Weibull shape parameter exponent
+        real*8 P_tau          ! Probability of twin nucleation
+        real*8 P_0            ! Threshold Probability of twin nucleation
+
+        iTwinFlag = 0
+
+        ! Set material parameters
+        tau_c = 200.0
+        beta = 11.1
+        P_0 = 0.85
+
+        ! Stress vector to matrix
+        sigma(1, 1) = stress(1)
+        sigma(2, 2) = stress(2)
+        sigma(3, 3) = stress(3)
+        sigma(2, 3) = stress(4)
+        sigma(3, 2) = stress(4)
+        sigma(1, 3) = stress(5)
+        sigma(3, 1) = stress(5)
+        sigma(1, 2) = stress(6)
+        sigma(2, 1) = stress(6)
+
+        ! Resolved stress and probabilistic twin nucleation
+        do i = 1, 18
+          tau = sum(sigma * Smat(:, :, i))
+          Lambda_tau = (tau / tau_c)**beta
+          P_tau = 1.d0 - exp(-Lambda_tau)
+          if (P_tau.gt.P_0) then
+            iTwinFlag = i
+            exit
+          end if
+        end do
+
+      end subroutine

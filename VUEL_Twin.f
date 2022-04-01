@@ -227,6 +227,7 @@ C       Twin Code Implementation Started
         integer iVforType
         integer iConsType
         integer nstatev(6)
+        integer iTwinFlag        ! Twinning index that nucleated
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -264,6 +265,8 @@ C       Twin Code Implementation Started
         real*8 rStress(6)         ! Cauchy Stress
         real*8 rBmat(6,mcrd*nnode) ! current B (or B-bar) operator
         real*8 rBskw(3,mcrd*nnode) ! current skew-symmetric matrix operator
+        real*8 Smat(3, 3, 18)      ! Twinning Schmid Tensor
+        real*8 F_tw(3, 3, 18)      ! Twinning Deformation gradient
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -312,6 +315,9 @@ C       Initialize Identity Matrix(3x3)
             end if
           end do
         end do
+
+C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
+        call comp_twin_dfgrd(rImat, Smat, F_tw)
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
@@ -515,6 +521,9 @@ C             Until now, rStrain and rSpin are quantities wrt to mid-step
      &                         props(77:126), 50, nstatev(5), nnode,
      &                         elmt_number, l, mcrd, time, dtimeCur,
      &                         kstep, kinc)
+
+              ! Check for twin nucleation
+              call check_twin_nucleation(rStress, Smat, iTwinFlag)
 
 C             Compute the internal force vector
               DO n = 1, nnode

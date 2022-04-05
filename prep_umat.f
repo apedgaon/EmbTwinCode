@@ -397,9 +397,9 @@ C         for umat stress to vuel stress
         iTwinFlag = 0
 
         ! Set material parameters
-        tau_c = 200.0
-        beta = 11.1
-        P_0 = 0.85
+        tau_c = 200.d0
+        beta = 11.1d0
+        P_0 = 0.85d0
 
         ! Stress vector to matrix
         sigma(1, 1) = stress(1)

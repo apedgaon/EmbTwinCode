@@ -220,7 +220,6 @@ C       Twin Code Implementation Started
         integer kblock, i, j, l, n
         integer iTIntPt          ! Total # of Gauss PTS (=8) for MATRIX
         integer elmt_number      ! elmt global number
-        integer iTwinFlg_Ct      ! Twinned flag at elmt centroid
         integer iumatsvst        ! umat start index for svars
         integer iumatsven        ! umat end index of svars
         integer iVelmType
@@ -323,6 +322,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         IF ( lflags(iOpCode) .EQ. jMassCalc ) THEN
+          rRho = rRho * 1000.d0
           do kblock = 1, nblock
 C           Material coordinates (integrate mass terms over INITIAL config.)
             DO n = 1, nnode
@@ -420,41 +420,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             CALL SHP_FUNC_3D_8N(rXiEtaCt,rMSCoor,1,rNnCt,
      1                          rMSdNndXiCt,rMSJdetCt)
 
-C           If first increment of first step, initialize elmt centroid
-C           twinning flag in history
-            IF ( ( kstep .EQ. 1) .AND. ( kinc .EQ. 1) ) THEN
-              svars(kblock, 1) = 0.d0
-            END IF
-            iTwinFlg_Ct = int(svars(kblock, 1))
-
-C           Element with no twins, check for twinning
-C           Only for elements in forward set (not implemented)
-            if (iTwinFlg_Ct.eq.0) then
-
-              ! Shp fcn at elmt centroid
-              call SHP_FUNC_3D_8N(rXiEtaCt,rCoords,1,rNnCt,
-     &                            rdNndXiCt,rJdetCt)
-
-              ! Def Grd at elmt centroid
-              iumatsvst = 540 + iTIntPt * nstatev(5)
-              iumatsven = 539 + (iTIntPt + 1) * nstatev(5)
-              call calc_dfgrd(rXiEtaCt, rOrigCoords, rPrevCoords,
-     &                         rCoords, mcrd, nnode, rDfgrd0Ct,
-     &                         rDfgrd1Ct, rCtCoords)
-              
-              ! Stress using umat at elmt centroid
-              call umat_stress(rStressCt,
-     &                         svars(kblock, iumatsvst:iumatsven),
-     &                         rCtCoords, rDfgrd0Ct, rDfgrd1Ct,
-     &                         props(77:126), 50, nstatev(5), nnode,
-     &                         elmt_number, 0, mcrd, time, dtimeCur,
-     &                         kstep, kinc)
-
-              ! Twinning Criterion (Not Implemented)
-
-              ! Update twinning elements (Not Implemented)
-
-            end if
+C           Check twinning flag in history (not impl)
 
             ! Quadrature Loop
             do l = 1, iTIntPt

@@ -503,6 +503,7 @@ C             Compute the internal force vector
               END DO
             end do
 
+            dtimeStable(kblock) = 1.d-5
           end do
         ENDIF
       END  ! Subroutine VUEL

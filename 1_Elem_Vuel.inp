@@ -7,7 +7,6 @@
 **
 ** PARTS
 **
-*Part, name=Cube
 *Node, nset=VU1_NODES
       1,         -1.5,         -1.5,          -1.5
       2,          1.5,         -1.5,          -1.5
@@ -47,25 +46,15 @@
 ** Section: Whole
 *Solid Section, elset=Ghost_elem, material=Ghost_mat
 ,
-*End Part
 **  
-**
-** ASSEMBLY
-**
-*Assembly, name=Assembly
-**  
-*Instance, name=Cube-1, part=Cube
-*End Instance
-**  
-*Nset, nset=Bottom_Face, instance=Cube-1
+*Nset, nset=Bottom_Face
  1,  2,  5,  6
-*Elset, elset=Bottom_Face, instance=Cube-1
+*Elset, elset=Bottom_Face
  1,
-*Nset, nset=Top_Face, instance=Cube-1
+*Nset, nset=Top_Face
  3,  4,  7,  8
-*Elset, elset=Top_Face, instance=Cube-1
+*Elset, elset=Top_Face
  1,
-*End Assembly
 ** 
 ** MATERIALS
 **

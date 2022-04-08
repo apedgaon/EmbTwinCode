@@ -4,10 +4,6 @@
 *Preprint, echo=NO, model=NO, history=NO, contact=NO
 ** include material parameters
 *Include, input=material_properties_3D.inp
-**
-** PARTS
-**
-*Part, name=Cube
 *Node
       1,         -1.5,         -1.5,           3.
       2,         -1.5,  -1.20000005,           3.
@@ -3365,25 +3361,15 @@
 ** Section: Whole
 *Solid Section, elset=ghost_elem, material=ghost_mat
 ,
-*End Part
 **  
-**
-** ASSEMBLY
-**
-*Assembly, name=Assembly
-**  
-*Instance, name=Cube-1, part=Cube
-*End Instance
-**  
-*Nset, nset=Bottom_Face, instance=Cube-1, generate
+*Nset, nset=Bottom_Face, generate
     1,  1321,    11
-*Elset, elset=Bottom_Face, instance=Cube-1, generate
+*Elset, elset=Bottom_Face, generate
    1,  991,   10
-*Nset, nset=Top_Face, instance=Cube-1, generate
+*Nset, nset=Top_Face, generate
    11,  1331,    11
-*Elset, elset=Top_Face, instance=Cube-1, generate
+*Elset, elset=Top_Face, generate
    10,  1000,    10
-*End Assembly
 ** 
 ** MATERIALS
 ** 

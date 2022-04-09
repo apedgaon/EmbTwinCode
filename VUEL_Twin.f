@@ -489,7 +489,8 @@ C             Until now, rStrain and rSpin are quantities wrt to mid-step
      &                         kstep, kinc)
 
               ! Check for twin nucleation
-              call check_twin_nucleation(rStress, Smat, iTwinFlag)
+              call check_twin_nucleation(rStress, Smat, rDfgrd1, 
+     &                                   iTwinFlag)
 
 C             Compute the internal force vector
               DO n = 1, nnode

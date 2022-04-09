@@ -380,12 +380,13 @@ C         for umat stress to vuel stress
 
       end subroutine
 
-      subroutine check_twin_nucleation(stress, Smat, iTwinFlag)
+      subroutine check_twin_nucleation(stress, Smat, dfgrd, iTwinFlag)
         implicit none
 
         integer :: iTwinFlag, i ! Twinning nucleation flag
         real*8 stress(6)      ! Input stress vector
         real*8 Smat(3, 3, 18) ! Twinning Schmid Tensor
+        real*8 SmatC(3, 3)    ! Twinning Scmid Tensor in current configuration
         real*8 sigma(3, 3)    ! Stress Tensor (3, 3)
         real*8 tau            ! Twinning Resolved shear stress
         real*8 Lambda_tau     ! Twinning Probability Distribution
@@ -393,6 +394,8 @@ C         for umat stress to vuel stress
         real*8 beta           ! Weibull shape parameter exponent
         real*8 P_tau          ! Probability of twin nucleation
         real*8 P_0            ! Threshold Probability of twin nucleation
+        real*8 dfgrd(3, 3)    ! Deformation Gradient
+        real*8 dfgrdinv(3, 3) ! Deformation Gradient Inverse
 
         iTwinFlag = 0
 
@@ -412,9 +415,12 @@ C         for umat stress to vuel stress
         sigma(1, 2) = stress(6)
         sigma(2, 1) = stress(6)
 
+        call inverse_3x3(dfgrd, dfgrdinv)
+
         ! Resolved stress and probabilistic twin nucleation
         do i = 1, 18
-          tau = sum(sigma * Smat(:, :, i))
+          SmatC = matmul(dfgrd, matmul(Smat(:, :, i), dfgrdinv))
+          tau = sum(sigma * SmatC)
           Lambda_tau = (tau / tau_c)**beta
           P_tau = 1.d0 - exp(-Lambda_tau)
           if (P_tau.gt.P_0) then

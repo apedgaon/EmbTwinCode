@@ -420,13 +420,18 @@ C         for umat stress to vuel stress
         ! Resolved stress and probabilistic twin nucleation
         do i = 1, 18
           SmatC = matmul(dfgrd, matmul(Smat(:, :, i), dfgrdinv))
-          tau = sum(sigma * SmatC)
+          tau = sum(sigma * SmatC)    ! rss
+          if (tau.lt.0.d0) then       ! if rss is negative, then continue
+            cycle
+          end if      ! TODO check for compression twins!
+
           Lambda_tau = (abs(tau) / tau_c)**beta
           P_tau = 1.d0 - exp(-Lambda_tau)
           if (P_tau.gt.P_0) then
             iTwinFlag = i
             exit
           end if
+
         end do
 
       end subroutine

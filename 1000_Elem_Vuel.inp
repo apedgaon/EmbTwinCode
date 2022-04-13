@@ -3392,7 +3392,7 @@ Bottom_Face, 3, 3
 ** 
 *Step, name=Compression, nlgeom=YES
 *Dynamic, Explicit
-, 1.
+, 4.
 *Bulk Viscosity
 0.06, 1.2
 ** 
@@ -3400,7 +3400,7 @@ Bottom_Face, 3, 3
 ** 
 ** Name: Comp_BC Type: Velocity/Angular velocity
 *Boundary, type=VELOCITY
-Top_Face, 2, 2, -0.1
+Top_Face, 2, 2, -1.0
 ** 
 ** OUTPUT REQUESTS
 ** 

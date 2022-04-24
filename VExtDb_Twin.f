@@ -47,7 +47,36 @@ C       Contents of r_Array
 
         integer kStep
         integer kInc
+
         kStep = i_Array(i_int_kStep)
         kInc  = i_Array(i_int_kInc)
+
+        if (lop.eq.j_int_StartAnalysis) then
+          call sleep(20)
+          call read_gb_elements()
+        end if
+
+      end subroutine
+
+
+      subroutine read_gb_elements()
+        implicit none
+        character(len = 50) :: gbfilename
+        character (len = 1) :: pathseperator = '/'
+        character (len = 256) :: outdir, gbfilepath
+        integer :: lenoutdir, i, io, num_gb_elems
+
+        gbfilename = 'gb_elems_1000.txt'
+        call vgetoutdir(outdir, lenoutdir)
+        gbfilepath = trim(outdir)//pathseperator//trim(gbfilename)
+
+        num_gb_elems = 0
+        open(120, file = gbfilepath, status = 'old', iostat = io)
+        do
+          read(120, *, iostat = io)
+          if (io /= 0) exit
+          num_gb_elems = num_gb_elems + 1
+        end do
+        close(120)
 
       end subroutine

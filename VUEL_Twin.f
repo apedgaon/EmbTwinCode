@@ -266,6 +266,11 @@ C       Twin Code Implementation Started
         real*8 rBskw(3,mcrd*nnode) ! current skew-symmetric matrix operator
         real*8 Smat(3, 3, 18)      ! Twinning Schmid Tensor
         real*8 F_tw(3, 3, 18)      ! Twinning Deformation gradient
+        real*8 rm11                ! C11 vs temperature slope
+        real*8 c11_0               ! C11 at 0 K
+        real*8 c11                 ! C11 at temperature theta
+        real*8 theta               ! Temperature
+        real*8 rDilWaveSpd         ! Dilitational wave speed
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -492,6 +497,10 @@ C             Until now, rStrain and rSpin are quantities wrt to mid-step
               call check_twin_nucleation(rStress, Smat, rDfgrd1, 
      &                                   iTwinFlag)
 
+              if (iTwinFlag.gt.0) then
+                exit
+              end if
+
 C             Compute the internal force vector
               DO n = 1, nnode
                 DO i = 1, mcrd
@@ -504,7 +513,13 @@ C             Compute the internal force vector
               END DO
             end do
 
-            dtimeStable(kblock) = 1.d-5
+            ! Compute stable time step by dilitational wave speed and elem size
+            rm11  = props(82)
+            c11_0 = props(83)
+            theta = props(77)
+            c11 = c11_0 + rm11 * theta
+            rDilWaveSpd = sqrt(c11 / (1000.d0 * rRho))
+            dtimeStable(kblock) = rElmtSize / rDilWaveSpd
           end do
         ENDIF
       END  ! Subroutine VUEL

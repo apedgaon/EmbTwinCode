@@ -524,10 +524,10 @@ C             Compute the internal force vector
         ENDIF
       END  ! Subroutine VUEL
 
-
       include 'GSPT_3D_8N.f'
       include 'SHP_FUNC_3D_8N.f'
       include 'prep_umat.f'
       include 'gdefgrad_3D.f'
       include 'fcc_umat_lbl34_test.f'
       include 'Gstrain_3D.f'
+      include 'VExtDb_Twin.f'

@@ -52,7 +52,6 @@ C       Contents of r_Array
         kInc  = i_Array(i_int_kInc)
 
         if (lop.eq.j_int_StartAnalysis) then
-          call sleep(20)
           call read_gb_elements()
         end if
 
@@ -65,6 +64,7 @@ C       Contents of r_Array
         character (len = 1) :: pathseperator = '/'
         character (len = 256) :: outdir, gbfilepath
         integer :: lenoutdir, i, io, num_gb_elems
+        integer, allocatable :: gb_elems(:)  ! Temporary, use SMAArray
 
         gbfilename = 'gb_elems_1000.txt'
         call vgetoutdir(outdir, lenoutdir)
@@ -79,4 +79,12 @@ C       Contents of r_Array
         end do
         close(120)
 
+        allocate(gb_elems(num_gb_elems))
+        open(121, file = gbfilepath, status = 'old',action = 'read')
+          do i = 1, num_gb_elems
+            read(121, *) gb_elems(i)
+          end do
+        close(121)
+
+        deallocate(gb_elems)
       end subroutine

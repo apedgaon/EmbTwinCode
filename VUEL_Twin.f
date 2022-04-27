@@ -145,6 +145,7 @@ C     76        | iso_theta   the theta value for the isosurface
 
 
         IMPLICIT NONE
+#include <SMAAspUserSubroutines.hdr>
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C       PREDEFINED PARAMETERS & FLAGS
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -272,6 +273,9 @@ C       Twin Code Implementation Started
         real*8 theta               ! Temperature
         real*8 rDilWaveSpd         ! Dilitational wave speed
 
+        integer gb_elems(*)
+        pointer (ptr_gb_elems, gb_elems)
+
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
 
@@ -322,6 +326,11 @@ C       Initialize Identity Matrix(3x3)
 
 C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
         call comp_twin_dfgrd(rImat, Smat, F_tw)
+
+        ! Access grain boundary elements
+        if (kstep.gt.0) then
+          ptr_gb_elems = SMAIntArrayAccess(1)
+        end if
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
@@ -579,17 +588,21 @@ C       Contents of r_Array
 
         if (lop.eq.j_int_StartAnalysis) then
           call read_gb_elements()
+        else if (lop.eq.j_int_EndAnalysis) then
+          call SMAIntArrayDelete(1)
         end if
 
       end subroutine
 
       subroutine read_gb_elements()
         implicit none
+#include <SMAAspUserSubroutines.hdr>
         character(len = 50) :: gbfilename
         character (len = 1) :: pathseperator = '/'
         character (len = 256) :: outdir, gbfilepath
         integer :: lenoutdir, i, io, num_gb_elems
-        integer, allocatable :: gb_elems(:)  ! Temporary, use SMAArray
+        integer gb_elems(*)
+        pointer (ptr_gb_elems, gb_elems)
 
         gbfilename = 'gb_elems_1000.txt'
         call vgetoutdir(outdir, lenoutdir)
@@ -604,26 +617,14 @@ C       Contents of r_Array
         end do
         close(120)
 
-        ! allocate(gb_elems(num_gb_elems))
-        ! open(121, file = gbfilepath, status = 'old',action = 'read')
-        !   do i = 1, num_gb_elems
-        !     read(121, *) gb_elems(i)
-        !   end do
-        ! close(121)
-
-        ! deallocate(gb_elems)
         call sleep(20)
-        call read_gb_data(num_gb_elems)
-      end subroutine
-
-      subroutine read_gb_data(num_gb_elems)
-        implicit none
-#include <SMAAspUserSubroutines.hdr>
-        integer num_gb_elems
-        integer gb_elems(num_gb_elems)
-        pointer (ptr_gb_elems, gb_elems)
-
         ptr_gb_elems = SMAIntArrayCreate(1, num_gb_elems, -1)
+
+        open(121, file = gbfilepath, status = 'old',action = 'read')
+        do i = 1, num_gb_elems
+          read(121, *) gb_elems(i)
+        end do
+        close(121)
       end subroutine
 
       include 'GSPT_3D_8N.f'

@@ -228,6 +228,7 @@ C       Twin Code Implementation Started
         integer iConsType
         integer nstatev(6)
         integer iTwinFlag        ! Twinning index that nucleated
+        integer num_gb_elems     ! Number of Grain Boundary Elements
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -273,8 +274,10 @@ C       Twin Code Implementation Started
         real*8 theta               ! Temperature
         real*8 rDilWaveSpd         ! Dilitational wave speed
 
-        integer gb_elems(*)
-        pointer (ptr_gb_elems, gb_elems)
+        integer gb_elems(*)        ! Grain boundary element array
+        pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
+        logical isGbElem           ! logical determining gb elem
+        logical, external :: is_gb_elem
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -329,6 +332,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
 
         ! Access grain boundary elements
         if (kstep.gt.0) then
+          num_gb_elems = 488  ! remove hard coding
           ptr_gb_elems = SMAIntArrayAccess(1)
         end if
 
@@ -436,6 +440,10 @@ C           b) shape functions and their derivatives wrt mid-step global coords
 
 C           Check twinning flag in history (not impl)
 
+            ! GB Element Check
+            isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
+            iTwinFlag = 0
+
             ! Quadrature Loop
             do l = 1, iTIntPt
 C             Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -503,8 +511,10 @@ C             Until now, rStrain and rSpin are quantities wrt to mid-step
      &                         kstep, kinc)
 
               ! Check for twin nucleation
-              call check_twin_nucleation(rStress, Smat, rDfgrd1, 
-     &                                   iTwinFlag)
+              if (isGbElem) then
+                call check_twin_nucleation(rStress, Smat, rDfgrd1,
+     &                                     iTwinFlag)
+              end if
 
               if (iTwinFlag.gt.0) then
                 exit
@@ -532,6 +542,22 @@ C             Compute the internal force vector
           end do
         ENDIF
       END  ! Subroutine VUEL
+
+      function is_gb_elem(el_num, gb_elems, num_gb_elems)
+        implicit none
+        logical is_gb_elem
+        integer el_num, i, num_gb_elems
+        integer gb_elems(num_gb_elems)
+
+        is_gb_elem = .false.
+        do i = 1, num_gb_elems
+          if (el_num.eq.gb_elems(i)) then
+            is_gb_elem = .true.
+            exit
+          end if
+        end do
+        return
+      end function
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       subroutine vexternaldb(lOp, i_Array, niArray, r_Array, nrArray)

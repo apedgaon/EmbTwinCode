@@ -218,7 +218,7 @@ C       integer Array variables passed from VUEL interface
         integer jprops(njprops),jElem(nblock),lflags(nFlags)
 
 C       Twin Code Implementation Started
-        integer kblock, i, j, l, n
+        integer kblock, i, j, l, n, iter
         integer iTIntPt          ! Total # of Gauss PTS (=8) for MATRIX
         integer elmt_number      ! elmt global number
         integer iumatsvst        ! umat start index for svars
@@ -226,7 +226,8 @@ C       Twin Code Implementation Started
         integer iVelmType
         integer iVforType
         integer iConsType
-        integer nstatev(6)
+        integer nstatev(3)
+        integer offstatev(5)
         integer iTwinFlag        ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
 
@@ -273,6 +274,20 @@ C       Twin Code Implementation Started
         real*8 c11                 ! C11 at temperature theta
         real*8 theta               ! Temperature
         real*8 rDilWaveSpd         ! Dilitational wave speed
+        real*8 rdLu(3, 3)          ! Velocity gradient increment in Untwinned part
+        real*8 rdLz(3, 3)          ! Velocity gradient increment in Twinned part
+        real*8 rdFu(3, 3)          ! Incremental deformation gradient in the untwinned part
+        real*8 rdFz(3, 3)          ! Incremental deformation gradient in the twinned part
+        real*8 rFu0(3, 3)          ! Previous untwinned deformation gradient
+        real*8 rFu1(3, 3)          ! Current untwinned deformation gradient
+        real*8 rFz0(3, 3)          ! Previous twinned deformation gradient
+        real*8 rFz1(3, 3)          ! Current twinned deformation gradient
+        real*8 rFz1h(3, 3)         ! Fe Fp part of twinned deformation gradient
+        real*8 alpha_U             ! Jump in velocity gradient
+        real*8 rBWidth             ! Band width of twin
+        real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
+        real*8 rStress_U(3, 3)     ! Stress in untwinned region
+        real*8 rStress_Z(3, 3)     ! Stress in twinned region
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -309,12 +324,16 @@ C       Natural coordinates of element centroid
         rXiEtaCt(2) = 0.d0
         rXiEtaCt(3) = 0.d0
 
-        nstatev(1) = 14
-        nstatev(2) = 14
-        nstatev(3) = 36
-        nstatev(4) = 14
-        nstatev(5) = 148
-        nstatev(6) = 9
+        ! Number of state variables array and offsets array
+        nstatev(1) = 148
+        nstatev(2) = 9
+        nstatev(3) = 1
+        offstatev(1) = 0
+        offstatev(2) = 8 * nstatev(1)
+        offstatev(3) = offstatev(2) + 8 * nstatev(1)
+        offstatev(4) = offstatev(3) + 8 * nstatev(2)
+        offstatev(5) = offstatev(4) + 8 * nstatev(2)
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 1
 
 C       Initialize Identity Matrix(3x3)
         do i = 1, 3
@@ -438,99 +457,188 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             CALL SHP_FUNC_3D_8N(rXiEtaCt,rMSCoor,1,rNnCt,
      1                          rMSdNndXiCt,rMSJdetCt)
 
-C           Check twinning flag in history (not impl)
-
             ! GB Element Check
             isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
+
+            ! Check twinning flag in history (not impl)
             iTwinFlag = 0
 
-            ! Quadrature Loop
-            do l = 1, iTIntPt
-C             Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
-              CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,1,
-     &                            rNn,rdNndXi,rJdet)
+            if (iTwinFlag.eq.0) then   ! No twinning detected in previous increment
+              ! Quadrature Loop
+              do l = 1, iTIntPt
+C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
+                CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,1,
+     &                              rNn,rdNndXi,rJdet)
 
-C             Compute Quadrature Point Current Coordinates
-              rGsCoords = 0.d0
-              do i = 1, mcrd
-                do j = 1, nnode
-                  rGsCoords(i) = rGsCoords(i) + rNn(j) * rCoords(i, j)
+C               Compute Quadrature Point Current Coordinates
+                rGsCoords = 0.d0
+                do i = 1, mcrd
+                  do j = 1, nnode
+                    rGsCoords(i) = rGsCoords(i) + rNn(j) * rCoords(i, j)
+                  end do
                 end do
-              end do
 
-C             Check Jacobian
-              IF ( rJdet .LE. 0.d0) THEN
-                CALL XPLB_ABQERR(-3,'Non-positive'//
+C               Check Jacobian
+                IF ( rJdet .LE. 0.d0) THEN
+                  CALL XPLB_ABQERR(-3,'Non-positive'//
      $            'Jacobian determinant in element VU1',0,0.d0,' ')
-              END IF
+                END IF
 
-C             Compute integration element (dOmega)
-              rdOmega = rJdet * rWeightPt(l)
+C               Compute integration element (dOmega)
+                rdOmega = rJdet * rWeightPt(l)
 
-C             Finite deformation
-C             Current value of the B or B-bar operator for internal force calculation
-              CALL Gstrain_3D(rue,rEpsilon,rNn,rNnCt,rdNndXi,rdNndXiCt,
-     $                        mcrd,nnode,iVelmType,iVforType,1,rStrain,
-     $                        rSpin,rBmat,rBskw)
+C               Finite deformation
+C               Current value of the B or B-bar operator for internal force calculation
+                CALL Gstrain_3D(rue,rEpsilon,rNn,rNnCt,rdNndXi,
+     $                          rdNndXiCt,mcrd,nnode,iVelmType,
+     $                          iVforType,1,rStrain,rSpin,rBmat,rBskw)
 
-C             (Mid-step) strain increment and B or B-bar operator for constitutive update
-              CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rMSCoor,1,rNn,
-     $                            rMSdNndXi,rMSJdet)
-              CALL Gstrain_3D(rue,rEpsilon,rNn,rNnCt,rMSdNndXi,
-     $                        rMSdNndXiCt,mcrd,nnode,iVelmType,
-     $                        iVforType,1, rStrain,rSpin,rMSBm,
-     $                        rMSBs)
-C             Until now, rStrain and rSpin are quantities wrt to mid-step
+C               (Mid-step) strain increment and B or B-bar operator for constitutive update
+                CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rMSCoor,1,rNn,
+     $                             rMSdNndXi,rMSJdet)
+                CALL Gstrain_3D(rue,rEpsilon,rNn,rNnCt,rMSdNndXi,
+     $                          rMSdNndXiCt,mcrd,nnode,iVelmType,
+     $                          iVforType,1, rStrain,rSpin,rMSBm,
+     $                          rMSBs)
+C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
-              ! Compute Velocity Gradient
-              call comp_vel_gr(rdVelGrd, rStrain, rSpin)
+                ! Compute Velocity Gradient
+                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
-              ! Step 1, Inc 1, set def gradient to identity
-              iumatsvst = 1872 + (l - 1) * nstatev(6)
-              iumatsven = 1871 + l * nstatev(6)
-              if ((kstep.eq.1).and.(kinc.le.1)) then
+                ! Step 1, Inc 1, set def gradient to identity
+                iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
+                iumatsven = offstatev(3) + l * nstatev(2)
+                if ((kstep.eq.1).and.(kinc.le.1)) then
+                  svars(kblock, iumatsvst : iumatsven) =
+     &                                    reshape(rImat, (/9/))
+                end if
+
+                ! Get previous def gradients from svars and form current def grd
+                rDfgrd0 =
+     &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
+                rDfgrd1 = matmul(rImat + rdVelGrd, rDfgrd0)
+
+                ! Save deformation gradients to both untwinned and twinned block
                 svars(kblock, iumatsvst : iumatsven) =
-     &                                  reshape(rImat, (/9/))
-              end if
+     &                                  reshape(rDfgrd1, (/9/))
 
-              ! Get previous def gradients from svars and form current def grd
-              rDfgrd0 =
-     &          reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
-              rDfgrd1 = matmul(rImat + rdVelGrd, rDfgrd0)
-              svars(kblock, iumatsvst : iumatsven) =
-     &                                reshape(rDfgrd1, (/9/))
+                iumatsvst = offstatev(4) + 1 + (l - 1) * nstatev(2)
+                iumatsven = offstatev(4) + l * nstatev(2)
+                svars(kblock, iumatsvst : iumatsven) =
+     &                                  reshape(rDfgrd1, (/9/))
 
-              ! Compute Stress from existing UMAT
-              iumatsvst = 540 + (l - 1) * nstatev(5)
-              iumatsven = 539 + l * nstatev(5)
-              call umat_stress(rStress,
-     &                         svars(kblock, iumatsvst:iumatsven),
-     &                         rGsCoords, rDfgrd0, rDfgrd1,
-     &                         props(77:126), 50, nstatev(5), nnode,
-     &                         elmt_number, l, mcrd, time, dtimeCur,
-     &                         kstep, kinc)
+                ! Compute Stress from existing UMAT
+                iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+                iumatsven = offstatev(1) + l * nstatev(1)
+                ! iumatsvst = 540 + (l - 1) * nstatev(5)
+                ! iumatsven = 539 + l * nstatev(5)
+                call umat_stress(rStress,
+     &                           svars(kblock, iumatsvst:iumatsven),
+     &                           rGsCoords, rDfgrd0, rDfgrd1,
+     &                           props(77:126), 50, nstatev(1), nnode,
+     &                           elmt_number, l, mcrd, time, dtimeCur,
+     &                           kstep, kinc)
 
-              ! Check for twin nucleation
-              if (isGbElem) then
-                call check_twin_nucleation(rStress, Smat, rDfgrd1,
-     &                                     iTwinFlag)
-              end if
+                ! Check for twin nucleation
+                if (isGbElem) then
+                  call check_twin_nucleation(rStress, Smat, rDfgrd1,
+     &                                      iTwinFlag)
+                end if
 
-              if (iTwinFlag.gt.0) then
-                exit
-              end if
-
-C             Compute the internal force vector
-              DO n = 1, nnode
-                DO i = 1, mcrd
-                  DO j = 1, 6
-                    rhs( kblock , (n-1)*mcrd + i ) =
-     $              rhs( kblock , (n-1)*mcrd + i )
+C               Compute the internal force vector
+                DO n = 1, nnode
+                  DO i = 1, mcrd
+                    DO j = 1, 6
+                      rhs( kblock , (n-1)*mcrd + i ) =
+     $                rhs( kblock , (n-1)*mcrd + i )
      $              + rBmat( j , (n-1)*mcrd + i ) * rStress(j) * rdOmega
+                    END DO
                   END DO
                 END DO
-              END DO
-            end do
+
+              end do
+
+            else  ! Twinning detected in the previous increment
+              ! Quadrature Loop
+              do l = 1, iTIntPt
+C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
+                CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rCoords,1,
+     &                              rNn,rdNndXi,rJdet)
+
+C               Compute Quadrature Point Current Coordinates
+                rGsCoords = 0.d0
+                do i = 1, mcrd
+                  do j = 1, nnode
+                    rGsCoords(i) = rGsCoords(i) + rNn(j) * rCoords(i, j)
+                  end do
+                end do
+
+C               Check Jacobian
+                IF ( rJdet .LE. 0.d0) THEN
+                  CALL XPLB_ABQERR(-3,'Non-positive'//
+     $            'Jacobian determinant in element VU1',0,0.d0,' ')
+                END IF
+
+C               Compute integration element (dOmega)
+                rdOmega = rJdet * rWeightPt(l)
+
+C               Finite deformation
+C               Current value of the B or B-bar operator for internal force calculation
+                CALL Gstrain_3D(rue,rEpsilon,rNn,rNnCt,rdNndXi,
+     $                          rdNndXiCt,mcrd,nnode,iVelmType,
+     $                          iVforType,1,rStrain,rSpin,rBmat,rBskw)
+
+
+C               (Mid-step) strain increment and B or B-bar operator for constitutive update
+                CALL SHP_FUNC_3D_8N(rXiEtaPt(1,l),rMSCoor,1,rNn,
+     $                             rMSdNndXi,rMSJdet)
+                CALL Gstrain_3D(rue,rEpsilon,rNn,rNnCt,rMSdNndXi,
+     $                          rMSdNndXiCt,mcrd,nnode,iVelmType,
+     $                          iVforType,1, rStrain,rSpin,rMSBm,
+     $                          rMSBs)
+C               Until now, rStrain and rSpin are quantities wrt to mid-step
+
+                ! Retrieve previous untwinned and twinned deformation gradient
+                iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
+                iumatsven = offstatev(3) + l * nstatev(2)
+                rFu0 =
+     &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
+                iumatsvst = offstatev(4) + 1 + (l - 1) * nstatev(2)
+                iumatsven = offstatev(4) + l * nstatev(2)
+                rFz0 =
+     &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
+
+                ! Compute Velocity Gradient
+                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
+
+                rBWidth = 0.01d0
+                alpha_U = 0.d0
+
+                do iter = 1, 5
+                  rdFu = matmul(rdVelGrd, rFu0)
+                  rdFz = matmul(rdVelGrd, rFz0)
+
+                  rFu1 = rFu0 + rdFu
+                  rFz1 = rFz0 + rdFz
+
+                  call inverse_3x3(F_tw(:, :, iTwinFlag), F_tw_inv)
+                  rFz1h = matmul(rFz1, F_tw_inv)
+
+                  ! Compute Stress from existing UMAT
+                  iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+                  iumatsven = offstatev(1) + l * nstatev(1)
+                  call umat_stress(rStress_U,
+     &                             svars(kblock, iumatsvst:iumatsven),
+     &                             rGsCoords, rFu0, rFu1,
+     &                             props(77:126), 50, nstatev(1), nnode,
+     &                             elmt_number, l, mcrd, time, dtimeCur,
+     &                             kstep, kinc)
+
+                end do
+
+              end do
+
+            end if
 
             ! Compute stable time step by dilitational wave speed and elem size
             rm11  = props(82)

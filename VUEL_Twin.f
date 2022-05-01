@@ -281,8 +281,9 @@ C       Twin Code Implementation Started
         real*8 rFu0(3, 3)          ! Previous untwinned deformation gradient
         real*8 rFu1(3, 3)          ! Current untwinned deformation gradient
         real*8 rFz0(3, 3)          ! Previous twinned deformation gradient
+        real*8 rFz0h(3, 3)         ! Fe Fp part of previous twinned deformation gradient
         real*8 rFz1(3, 3)          ! Current twinned deformation gradient
-        real*8 rFz1h(3, 3)         ! Fe Fp part of twinned deformation gradient
+        real*8 rFz1h(3, 3)         ! Fe Fp part of current twinned deformation gradient
         real*8 alpha_U             ! Jump in velocity gradient
         real*8 rBWidth             ! Band width of twin
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
@@ -559,6 +560,9 @@ C               Compute the internal force vector
               end do
 
             else  ! Twinning detected in the previous increment
+
+              call inverse_3x3(F_tw(:, :, iTwinFlag), F_tw_inv)
+
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -613,18 +617,11 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
                 rBWidth = 0.01d0
                 alpha_U = 0.d0
-
                 do iter = 1, 5
                   rdFu = matmul(rdVelGrd, rFu0)
-                  rdFz = matmul(rdVelGrd, rFz0)
-
                   rFu1 = rFu0 + rdFu
-                  rFz1 = rFz0 + rdFz
 
-                  call inverse_3x3(F_tw(:, :, iTwinFlag), F_tw_inv)
-                  rFz1h = matmul(rFz1, F_tw_inv)
-
-                  ! Compute Stress from existing UMAT
+                  ! Compute Stress (untwinned region) from existing UMAT
                   iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
                   iumatsven = offstatev(1) + l * nstatev(1)
                   call umat_stress(rStress_U,
@@ -633,6 +630,21 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             props(77:126), 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc)
+
+                  rdFz = matmul(rdVelGrd, rFz0)
+                  rFz1 = rFz0 + rdFz
+                  rFz0h = matmul(rFz0, F_tw_inv)
+                  rFz1h = matmul(rFz1, F_tw_inv)
+
+                  ! Compute Stress (untwinned region) from existing UMAT
+                  iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
+                  iumatsven = offstatev(2) + l * nstatev(1)
+                  call umat_stress(rStress_Z,
+     &                             svars(kblock, iumatsvst:iumatsven),
+     &                             rGsCoords, rFz0h, rFz1h,
+     &                             props(77:126), 50, nstatev(1), nnode,
+     &                             elmt_number, l, mcrd, time, dtimeCur,
+     &                             kstep, kinc)  ! TODO: euler angles change due to twinning
 
                 end do
 

@@ -538,7 +538,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                           rGsCoords, rDfgrd0, rDfgrd1,
      &                           props(77:126), 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc)
+     &                           kstep, kinc, .true.)
 
                 ! Check for twin nucleation
                 if (isGbElem) then
@@ -629,7 +629,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             rGsCoords, rFu0, rFu1,
      &                             props(77:126), 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc)
+     &                             kstep, kinc, .false.)
 
                   rdFz = matmul(rdVelGrd, rFz0)
                   rFz1 = rFz0 + rdFz
@@ -644,7 +644,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             rGsCoords, rFz0h, rFz1h,
      &                             props(77:126), 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc)  ! TODO: euler angles change due to twinning
+     &                             kstep, kinc, .false.)  ! TODO: euler angles change due to twinning
 
                 end do
 

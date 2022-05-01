@@ -303,7 +303,8 @@ C         See UMAT Deformation Gradient Documentation for more details
 
       subroutine umat_stress(rStress, hvars, rGsCoords, rDfgrd0,
      &                      rDfgrd1, props, nprops, nsvars, nnode, noel,
-     &                      npt, mcrd, time, dtime, kstep, kinc)
+     &                      npt, mcrd, time, dtime, kstep, kinc,
+     &                      lEditSvars)
           
           implicit none
 C         input arguments declaration
@@ -314,6 +315,7 @@ C         input arguments declaration
           real*8 time(2)
           real*8 dtime
           integer idx, jdx
+          logical lEditSvars
 
 C         additional arguments for umat
           real*8 ddsdde(6, 6), ddsddt(6), drplde(6), stran(6)
@@ -322,6 +324,7 @@ C         additional arguments for umat
           real*8 predef(1), dpred(1), pnewdt, celent
           character*80 cmname
           integer ndi, nshr, ntens, layer, kspt
+          real*8 tmphvars(nsvars)
 
 C         for umat stress to vuel stress
           real*8 rUmatStress(6)
@@ -333,14 +336,26 @@ C         for umat stress to vuel stress
               dtime = 1.d-9
           end if
 
-          call umat_crys(rUmatStress,  hvars,  ddsdde,  sse,  spd,
+          if (lEditSvars) then    ! During regular update
+            call umat_crys(rUmatStress,  hvars,  ddsdde,  sse,  spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,
      &               dtemp,   predef,  dpred,   cmname,  ndi,
      &               nshr,    ntens,   nsvars,  props,   nprops,
-     &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0, 
+     &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc)
+          else    ! Required during iterative updates when hvars should not be edited
+            tmphvars = hvars
+            call umat_crys(rUmatStress,  tmphvars,  ddsdde,  sse,  spd,
+     &               scd,     rpl,     ddsddt,  drplde,  drpldt,
+     &               stran,  dstran, time,    dtime,   temp,
+     &               dtemp,   predef,  dpred,   cmname,  ndi,
+     &               nshr,    ntens,   nsvars,  props,   nprops,
+     &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
+     &               rDfgrd1,  noel,    npt,     layer,   kspt,
+     &               kstep,   kinc)
+          end if
 
           rStress(1) = rUmatStress(1)
           rStress(2) = rUmatStress(2)

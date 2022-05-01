@@ -682,7 +682,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       subroutine vexternaldb(lOp, i_Array, niArray, r_Array, nrArray)
         implicit none
-
+#include <SMAAspUserSubroutines.hdr>
 C       Variables passed from interface
         integer lOp, niArray, nrArray
         integer i_Array(niArray)
@@ -728,14 +728,20 @@ C       Contents of r_Array
 
         integer kStep
         integer kInc
+        integer myThreadID
 
         kStep = i_Array(i_int_kStep)
         kInc  = i_Array(i_int_kInc)
+        myThreadID = get_thread_id()
 
         if (lop.eq.j_int_StartAnalysis) then
-          call read_gb_elements()
+          if (myThreadID.eq.0) then
+            call read_gb_elements()
+          end if
         else if (lop.eq.j_int_EndAnalysis) then
-          call SMAIntArrayDelete(1)
+          if (myThreadID.eq.0) then
+            call SMAIntArrayDelete(1)
+          end if
         end if
 
       end subroutine
@@ -763,7 +769,6 @@ C       Contents of r_Array
         end do
         close(120)
 
-        call sleep(20)
         ptr_gb_elems = SMAIntArrayCreate(1, num_gb_elems, -1)
 
         open(121, file = gbfilepath, status = 'old',action = 'read')

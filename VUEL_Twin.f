@@ -223,6 +223,8 @@ C       Twin Code Implementation Started
         integer elmt_number      ! elmt global number
         integer iumatsvst        ! umat start index for svars
         integer iumatsven        ! umat end index of svars
+        integer iumatsvst2        ! umat start index for svars
+        integer iumatsven2        ! umat end index of svars
         integer iVelmType
         integer iVforType
         integer iConsType
@@ -545,6 +547,12 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                           props(77:126), 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWu)
+
+                ! store same svars for twinned part which has not formed yet
+                iumatsvst2 = offstatev(2) + 1 + (l - 1) * nstatev(1)
+                iumatsven2 = offstatev(2) + l * nstatev(1)
+                svars(kblock, iumatsvst2:iumatsven2) =
+     &                                svars(kblock, iumatsvst:iumatsven)
 
                 ! Check for twin nucleation
                 if (isGbElem) then

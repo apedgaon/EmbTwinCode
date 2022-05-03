@@ -464,7 +464,11 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
 
             ! Check twinning flag in history (not impl)
-            iTwinFlag = 0
+            if (kinc.eq.0) then
+              svars(kblock, offstatev(5) + 1) = 0
+            end if
+
+            iTwinFlag = svars(kblock, offstatev(5) + 1)
 
             if (iTwinFlag.eq.0) then   ! No twinning detected in previous increment
               ! Quadrature Loop
@@ -547,6 +551,9 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   call check_twin_nucleation(rStress, Smat, rDfgrd1,
      &                                      iTwinFlag)
                 end if
+
+                ! Store twin flag
+                svars(kblock, offstatev(5) + 1) = iTwinFlag
 
 C               Compute the internal force vector
                 DO n = 1, nnode

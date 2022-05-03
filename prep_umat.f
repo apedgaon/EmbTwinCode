@@ -304,7 +304,7 @@ C         See UMAT Deformation Gradient Documentation for more details
       subroutine umat_stress(rStress, hvars, rGsCoords, rDfgrd0,
      &                      rDfgrd1, props, nprops, nsvars, nnode, noel,
      &                      npt, mcrd, time, dtime, kstep, kinc,
-     &                      lEditSvars)
+     &                      lEditSvars, rW)
           
           implicit none
 C         input arguments declaration
@@ -324,7 +324,7 @@ C         additional arguments for umat
           real*8 predef(1), dpred(1), pnewdt, celent
           character*80 cmname
           integer ndi, nshr, ntens, layer, kspt
-          real*8 tmphvars(nsvars)
+          real*8 tmphvars(nsvars), rW(3,3,3,3)
 
 C         for umat stress to vuel stress
           real*8 rUmatStress(6)
@@ -344,7 +344,7 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc)
+     &               kstep,   kinc, rW)
           else    ! Required during iterative updates when hvars should not be edited
             tmphvars = hvars
             call umat_crys(rUmatStress,  tmphvars,  ddsdde,  sse,  spd,
@@ -354,7 +354,7 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc)
+     &               kstep,   kinc, rW)
           end if
 
           rStress(1) = rUmatStress(1)

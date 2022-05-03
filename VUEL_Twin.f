@@ -289,6 +289,8 @@ C       Twin Code Implementation Started
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
         real*8 rStress_U(3, 3)     ! Stress in untwinned region
         real*8 rStress_Z(3, 3)     ! Stress in twinned region
+        real*8 rWu(3, 3, 3, 3)     ! dT/dF^U Material Jacobian for untwinned region
+        real*8 rWz(3, 3, 3, 3)     ! dT/dF^Z Material Jacobian for twinned region
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -538,7 +540,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                           rGsCoords, rDfgrd0, rDfgrd1,
      &                           props(77:126), 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true.)
+     &                           kstep, kinc, .true., rWu)
 
                 ! Check for twin nucleation
                 if (isGbElem) then
@@ -629,7 +631,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             rGsCoords, rFu0, rFu1,
      &                             props(77:126), 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false.)
+     &                             kstep, kinc, .false., rWu)
 
                   rdFz = matmul(rdVelGrd, rFz0)
                   rFz1 = rFz0 + rdFz
@@ -644,7 +646,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             rGsCoords, rFz0h, rFz1h,
      &                             props(77:126), 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false.)  ! TODO: euler angles change due to twinning
+     &                             kstep, kinc, .false., rWz)  ! TODO: euler angles change due to twinning
 
                 end do
 

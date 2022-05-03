@@ -25,7 +25,7 @@
      &          nshr,    ntens,   nstatv,  props,   nprops,
      &          coords,  drot,    pnewdt,  celent,  dfgrd0,
      &          dfgrd1,  noel,    npt,     layer,   kspt,
-     &          kstep,   kinc)
+     &          kstep,   kinc, rW)
 
       implicit real*8(a-h,o-z)
       character*80 cmname 

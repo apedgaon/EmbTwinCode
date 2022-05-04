@@ -596,23 +596,7 @@ C               Compute the internal force vector
               ! compute inverse of twinning deformation gradient
               call inverse_3x3(F_tw(:, :, iTwinFlag), F_tw_inv)
 
-    !           ! Rotation matrix for crystal basis caused by twinning
-    !           do j = 1, 3
-    !             do i = 1, 3
-    !               R_tw(i, j) = 2*rntw(i, iTwinFlag)*rntw(j, iTwinFlag) -
-    !  &                         rImat(i, j)
-    !             end do
-    !           end do
-
-    !           ! Calculate euler angles corresponding to rotaion matrix
-    !           call eulang(R_tw,th_tw,phi_tw,om_tw,ieulererr)
-
-    !           ! Create properties with different euler angles for twinning
-    !           props_tw(:) = props(77:126)
-    !           props_tw(31) = th_tw * 180.d0 / pi
-    !           props_tw(32) = phi_tw * 180.d0 / pi
-    !           props_tw(33) = om_tw * 180.d0 / pi
-
+              ! compute properties for twinned region due to rotation of crystal basis
               call compute_twin_props(rntw(:, iTwinFlag), props(77:126),
      &                                props_tw, 50, rImat, pi)
 

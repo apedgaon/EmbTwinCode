@@ -293,6 +293,8 @@ C       Twin Code Implementation Started
         real*8 rStress_Z(3, 3)     ! Stress in twinned region
         real*8 rWu(3, 3, 3, 3)     ! dT/dF^U Material Jacobian for untwinned region
         real*8 rWz(3, 3, 3, 3)     ! dT/dF^Z Material Jacobian for twinned region
+        real*8 rntw(3, 18)         ! Twin normal
+        real*8 rmtw(3, 18)         ! Twin shear direction
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -352,7 +354,7 @@ C       Initialize Identity Matrix(3x3)
         end do
 
 C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
-        call comp_twin_dfgrd(rImat, Smat, F_tw)
+        call comp_twin_dfgrd(rImat, Smat, F_tw, rntw, rmtw)
 
         ! Access grain boundary elements
         if (kstep.gt.0) then

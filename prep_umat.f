@@ -142,7 +142,7 @@ C         See UMAT Deformation Gradient Documentation for more details
           rdVelGrd(3, 3) = rStrainInc(3)
       end subroutine
 
-      subroutine comp_twin_dfgrd(rImat, Smat, F_tw)
+      subroutine comp_twin_dfgrd(rImat, Smat, F_tw, rn, rm)
           implicit none
           real*8 rn(3, 18), rm(3, 18)
           real*8 gamma1, gamma2, gamma3

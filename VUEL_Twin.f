@@ -556,8 +556,10 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
                 ! Check for twin nucleation
                 if (isGbElem) then
-                  call check_twin_nucleation(rStress, Smat, rDfgrd1,
-     &                                      iTwinFlag)
+                  if (iTwinFlag.eq.0) then
+                    call check_twin_nucleation(rStress, Smat, rDfgrd1,
+     &                                         iTwinFlag)
+                  end if
                 end if
 
                 ! Store twin flag

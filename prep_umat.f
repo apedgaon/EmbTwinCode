@@ -415,7 +415,7 @@ C         for umat stress to vuel stress
         iTwinFlag = 0
 
         ! Set material parameters
-        tau_c = 200.d0      ! TODO: Different critical stress for different types of twin
+        tau_c = 20.d0      ! TODO: Different critical stress for different types of twin
         beta = 11.1d0
         P_0 = 0.85d0
 
@@ -449,4 +449,45 @@ C         for umat stress to vuel stress
 
         end do
 
+      end subroutine
+
+      subroutine compute_twin_props(n_tw, props, props_tw, nprops,
+     &                              rImat, pi)
+        implicit none
+        integer nprops
+        real*8 n_tw(3)
+        real*8 props(nprops)
+        real*8 props_tw(nprops)
+        real*8 rImat(3, 3)
+
+        integer i, j, ieulererr
+        real*8 R_tw(3, 3)
+        real*8 Q_0(3, 3), Q_1(3, 3)
+        real*8 th, th_tw
+        real*8 phi, phi_tw
+        real*8 om, om_tw
+        real*8 pi
+
+        ! Form rotation matrix corresponding to euler angles
+        th = props(31) * pi / 180.d0
+        phi = props(32) * pi / 180.d0
+        om = props(33) * pi / 180.d0
+        call rotmat(th, phi, om, Q_0)
+
+        ! Form rotation matrix corresponding to twinning
+        do j = 1, 3
+          do i = 1, 3
+            R_tw(i, j) = 2*n_tw(i)*n_tw(j) - rImat(i, j)
+          end do
+        end do
+
+        ! Find new euler angles after rotation of crystal basis due to twinning
+        Q_1 = matmul(R_tw, Q_0)
+        call eulang(Q_1, th_tw, phi_tw, om_tw, ieulererr)
+
+        ! Form new properties for twinning with updated euler angles
+        props_tw(:) = props(:)
+        props_tw(31) = th_tw * 180.d0 / pi
+        props_tw(32) = phi_tw * 180.d0 / pi
+        props_tw(33) = om_tw * 180.d0 / pi
       end subroutine

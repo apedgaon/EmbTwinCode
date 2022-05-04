@@ -300,6 +300,9 @@ C       Twin Code Implementation Started
         real*8 phi_tw              ! Euler angles phi for rotation by twinning
         real*8 om_tw               ! Euler angles om for rotation by twinning
         real*8 R_tw(3, 3)          ! Rotation matrix of crystal basis due to twinning
+        real*8 props_tw(50)        ! Properties for twinned region since euler angles have changed
+        ! TODO: Remove hard coded 50
+        real*8 pi                  ! PI
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -346,6 +349,9 @@ C       Natural coordinates of element centroid
         offstatev(4) = offstatev(3) + 8 * nstatev(2)
         offstatev(5) = offstatev(4) + 8 * nstatev(2)
         ! 148*8 + 148*8 + 9*8 + 9*8 + 1
+
+        ! Define PI
+        pi = 4.d0 * atan(1.d0)
 
 C       Initialize Identity Matrix(3x3)
         do i = 1, 3
@@ -590,16 +596,25 @@ C               Compute the internal force vector
               ! compute inverse of twinning deformation gradient
               call inverse_3x3(F_tw(:, :, iTwinFlag), F_tw_inv)
 
-              ! Rotation matrix for crystal basis caused by twinning
-              do j = 1, 3
-                do i = 1, 3
-                  R_tw(i, j) = 2*rntw(i, iTwinFlag)*rntw(j, iTwinFlag) -
-     &                         rImat(i, j)
-                end do
-              end do
+    !           ! Rotation matrix for crystal basis caused by twinning
+    !           do j = 1, 3
+    !             do i = 1, 3
+    !               R_tw(i, j) = 2*rntw(i, iTwinFlag)*rntw(j, iTwinFlag) -
+    !  &                         rImat(i, j)
+    !             end do
+    !           end do
 
-              ! Calculate euler angles corresponding to rotaion matrix
-              call eulang(R_tw,th_tw,phi_tw,om_tw,ieulererr)
+    !           ! Calculate euler angles corresponding to rotaion matrix
+    !           call eulang(R_tw,th_tw,phi_tw,om_tw,ieulererr)
+
+    !           ! Create properties with different euler angles for twinning
+    !           props_tw(:) = props(77:126)
+    !           props_tw(31) = th_tw * 180.d0 / pi
+    !           props_tw(32) = phi_tw * 180.d0 / pi
+    !           props_tw(33) = om_tw * 180.d0 / pi
+
+              call compute_twin_props(rntw(:, iTwinFlag), props(77:126),
+     &                                props_tw, 50, rImat, pi)
 
               ! Quadrature Loop
               do l = 1, iTIntPt
@@ -680,7 +695,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   call umat_stress(rStress_Z,
      &                             svars(kblock, iumatsvst:iumatsven),
      &                             rGsCoords, rFz0h, rFz1h,
-     &                             props(77:126), 50, nstatev(1), nnode,
+     &                             props_tw, 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWz)  ! TODO: euler angles change due to twinning
 

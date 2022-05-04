@@ -232,6 +232,7 @@ C       Twin Code Implementation Started
         integer offstatev(5)
         integer iTwinFlag        ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
+        integer ieulererr        ! return error from eulang routine
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -295,6 +296,10 @@ C       Twin Code Implementation Started
         real*8 rWz(3, 3, 3, 3)     ! dT/dF^Z Material Jacobian for twinned region
         real*8 rntw(3, 18)         ! Twin normal
         real*8 rmtw(3, 18)         ! Twin shear direction
+        real*8 th_tw               ! Euler angles theta for rotation by twinning
+        real*8 phi_tw              ! Euler angles phi for rotation by twinning
+        real*8 om_tw               ! Euler angles om for rotation by twinning
+        real*8 R_tw(3, 3)          ! Rotation matrix of crystal basis due to twinning
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -582,7 +587,19 @@ C               Compute the internal force vector
 
             else  ! Twinning detected in the previous increment
 
+              ! compute inverse of twinning deformation gradient
               call inverse_3x3(F_tw(:, :, iTwinFlag), F_tw_inv)
+
+              ! Rotation matrix for crystal basis caused by twinning
+              do j = 1, 3
+                do i = 1, 3
+                  R_tw(i, j) = 2*rntw(i, iTwinFlag)*rntw(j, iTwinFlag) -
+     &                         rImat(i, j)
+                end do
+              end do
+
+              ! Calculate euler angles corresponding to rotaion matrix
+              call eulang(R_tw,th_tw,phi_tw,om_tw,ieulererr)
 
               ! Quadrature Loop
               do l = 1, iTIntPt

@@ -218,7 +218,7 @@ C       integer Array variables passed from VUEL interface
         integer jprops(njprops),jElem(nblock),lflags(nFlags)
 
 C       Twin Code Implementation Started
-        integer kblock, i, j, l, n, iter
+        integer kblock, i, j, l, n, m, iter
         integer iTIntPt          ! Total # of Gauss PTS (=8) for MATRIX
         integer elmt_number      ! elmt global number
         integer iumatsvst        ! umat start index for svars
@@ -303,6 +303,7 @@ C       Twin Code Implementation Started
         real*8 props_tw(50)        ! Properties for twinned region since euler angles have changed
         ! TODO: Remove hard coded 50
         real*8 pi                  ! PI
+        real*8 T_tw(3, 3, 3, 3)   ! = (T_ij T_kl) where T_ij = m_i n_j for twin
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -476,7 +477,9 @@ C           b) shape functions and their derivatives wrt mid-step global coords
      1                          rMSdNndXiCt,rMSJdetCt)
 
             ! GB Element Check
-            isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
+            if (kstep.gt.0) then
+              isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
+            end if
 
             ! Check twinning flag in history (not impl)
             if (kinc.eq.0) then
@@ -600,6 +603,18 @@ C               Compute the internal force vector
               call compute_twin_props(rntw(:, iTwinFlag), props(77:126),
      &                                props_tw, 50, rImat, pi)
 
+              ! Compute T_ij T_kl
+              do n = 1, 3
+                do m = 1, 3
+                  do j = 1, 3
+                    do i = 1, 3
+                      T_tw(i, j, m, n) = Smat(i, j, iTwinFlag) *
+     &                                   Smat(m, n, iTwinFlag)
+                    end do
+                  end do
+                end do
+              end do
+
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -655,7 +670,26 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rBWidth = 0.01d0
                 alpha_U = 0.d0
                 do iter = 1, 5
-                  rdFu = matmul(rdVelGrd, rFu0)
+                  ! Compute jump velocity gradient increments
+                  do j = 1, 3
+                    do i = 1, 3
+                      rdLu(i, j) = 0.d0
+                      rdLz(i, j) = 0.d0
+                      do n = 1, 3
+                        do m = 1, 3
+                          rdLu(i, j) = rdLu(i, j) + (rImat(i, m) *
+     &                    rImat(j, n) + (rElmtSize/rBWidth - 1.d0) *
+     &                    alpha_U * T_tw(i, j, m, n)) * rdVelGrd(m, n)
+
+                          rdLz(i, j) = rdLz(i, j) + (rImat(i, m) *
+     &                    rImat(j, n) - alpha_U * T_tw(i, j, m, n)) *
+     &                    rdVelGrd(m, n)
+                        end do
+                      end do
+                    end do
+                  end do
+
+                  rdFu = matmul(rdLu, rFu0)
                   rFu1 = rFu0 + rdFu
 
                   ! Compute Stress (untwinned region) from existing UMAT
@@ -668,7 +702,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWu)
 
-                  rdFz = matmul(rdVelGrd, rFz0)
+                  rdFz = matmul(rdLz, rFz0)
                   rFz1 = rFz0 + rdFz
                   rFz0h = matmul(rFz0, F_tw_inv)
                   rFz1h = matmul(rFz1, F_tw_inv)

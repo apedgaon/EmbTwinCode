@@ -290,8 +290,8 @@ C       Twin Code Implementation Started
         real*8 alpha_U             ! Jump in velocity gradient
         real*8 rBWidth             ! Band width of twin
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
-        real*8 rStress_U(3, 3)     ! Stress in untwinned region
-        real*8 rStress_Z(3, 3)     ! Stress in twinned region
+        real*8 rStress_U(6)     ! Stress in untwinned region
+        real*8 rStress_Z(6)     ! Stress in twinned region
         real*8 rWu(3, 3, 3, 3)     ! dT/dF^U Material Jacobian for untwinned region
         real*8 rWz(3, 3, 3, 3)     ! dT/dF^Z Material Jacobian for twinned region
         real*8 rntw(3, 18)         ! Twin normal
@@ -303,7 +303,11 @@ C       Twin Code Implementation Started
         real*8 props_tw(50)        ! Properties for twinned region since euler angles have changed
         ! TODO: Remove hard coded 50
         real*8 pi                  ! PI
-        real*8 T_tw(3, 3, 3, 3)   ! = (T_ij T_kl) where T_ij = m_i n_j for twin
+        real*8 T_tw(3, 3, 3, 3)    ! = (T_ij T_kl) where T_ij = m_i n_j for twin
+        real*8 g_tr(3)             ! residual for traction continuity
+        real*8 z_tr(3, 3)          ! tangent matrix for traction continuity
+        real*8 sigmaZ(3, 3)        ! Tensor Stress in twinned region
+        real*8 sigmaU(3, 3)        ! Tensor Stress in untwinned region
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -716,6 +720,33 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             props_tw, 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWz)  ! TODO: euler angles change due to twinning
+
+                  sigmaU(1, 1) = rStress_U(1)
+                  sigmaU(2, 2) = rStress_U(2)
+                  sigmaU(3, 3) = rStress_U(3)
+                  sigmaU(2, 3) = rStress_U(4)
+                  sigmaU(3, 2) = rStress_U(4)
+                  sigmaU(1, 3) = rStress_U(5)
+                  sigmaU(3, 1) = rStress_U(5)
+                  sigmaU(1, 2) = rStress_U(6)
+                  sigmaU(2, 1) = rStress_U(6)
+
+                  sigmaZ(1, 1) = rStress_Z(1)
+                  sigmaZ(2, 2) = rStress_Z(2)
+                  sigmaZ(3, 3) = rStress_Z(3)
+                  sigmaZ(2, 3) = rStress_Z(4)
+                  sigmaZ(3, 2) = rStress_Z(4)
+                  sigmaZ(1, 3) = rStress_Z(5)
+                  sigmaZ(3, 1) = rStress_Z(5)
+                  sigmaZ(1, 2) = rStress_Z(6)
+                  sigmaZ(2, 1) = rStress_Z(6)
+                  g_tr(:) = 0.d0
+                  do i = 1, 3
+                    do j = 1, 3
+                      g_tr(i) = g_tr(i) +
+     &                  rntw(i, iTwinFlag) * (sigmaZ(i,j) - sigmaU(i,j))
+                    end do
+                  end do
 
                 end do
 

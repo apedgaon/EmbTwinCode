@@ -491,3 +491,32 @@ C         for umat stress to vuel stress
         props_tw(32) = phi_tw * 180.d0 / pi
         props_tw(33) = om_tw * 180.d0 / pi
       end subroutine
+
+      ! Explicit sym mat -> vec
+      subroutine sym_mat_to_vec(mat, vec)
+        implicit none
+        real*8 mat(3, 3), vec(6)
+
+        vec(1) = mat(1, 1)
+        vec(2) = mat(2, 2)
+        vec(3) = mat(3, 3)
+        vec(4) = mat(2, 3)
+        vec(5) = mat(1, 3)
+        vec(6) = mat(1, 2)
+      end subroutine
+
+      ! Explicit vec -> sym mat
+      subroutine vec_to_sym_mat(vec, mat)
+        implicit none
+        real*8 vec(6), mat(3, 3)
+
+        mat(1, 1) = vec(1)
+        mat(2, 2) = vec(2)
+        mat(3, 3) = vec(3)
+        mat(2, 3) = vec(4)
+        mat(3, 2) = vec(4)
+        mat(1, 3) = vec(5)
+        mat(3, 1) = vec(5)
+        mat(1, 2) = vec(6)
+        mat(2, 1) = vec(6)
+      end subroutine

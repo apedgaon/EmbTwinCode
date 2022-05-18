@@ -721,25 +721,8 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWz)  ! TODO: euler angles change due to twinning
 
-                  sigmaU(1, 1) = rStress_U(1)
-                  sigmaU(2, 2) = rStress_U(2)
-                  sigmaU(3, 3) = rStress_U(3)
-                  sigmaU(2, 3) = rStress_U(4)
-                  sigmaU(3, 2) = rStress_U(4)
-                  sigmaU(1, 3) = rStress_U(5)
-                  sigmaU(3, 1) = rStress_U(5)
-                  sigmaU(1, 2) = rStress_U(6)
-                  sigmaU(2, 1) = rStress_U(6)
-
-                  sigmaZ(1, 1) = rStress_Z(1)
-                  sigmaZ(2, 2) = rStress_Z(2)
-                  sigmaZ(3, 3) = rStress_Z(3)
-                  sigmaZ(2, 3) = rStress_Z(4)
-                  sigmaZ(3, 2) = rStress_Z(4)
-                  sigmaZ(1, 3) = rStress_Z(5)
-                  sigmaZ(3, 1) = rStress_Z(5)
-                  sigmaZ(1, 2) = rStress_Z(6)
-                  sigmaZ(2, 1) = rStress_Z(6)
+                  call vec_to_sym_mat(rStress_U, sigmaU)
+                  call vec_to_sym_mat(rStress_Z, sigmaZ)
                   g_tr(:) = 0.d0
                   do i = 1, 3
                     do j = 1, 3

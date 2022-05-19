@@ -218,7 +218,7 @@ C       integer Array variables passed from VUEL interface
         integer jprops(njprops),jElem(nblock),lflags(nFlags)
 
 C       Twin Code Implementation Started
-        integer kblock, i, j, l, n, m, iter
+        integer kblock, i, j, k, l, n, m, p, iter, aidx
         integer iTIntPt          ! Total # of Gauss PTS (=8) for MATRIX
         integer elmt_number      ! elmt global number
         integer iumatsvst        ! umat start index for svars
@@ -287,6 +287,7 @@ C       Twin Code Implementation Started
         real*8 rFz0h(3, 3)         ! Fe Fp part of previous twinned deformation gradient
         real*8 rFz1(3, 3)          ! Current twinned deformation gradient
         real*8 rFz1h(3, 3)         ! Fe Fp part of current twinned deformation gradient
+        real*8 rdFzh(3, 3)         ! Difference in Fe Fp part of twinned region
         real*8 alpha_U             ! Jump in velocity gradient
         real*8 rBWidth             ! Band width of twin
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
@@ -674,6 +675,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rBWidth = 0.01d0
                 alpha_U = 0.d0
                 do iter = 1, 5
+
                   ! Compute jump velocity gradient increments
                   do j = 1, 3
                     do i = 1, 3
@@ -693,6 +695,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                     end do
                   end do
 
+                  ! Compute new deformation gradient in the untwinned region
                   rdFu = matmul(rdLu, rFu0)
                   rFu1 = rFu0 + rdFu
 
@@ -706,12 +709,16 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWu)
 
+                  ! Compute new deformation gradient in the twinned region
                   rdFz = matmul(rdLz, rFz0)
                   rFz1 = rFz0 + rdFz
+
+                  ! Compute elastoplastic part of twinned deformation gradient
                   rFz0h = matmul(rFz0, F_tw_inv)
                   rFz1h = matmul(rFz1, F_tw_inv)
+                  rdFzh = rFz1h - rFz0h
 
-                  ! Compute Stress (untwinned region) from existing UMAT
+                  ! Compute Stress (twinned region) from existing UMAT
                   iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
                   iumatsven = offstatev(2) + l * nstatev(1)
                   call umat_stress(rStress_Z,
@@ -719,15 +726,35 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             rGsCoords, rFz0h, rFz1h,
      &                             props_tw, 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false., rWz)  ! TODO: euler angles change due to twinning
+     &                             kstep, kinc, .false., rWz)
 
+                  ! vector to matrix for stress in twinned and untwinned region
                   call vec_to_sym_mat(rStress_U, sigmaU)
                   call vec_to_sym_mat(rStress_Z, sigmaZ)
-                  g_tr(:) = 0.d0
-                  do i = 1, 3
-                    do j = 1, 3
-                      g_tr(i) = g_tr(i) +
-     &                  rntw(i, iTwinFlag) * (sigmaZ(i,j) - sigmaU(i,j))
+
+                  ! Form residual
+                  do aidx = 1, 3
+                    g_tr(aidx) = 0.d0
+                    do i = 1, 3
+                      g_tr(aidx) = g_tr(aidx) - rntw(i, iTwinFlag) *
+     &                            (sigmaZ(i,aidx) - sigmaU(i,aidx))
+                    end do
+                  end do
+
+                  ! Form residual tangent matrix
+                  do j = 1, 3
+                    do aidx = 1, 3
+                      z_tr(aidx, j) = 0.d0
+                      do i = 1, 3
+                        do k = 1, 3
+                          do p = 1, 3
+                            z_tr(aidx, j) = z_tr(aidx, j) +
+     &                      rntw(i,iTwinFlag)*((rElmtSize/rBWidth-1.d0)*
+     &                      rWz(i,aidx,j,k)*rdFzh(p,k)+rWu(i,aidx,j,k)*
+     &                      rdFu(p,k)) * rntw(p,iTwinFlag)
+                          end do
+                        end do
+                      end do
                     end do
                   end do
 

@@ -307,8 +307,14 @@ C       Twin Code Implementation Started
         real*8 T_tw(3, 3, 3, 3)    ! = (T_ij T_kl) where T_ij = m_i n_j for twin
         real*8 g_tr(3)             ! residual for traction continuity
         real*8 z_tr(3, 3)          ! tangent matrix for traction continuity
+        real*8 z_tr_inv(3, 3)      ! inverse of tangent matrix for traction continuity
         real*8 sigmaZ(3, 3)        ! Tensor Stress in twinned region
         real*8 sigmaU(3, 3)        ! Tensor Stress in untwinned region
+        real*8 rdmh(3)             ! change in jump + direction
+        real*8 rmh(3)              ! jump + direction
+        real*8 rntwc(3)            ! Twin normal in current configuration
+        real*8 rFuinv(3, 3)        ! inverse of def grad in untwinned region
+        real*8 mtpn(3, 3)          ! m tensor product n
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -672,28 +678,25 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
+                ! Iterations to satisfy traction continuity
                 rBWidth = 0.01d0
-                alpha_U = 0.d0
-                do iter = 1, 5
+                rmh = 0.d0
+                rFu1 = rFu0
+                do iter = 1, 10
+                  ! Compute twin normal in current configuration F^-T n
+                  call inverse_3x3(rFu1, rFuinv)
+                  rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
 
-                  ! Compute jump velocity gradient increments
+                  ! Compute m tensor product with n
                   do j = 1, 3
                     do i = 1, 3
-                      rdLu(i, j) = 0.d0
-                      rdLz(i, j) = 0.d0
-                      do n = 1, 3
-                        do m = 1, 3
-                          rdLu(i, j) = rdLu(i, j) + (rImat(i, m) *
-     &                    rImat(j, n) + (rElmtSize/rBWidth - 1.d0) *
-     &                    alpha_U * T_tw(i, j, m, n)) * rdVelGrd(m, n)
-
-                          rdLz(i, j) = rdLz(i, j) + (rImat(i, m) *
-     &                    rImat(j, n) - alpha_U * T_tw(i, j, m, n)) *
-     &                    rdVelGrd(m, n)
-                        end do
-                      end do
+                      mtpn(i, j) = rmh(i) * rntwc(j)
                     end do
                   end do
+
+                  ! Compute jump velocity gradient increments
+                  rdLu = rdVelGrd - mtpn
+                  rdLz = rdVelGrd + (rElmtSize/rBWidth - 1.d0) * mtpn
 
                   ! Compute new deformation gradient in the untwinned region
                   rdFu = matmul(rdLu, rFu0)
@@ -736,7 +739,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   do aidx = 1, 3
                     g_tr(aidx) = 0.d0
                     do i = 1, 3
-                      g_tr(aidx) = g_tr(aidx) - rntw(i, iTwinFlag) *
+                      g_tr(aidx) = g_tr(aidx) - rntwc(i) *
      &                            (sigmaZ(i,aidx) - sigmaU(i,aidx))
                     end do
                   end do
@@ -749,17 +752,22 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                         do k = 1, 3
                           do p = 1, 3
                             z_tr(aidx, j) = z_tr(aidx, j) +
-     &                      rntw(i,iTwinFlag)*((rElmtSize/rBWidth-1.d0)*
-     &                      rWz(i,aidx,j,k)*rdFzh(p,k)+rWu(i,aidx,j,k)*
-     &                      rdFu(p,k)) * rntw(p,iTwinFlag)
+     &                      rntwc(i) * ((rElmtSize/rBWidth-1.d0)*
+     &                      rWz(i,aidx,j,k)*rFz0h(p,k)+rWu(i,aidx,j,k)*
+     &                      rFu0(p,k)) * rntwc(p)
                           end do
                         end do
                       end do
                     end do
                   end do
 
-                end do
+                  ! Compute change in m hat
+                  call inverse_3x3(z_tr, z_tr_inv)
+                  rdmh = matmul(z_tr_inv, g_tr)
 
+                  ! Compute updated m hat
+                  rmh = rmh + rdmh
+                end do
               end do
 
             end if

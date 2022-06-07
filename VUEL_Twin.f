@@ -315,6 +315,8 @@ C       Twin Code Implementation Started
         real*8 rntwc(3)            ! Twin normal in current configuration
         real*8 rFuinv(3, 3)        ! inverse of def grad in untwinned region
         real*8 mtpn(3, 3)          ! m tensor product n
+        real*8 rmtwc(3)
+        real*8 rmhu(3)
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -686,6 +688,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   ! Compute twin normal in current configuration F^-T n
                   call inverse_3x3(rFu1, rFuinv)
                   rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
+                  rntwc = rntwc / norm2(rntwc)
 
                   ! Compute m tensor product with n
                   do j = 1, 3
@@ -768,6 +771,11 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   ! Compute updated m hat
                   rmh = rmh + rdmh
                 end do
+
+                rmhu = rmh / norm2(rmh)
+                rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
+                rmtwc = rmtwc / norm2(rmtwc)
+
               end do
 
             end if

@@ -297,10 +297,6 @@ C       Twin Code Implementation Started
         real*8 rWz(3, 3, 3, 3)     ! dT/dF^Z Material Jacobian for twinned region
         real*8 rntw(3, 18)         ! Twin normal
         real*8 rmtw(3, 18)         ! Twin shear direction
-        real*8 th_tw               ! Euler angles theta for rotation by twinning
-        real*8 phi_tw              ! Euler angles phi for rotation by twinning
-        real*8 om_tw               ! Euler angles om for rotation by twinning
-        real*8 R_tw(3, 3)          ! Rotation matrix of crystal basis due to twinning
         real*8 props_tw(50)        ! Properties for twinned region since euler angles have changed
         ! TODO: Remove hard coded 50
         real*8 pi                  ! PI

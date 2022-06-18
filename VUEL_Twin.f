@@ -680,12 +680,13 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rBWidth = 0.01d0
                 rmh = 0.d0
                 rFu1 = rFu0
-                do iter = 1, 10
-                  ! Compute twin normal in current configuration F^-T n
-                  call inverse_3x3(rFu1, rFuinv)
-                  rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
-                  rntwc = rntwc / norm2(rntwc)
 
+                ! Compute twin normal in current configuration F^-T n
+                call inverse_3x3(rFu1, rFuinv)
+                rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
+                rntwc = rntwc / norm2(rntwc)
+
+                do iter = 1, 10
                   ! Compute m tensor product with n
                   do j = 1, 3
                     do i = 1, 3
@@ -733,6 +734,11 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   ! vector to matrix for stress in twinned and untwinned region
                   call vec_to_sym_mat(rStress_U, sigmaU)
                   call vec_to_sym_mat(rStress_Z, sigmaZ)
+
+                ! Compute twin normal in current configuration F^-T n
+                  call inverse_3x3(rFu1, rFuinv)
+                  rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
+                  rntwc = rntwc / norm2(rntwc)
 
                   ! Form residual
                   do aidx = 1, 3

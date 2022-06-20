@@ -287,7 +287,6 @@ C       Twin Code Implementation Started
         real*8 rFz0h(3, 3)         ! Fe Fp part of previous twinned deformation gradient
         real*8 rFz1(3, 3)          ! Current twinned deformation gradient
         real*8 rFz1h(3, 3)         ! Fe Fp part of current twinned deformation gradient
-        real*8 rdFzh(3, 3)         ! Difference in Fe Fp part of twinned region
         real*8 alpha_U             ! Jump in velocity gradient
         real*8 rBWidth             ! Band width of twin
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
@@ -681,6 +680,12 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rmh = 0.d0
                 rFu1 = rFu0
 
+                ! Elastoplastic part of previous deformation gradient in the twinned region
+                ! TODO: if loop implementation needed based on whether this is the first time
+                !       after the twin is detected
+                rFz0h = matmul(rFz0, F_tw_inv)
+                rFz0h = rFz0
+
                 ! Compute twin normal in current configuration F^-T n
                 call inverse_3x3(rFu1, rFuinv)
                 rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
@@ -717,9 +722,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   rFz1 = rFz0 + rdFz
 
                   ! Compute elastoplastic part of twinned deformation gradient
-                  rFz0h = matmul(rFz0, F_tw_inv)
                   rFz1h = matmul(rFz1, F_tw_inv)
-                  rdFzh = rFz1h - rFz0h
 
                   ! Compute Stress (twinned region) from existing UMAT
                   iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)

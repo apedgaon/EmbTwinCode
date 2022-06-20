@@ -691,7 +691,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
                 rntwc = rntwc / norm2(rntwc)
 
-                do iter = 1, 10
+                do iter = 1, 30
                   ! Compute m tensor product with n
                   do j = 1, 3
                     do i = 1, 3
@@ -751,6 +751,11 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                            (sigmaZ(i,aidx) - sigmaU(i,aidx))
                     end do
                   end do
+
+                  ! check for residual convergence
+                  if (norm2(g_tr).lt.1.d-8) then
+                    exit
+                  end if
 
                   ! Form residual tangent matrix
                   do j = 1, 3

@@ -782,9 +782,42 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   rmh = rmh + rdmh
                 end do
 
-                rmhu = rmh / norm2(rmh)
+                ! Compute discontinuity magnitude and direction
+                alpha_U = norm2(rmh)
+                rmhu = rmh / alpha_U
                 rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
                 rmtwc = rmtwc / norm2(rmtwc)
+
+                ! Save deformation gradients to both untwinned and twinned block
+                iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
+                iumatsven = offstatev(3) + l * nstatev(2)
+                svars(kblock, iumatsvst : iumatsven) =
+     &                                  reshape(rFu1, (/9/))
+                iumatsvst = offstatev(4) + 1 + (l - 1) * nstatev(2)
+                iumatsven = offstatev(4) + l * nstatev(2)
+                svars(kblock, iumatsvst : iumatsven) =
+     &                                  reshape(rFz1, (/9/))
+
+                ! Compute Final Stress (untwinned region) from existing UMAT
+                iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+                iumatsven = offstatev(1) + l * nstatev(1)
+                call umat_stress(rStress_U,
+     &                           svars(kblock, iumatsvst:iumatsven),
+     &                           rGsCoords, rFu0, rFu1,
+     &                           props(77:126), 50, nstatev(1), nnode,
+     &                           elmt_number, l, mcrd, time, dtimeCur,
+     &                           kstep, kinc, .true., rWu)
+
+
+                ! Compute Final Stress (twinned region) from existing UMAT
+                iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
+                iumatsven = offstatev(2) + l * nstatev(1)
+                call umat_stress(rStress_Z,
+     &                           svars(kblock, iumatsvst:iumatsven),
+     &                           rGsCoords, rFz0h, rFz1h,
+     &                           props_tw, 50, nstatev(1), nnode,
+     &                           elmt_number, l, mcrd, time, dtimeCur,
+     &                           kstep, kinc, .true., rWz)
 
               end do
 

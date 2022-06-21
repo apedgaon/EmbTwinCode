@@ -287,7 +287,6 @@ C       Twin Code Implementation Started
         real*8 rFz0h(3, 3)         ! Fe Fp part of previous twinned deformation gradient
         real*8 rFz1(3, 3)          ! Current twinned deformation gradient
         real*8 rFz1h(3, 3)         ! Fe Fp part of current twinned deformation gradient
-        real*8 alpha_U             ! Jump in velocity gradient
         real*8 rBWidth             ! Band width of twin
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
         real*8 rStress_U(6)     ! Stress in untwinned region
@@ -299,7 +298,6 @@ C       Twin Code Implementation Started
         real*8 props_tw(50)        ! Properties for twinned region since euler angles have changed
         ! TODO: Remove hard coded 50
         real*8 pi                  ! PI
-        real*8 T_tw(3, 3, 3, 3)    ! = (T_ij T_kl) where T_ij = m_i n_j for twin
         real*8 g_tr(3)             ! residual for traction continuity
         real*8 z_tr(3, 3)          ! tangent matrix for traction continuity
         real*8 z_tr_inv(3, 3)      ! inverse of tangent matrix for traction continuity
@@ -309,9 +307,15 @@ C       Twin Code Implementation Started
         real*8 rmh(3)              ! jump + direction
         real*8 rntwc(3)            ! Twin normal in current configuration
         real*8 rFuinv(3, 3)        ! inverse of def grad in untwinned region
-        real*8 mtpn(3, 3)          ! m tensor product n
-        real*8 rmtwc(3)
-        real*8 rmhu(3)
+        real*8 mtpn(3, 3)          ! mhat tensor product n
+        real*8 rmtwc(3)            ! Twin Direction in current configuration
+        real*8 rmhu(3)             ! Unit vector along mhat
+        real*8 rBmatU(6,mcrd*nnode)! B-bar operator in untwinned region
+        real*8 rBmatZ(6,mcrd*nnode)! B-bar operator in twinned region
+        real*8 rTdis(3, 3)         ! Discontinuity tensor (m tensor product n)
+        real*8 alpha_h             ! Intermediate discontinuity magnitude
+        real*8 alpha_U             ! Discontinuity magnitude in untwinned region
+        real*8 rTdL                ! Velocity gradient increment projected on discontinous mode
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -611,18 +615,6 @@ C               Compute the internal force vector
               call compute_twin_props(rntw(:, iTwinFlag), props(77:126),
      &                                props_tw, 50, rImat, pi)
 
-              ! Compute T_ij T_kl
-              do n = 1, 3
-                do m = 1, 3
-                  do j = 1, 3
-                    do i = 1, 3
-                      T_tw(i, j, m, n) = Smat(i, j, iTwinFlag) *
-     &                                   Smat(m, n, iTwinFlag)
-                    end do
-                  end do
-                end do
-              end do
-
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -783,10 +775,22 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 end do
 
                 ! Compute discontinuity magnitude and direction
-                alpha_U = norm2(rmh)
-                rmhu = rmh / alpha_U
+                alpha_h = norm2(rmh)
+                rmhu = rmh / alpha_h
                 rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
                 rmtwc = rmtwc / norm2(rmtwc)
+
+                ! Compute discontinuity magnitude in the untwinned region
+                rTdL = 0.d0
+                do j = 1, 3
+                  do i = 1, 3
+                    rTdis(i, j) = rmhu(i) * rntwc(j)
+                    rTdL = rTdL + rTdis(i, j) * rdVelGrd(i, j)
+                  end do
+                end do
+                
+                alpha_U = alpha_h / rTdL
+
 
                 ! Save deformation gradients to both untwinned and twinned block
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)

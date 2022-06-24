@@ -862,9 +862,9 @@ C               Compute the internal force vector
                     do j = 1, 6
                       rhs( kblock , (n-1)*mcrd + i ) =
      &                rhs( kblock , (n-1)*mcrd + i )
-     &    +((rBWidth/rElmtSize)*rBmatZ(j,(n-1)*mcrd+i)*rStress_Z(j)
-     &    +(1.d0-rBWidth/rElmtSize)*rBmatU(j,(n-1)*mcrd+i)*rStress_U(j))
-     &    *rdOmega
+     &                + ((rBWidth/rElmtSize)*rBmatZ(j,(n-1)*mcrd+i)*
+     &                rStress_Z(j) + (1.d0-rBWidth/rElmtSize)*
+     &                rBmatU(j,(n-1)*mcrd+i)*rStress_U(j))*rdOmega
                     end do
                   end do
                 end do

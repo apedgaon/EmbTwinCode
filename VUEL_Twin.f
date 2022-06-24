@@ -315,6 +315,7 @@ C       Twin Code Implementation Started
         real*8 rTdis(6)         ! Discontinuity tensor (m tensor product n)
         real*8 alpha_h             ! Intermediate discontinuity magnitude
         real*8 alpha_U             ! Discontinuity magnitude in untwinned region
+        real*8 alpha_Z             ! Discontinuity magnitude in twinned region
         real*8 rTdL                ! Velocity gradient increment projected on discontinous mode
         real*8 rTBmat              ! B-bar matrix projected on discontinous mode
 
@@ -776,13 +777,13 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   rmh = rmh + rdmh
                 end do
 
-                ! Compute discontinuity magnitude and direction
+                ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)
                 rmhu = rmh / alpha_h
                 rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
                 rmtwc = rmtwc / norm2(rmtwc)
 
-                ! Compute discontinuity magnitude in the untwinned region
+                ! Compute velocity gradient increment projected on discontinuity tensor
                 rTdL = 0.d0
                 do j = 1, 3
                   do i = 1, 3
@@ -790,7 +791,9 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   end do
                 end do
                 
+                ! Compute discontinuity magnitude in untwinned and twinned region
                 alpha_U = alpha_h / rTdL
+                alpha_Z = (rElmtSize/rBWidth - 1.d0) * alpha_U
 
 
                 ! Save deformation gradients to both untwinned and twinned block
@@ -838,6 +841,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rTdis(5) = rmhu(1) * rntwc(3) + rmhu(3) * rntwc(1)
                 rTdis(6) = rmhu(1) * rntwc(2) + rmhu(2) * rntwc(1)
 
+                ! Compute B-bar in twinned and untwinned region
                 rBmatU = rBmat
                 rBmatZ = rBmat
                 do aidx = 1, mcrd*nnode
@@ -846,10 +850,10 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                     rTBmat = rTBmat + rTdis(i) * rBmat(i, aidx)
                   end do
 
-                  rBmatU(:,aidx) = rBmatU(:,aidx) -
+                  rBmatU(:,aidx) = rBmatU(:, aidx) -
      &                             alpha_U * rTdis(:) * rTBmat
                   rBmatZ(:, aidx) = rBmatZ(:, aidx) +
-     &                (rElmtSize/rBWidth - 1.d0)*alpha_U*rTdis(:)*rTBmat
+     &                             alpha_Z * rTdis(:) * rTBmat
                 end do
 
               end do

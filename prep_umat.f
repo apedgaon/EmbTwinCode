@@ -332,6 +332,7 @@ C         for umat stress to vuel stress
           ndi = 3
           nshr = 3
           ntens = ndi + nshr
+          rUmatStress = 0.d0
           if (((kstep.eq.0).or.(kstep.eq.1)).and.(kinc.eq.0)) then
               dtime = 1.d-9
           end if

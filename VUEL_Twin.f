@@ -312,10 +312,11 @@ C       Twin Code Implementation Started
         real*8 rmhu(3)             ! Unit vector along mhat
         real*8 rBmatU(6,mcrd*nnode)! B-bar operator in untwinned region
         real*8 rBmatZ(6,mcrd*nnode)! B-bar operator in twinned region
-        real*8 rTdis(3, 3)         ! Discontinuity tensor (m tensor product n)
+        real*8 rTdis(6)         ! Discontinuity tensor (m tensor product n)
         real*8 alpha_h             ! Intermediate discontinuity magnitude
         real*8 alpha_U             ! Discontinuity magnitude in untwinned region
         real*8 rTdL                ! Velocity gradient increment projected on discontinous mode
+        real*8 rTBmat              ! B-bar matrix projected on discontinous mode
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -731,6 +732,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   call vec_to_sym_mat(rStress_Z, sigmaZ)
 
                 ! Compute twin normal in current configuration F^-T n
+                ! TODO should this be done with F^U or homogeneous F
                   call inverse_3x3(rFu1, rFuinv)
                   rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
                   rntwc = rntwc / norm2(rntwc)
@@ -784,8 +786,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rTdL = 0.d0
                 do j = 1, 3
                   do i = 1, 3
-                    rTdis(i, j) = rmhu(i) * rntwc(j)
-                    rTdL = rTdL + rTdis(i, j) * rdVelGrd(i, j)
+                    rTdL = rTdL + rmhu(i) * rntwc(j) * rdVelGrd(i, j)
                   end do
                 end do
                 
@@ -822,6 +823,34 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                           props_tw, 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWz)
+
+                ! Compute discontinuous mode tensor
+                rTdis(1) = rmhu(1) * rntwc(1)
+                rTdis(2) = rmhu(2) * rntwc(2)
+                rTdis(3) = rmhu(3) * rntwc(3)
+                rTdis(4) = 0.5d0 * (rmhu(2) * rntwc(3) +
+     &                              rmhu(3) * rntwc(2))
+                rTdis(5) = 0.5d0 * (rmhu(1) * rntwc(3) +
+     &                              rmhu(3) * rntwc(1))
+                rTdis(6) = 0.5d0 * (rmhu(1) * rntwc(2) +
+     &                              rmhu(2) * rntwc(1))
+                rTdis(4) = rmhu(2) * rntwc(3) + rmhu(3) * rntwc(2)
+                rTdis(5) = rmhu(1) * rntwc(3) + rmhu(3) * rntwc(1)
+                rTdis(6) = rmhu(1) * rntwc(2) + rmhu(2) * rntwc(1)
+
+                rBmatU = rBmat
+                rBmatZ = rBmat
+                do aidx = 1, mcrd*nnode
+                  rTBmat = 0.d0
+                  do i = 1, 6
+                    rTBmat = rTBmat + rTdis(i) * rBmat(i, aidx)
+                  end do
+
+                  rBmatU(:,aidx) = rBmatU(:,aidx) -
+     &                             alpha_U * rTdis(:) * rTBmat
+                  rBmatZ(:, aidx) = rBmatZ(:, aidx) +
+     &                (rElmtSize/rBWidth - 1.d0)*alpha_U*rTdis(:)*rTBmat
+                end do
 
               end do
 

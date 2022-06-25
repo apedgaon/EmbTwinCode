@@ -685,6 +685,10 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
                 rntwc = rntwc / norm2(rntwc)
 
+                rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
+                rmtwc = rmtwc / norm2(rmtwc)
+                rmh = 1.d-4 * rmtwc
+
                 do iter = 1, 30
                   ! Compute m tensor product with n
                   do j = 1, 3

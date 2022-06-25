@@ -325,6 +325,7 @@ C         additional arguments for umat
           character*80 cmname
           integer ndi, nshr, ntens, layer, kspt
           real*8 tmphvars(nsvars), rW(3,3,3,3)
+          integer iterErr
 
 C         for umat stress to vuel stress
           real*8 rUmatStress(6)
@@ -345,7 +346,7 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc, rW)
+     &               kstep,   kinc, rW, iterErr)
           else    ! Required during iterative updates when hvars should not be edited
             tmphvars = hvars
             call umat_crys(rUmatStress,  tmphvars,  ddsdde,  sse,  spd,
@@ -355,7 +356,11 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc, rW)
+     &               kstep,   kinc, rW, iterErr)
+          end if
+
+          if (itererr.eq.1) then
+            CALL XPLB_ABQERR(-3,'UMAT convergence failed!',0,0.d0,' ')
           end if
 
           rStress(1) = rUmatStress(1)

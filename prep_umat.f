@@ -304,7 +304,7 @@ C         See UMAT Deformation Gradient Documentation for more details
       subroutine umat_stress(rStress, hvars, rGsCoords, rDfgrd0,
      &                      rDfgrd1, props, nprops, nsvars, nnode, noel,
      &                      npt, mcrd, time, dtime, kstep, kinc,
-     &                      lEditSvars, rW)
+     &                      lEditSvars, rW, iterErr)
           
           implicit none
 C         input arguments declaration
@@ -334,6 +334,7 @@ C         for umat stress to vuel stress
           nshr = 3
           ntens = ndi + nshr
           rUmatStress = 0.d0
+          rW = 0.d0
           if (((kstep.eq.0).or.(kstep.eq.1)).and.(kinc.eq.0)) then
               dtime = 1.d-9
           end if
@@ -359,9 +360,9 @@ C         for umat stress to vuel stress
      &               kstep,   kinc, rW, iterErr)
           end if
 
-          if (itererr.eq.1) then
-            CALL XPLB_ABQERR(-3,'UMAT convergence failed!',0,0.d0,' ')
-          end if
+          ! if (itererr.eq.1) then
+          !   CALL XPLB_ABQERR(-3,'UMAT convergence failed!',0,0.d0,' ')
+          ! end if
 
           rStress(1) = rUmatStress(1)
           rStress(2) = rUmatStress(2)

@@ -233,6 +233,7 @@ C       Twin Code Implementation Started
         integer iTwinFlag        ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
         integer ieulererr        ! return error from eulang routine
+        integer iterErr          ! Iteration convergence error
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -318,6 +319,7 @@ C       Twin Code Implementation Started
         real*8 alpha_Z             ! Discontinuity magnitude in twinned region
         real*8 rTdL                ! Velocity gradient increment projected on discontinous mode
         real*8 rTBmat              ! B-bar matrix projected on discontinous mode
+        real*8 g_tr_err            ! Error norm in residual
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -576,7 +578,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                           rGsCoords, rDfgrd0, rDfgrd1,
      &                           props(77:126), 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWu)
+     &                           kstep, kinc, .true., rWu, iterErr)
 
                 ! store same svars for twinned part which has not formed yet
                 iumatsvst2 = offstatev(2) + 1 + (l - 1) * nstatev(1)
@@ -685,9 +687,12 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
                 rntwc = rntwc / norm2(rntwc)
 
+                ! Guess for initial rmh based on twin shear direction
                 rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
                 rmtwc = rmtwc / norm2(rmtwc)
                 rmh = 1.d-4 * rmtwc
+
+                g_tr_err = 1.d0  ! some random initial value
 
                 do iter = 1, 30
                   ! Compute m tensor product with n
@@ -713,7 +718,13 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             rGsCoords, rFu0, rFu1,
      &                             props(77:126), 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false., rWu)
+     &                             kstep, kinc, .false., rWu, iterErr)
+
+                  if (iterErr.eq.1) then
+                    call random_number(rmh)
+                    rmh = 1.d-4 * rmh
+                    cycle
+                  end if
 
                   ! Compute new deformation gradient in the twinned region
                   rdFz = matmul(rdLz, rFz0)
@@ -730,7 +741,13 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             rGsCoords, rFz0h, rFz1h,
      &                             props_tw, 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false., rWz)
+     &                             kstep, kinc, .false., rWz, iterErr)
+
+                  if (iterErr.eq.1) then
+                    call random_number(rmh)
+                    rmh = 1.d-2 * rmh
+                    cycle
+                  end if
 
                   ! vector to matrix for stress in twinned and untwinned region
                   call vec_to_sym_mat(rStress_U, sigmaU)
@@ -752,7 +769,8 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   end do
 
                   ! check for residual convergence
-                  if (norm2(g_tr).lt.1.d-8) then
+                  g_tr_err = norm2(g_tr)
+                  if (g_tr_err.lt.1.d-8) then
                     exit
                   end if
 
@@ -780,6 +798,12 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   ! Compute updated m hat
                   rmh = rmh + rdmh
                 end do
+
+                ! End analysis if traction continuity fails
+                if (g_tr_err.gt.1.d-8) then
+                  CALL XPLB_ABQERR(-3,'Traction Continuity failed!',
+     &                             0,0.d0,' ')
+                end if
 
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)
@@ -818,7 +842,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                           rGsCoords, rFu0, rFu1,
      &                           props(77:126), 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWu)
+     &                           kstep, kinc, .true., rWu, iterErr)
 
 
                 ! Compute Final Stress (twinned region) from existing UMAT
@@ -829,7 +853,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                           rGsCoords, rFz0h, rFz1h,
      &                           props_tw, 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWz)
+     &                           kstep, kinc, .true., rWz, iterErr)
 
                 ! Compute discontinuous mode tensor
                 rTdis(1) = rmhu(1) * rntwc(1)

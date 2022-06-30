@@ -694,7 +694,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
                 g_tr_err = 1.d0  ! some random initial value
 
-                do iter = 1, 30
+                do iter = 1, 100
                   ! Compute m tensor product with n
                   do j = 1, 3
                     do i = 1, 3

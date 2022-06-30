@@ -690,7 +690,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 ! Guess for initial rmh based on twin shear direction
                 rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
                 rmtwc = rmtwc / norm2(rmtwc)
-                rmh = 1.d-4 * rmtwc
+                rmh = 1.d-3 * rmtwc
 
                 g_tr_err = 1.d0  ! some random initial value
 
@@ -722,7 +722,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
                   if (iterErr.eq.1) then
                     call random_number(rmh)
-                    rmh = 1.d-4 * rmh
+                    rmh = 1.d-3 * rmh
                     cycle
                   end if
 
@@ -745,7 +745,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
                   if (iterErr.eq.1) then
                     call random_number(rmh)
-                    rmh = 1.d-2 * rmh
+                    rmh = 1.d-3 * rmh
                     cycle
                   end if
 

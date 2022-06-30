@@ -287,7 +287,7 @@
         eulangs(1) = th 
         eulangs(2) = phi 
         eulangs(3) = om
-        rhossd_n(:) = rhossd_0
+        rhossd_n(:) = rhossd_0  ! TODO: Ti
         FpInv_n = del
         spk2_n = 0.d0
         chi_n = chi0
@@ -415,11 +415,11 @@
         
 !  Compute slip resistances from dislocation densities at t_n
       ! xmu = sqrt((c11-c12)/2.d0*c44)
-      xmu = sqrt((c11-c12)/2.d0*c44) + xmu0
-      call calc_amat(nslip,props,nprops,xsC,xmC,amat)
-      call calc_dmat(nslip,props,nprops,xmC,amat,dmat)
+      xmu = sqrt((c11-c12)/2.d0*c55) + xmu0   !TODO: xmu0 adjustment for Ti
+      call calc_amat(nslip,props,nprops,xsC,xmC,amat) !TODO: Ti version
+      call calc_dmat(nslip,props,nprops,xmC,amat,dmat)  !TODO: Ti version
       call get_burgvec(props, burg_vec)
-      s_n = (xmu/rs)*burg_vec*sqrt(matmul(amat,rhossd_n))
+      s_n = (xmu/rs)*burg_vec*sqrt(matmul(amat,rhossd_n)) !TODO: rs for Ti
       rhomf_n = matmul(dmat,rhossd_n)
       rhossd_i = matmul(dmat,rhossd_n)
 

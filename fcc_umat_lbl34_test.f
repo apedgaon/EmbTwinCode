@@ -2355,7 +2355,7 @@ C **********************************************************************
         THETAP = props(26)
         bk     = props(27)
         eta    = props(28)
-        rx     = props(37)
+        rx     = props(37) !TODO: rx for hcp Ti? Remove?
 
         IF (TAUALPHA.eq.0.d0) THEN
            gfunc = 0.d0

@@ -230,7 +230,7 @@ C       Twin Code Implementation Started
         integer iConsType
         integer nstatev(3)
         integer offstatev(5)
-        integer iTwinFlag        ! Twinning index that nucleated
+        integer iTwFlg        ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
         integer ieulererr        ! return error from eulang routine
         integer iterErr          ! Iteration convergence error
@@ -502,9 +502,9 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               svars(kblock, offstatev(5) + 1) = 0
             end if
 
-            iTwinFlag = svars(kblock, offstatev(5) + 1)
+            iTwFlg = svars(kblock, offstatev(5) + 1)
 
-            if (iTwinFlag.eq.0) then   ! No twinning detected in previous increment
+            if (iTwFlg.eq.0) then   ! No twinning detected in previous increment
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -588,14 +588,14 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
                 ! Check for twin nucleation
                 if (isGbElem) then
-                  if (iTwinFlag.eq.0) then
+                  if (iTwFlg.eq.0) then
                     call check_twin_nucleation(rStress, Smat, rDfgrd1,
-     &                                         iTwinFlag)
+     &                                         iTwFlg)
                   end if
                 end if
 
                 ! Store twin flag
-                svars(kblock, offstatev(5) + 1) = iTwinFlag
+                svars(kblock, offstatev(5) + 1) = iTwFlg
 
 C               Compute the internal force vector
                 DO n = 1, nnode
@@ -613,10 +613,10 @@ C               Compute the internal force vector
             else  ! Twinning detected in the previous increment
 
               ! compute inverse of twinning deformation gradient
-              call inverse_3x3(F_tw(:, :, iTwinFlag), F_tw_inv)
+              call inverse_3x3(F_tw(:, :, iTwFlg), F_tw_inv)
 
               ! compute properties for twinned region due to rotation of crystal basis
-              call compute_twin_props(rntw(:, iTwinFlag), props(77:126),
+              call compute_twin_props(rntw(:, iTwFlg), props(77:126),
      &                                props_tw, 50, rImat, pi)
 
               ! Quadrature Loop
@@ -684,11 +684,11 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
                 ! Compute twin normal in current configuration F^-T n
                 call inverse_3x3(rFu1, rFuinv)
-                rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
+                rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
                 rntwc = rntwc / norm2(rntwc)
 
                 ! Guess for initial rmh based on twin shear direction
-                rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
+                rmtwc = matmul(rFu1, rmtw(:, iTwFlg))
                 rmtwc = rmtwc / norm2(rmtwc)
                 rmh = 1.d-3 * rmtwc
 
@@ -756,7 +756,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 ! Compute twin normal in current configuration F^-T n
                 ! TODO should this be done with F^U or homogeneous F
                   call inverse_3x3(rFu1, rFuinv)
-                  rntwc = matmul(transpose(rFuinv), rntw(:, iTwinFlag))
+                  rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
                   rntwc = rntwc / norm2(rntwc)
 
                   ! Form residual
@@ -808,7 +808,7 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)
                 rmhu = rmh / alpha_h
-                rmtwc = matmul(rFu1, rmtw(:, iTwinFlag))
+                rmtwc = matmul(rFu1, rmtw(:, iTwFlg))
                 rmtwc = rmtwc / norm2(rmtwc)
 
                 ! Compute velocity gradient increment projected on discontinuity tensor

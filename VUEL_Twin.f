@@ -230,10 +230,11 @@ C       Twin Code Implementation Started
         integer iConsType
         integer nstatev(3)
         integer offstatev(5)
-        integer iTwFlg        ! Twinning index that nucleated
+        integer iTwFlg           ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
         integer ieulererr        ! return error from eulang routine
         integer iterErr          ! Iteration convergence error
+        integer iTwEmbStp        ! Twin Embedding Step
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -359,7 +360,7 @@ C       Natural coordinates of element centroid
         ! Number of state variables array and offsets array
         nstatev(1) = 148
         nstatev(2) = 9
-        nstatev(3) = 1
+        nstatev(3) = 2
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)
         offstatev(3) = offstatev(2) + 8 * nstatev(1)
@@ -500,9 +501,11 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             ! Check twinning flag in history (not impl)
             if (kinc.eq.0) then
               svars(kblock, offstatev(5) + 1) = 0
+              svars(kblock, offstatev(5) + 2) = 0
             end if
 
             iTwFlg = svars(kblock, offstatev(5) + 1)
+            iTwEmbStp = svars(kblock, offstatev(5) + 2)
 
             if (iTwFlg.eq.0) then   ! No twinning detected in previous increment
               ! Quadrature Loop
@@ -597,6 +600,12 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 ! Store twin flag
                 svars(kblock, offstatev(5) + 1) = iTwFlg
 
+                ! If twin detected, mark next step for twin embedding
+                if (iTwFlg.gt.0) then
+                  iTwEmbStp = 1
+                  svars(kblock, offstatev(5) + 2) = iTwEmbStp
+                end if
+
 C               Compute the internal force vector
                 DO n = 1, nnode
                   DO i = 1, mcrd
@@ -677,10 +686,11 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                 rFu1 = rFu0
 
                 ! Elastoplastic part of previous deformation gradient in the twinned region
-                ! TODO: if loop implementation needed based on whether this is the first time
-                !       after the twin is detected
-                rFz0h = matmul(rFz0, F_tw_inv)
-                rFz0h = rFz0
+                if (iTwEmbStp.eq.1) then
+                  rFz0h = rFz0
+                else
+                  rFz0h = matmul(rFz0, F_tw_inv)
+                end if
 
                 ! Compute twin normal in current configuration F^-T n
                 call inverse_3x3(rFu1, rFuinv)
@@ -898,6 +908,13 @@ C               Compute the internal force vector
                 end do
 
               end do
+
+              ! Twin is embedded in this step, unset the flag
+              if (iTwEmbStp.eq.1) then
+                iTwEmbStp = 0
+                svars(kblock, offstatev(5) + 2) = iTwEmbStp
+              end if
+
 
             end if
 

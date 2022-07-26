@@ -227,16 +227,19 @@ C         See UMAT Deformation Gradient Documentation for more details
           rm(:, 18) = (/0.41477905129774d0, -0.23947279692096776d0,
      &                -0.8778445865524238d0/)
 
-          gamma1 = 0.17475083284085197d0
-          gamma2 = 0.218d0 ! Need more accuracy
-          gamma3 = 0.098d0 ! Need more accuracy
-          Smat = 0.0d0
+          ! Shear in twin systems
+          gamma1 = 0.17475083284085213d0     ! {1 0 -1 2} <-1 0 1 1> (tens)
+          gamma2 = 0.21821257173587794d0     ! {1 1 -2 2} <1 1 -2 -3> (comp)
+          gamma3 = 0.09804551470109034d0     ! {1 0 -1 1} <1 0 -1 -2> (comp)
+
+          ! Form Twin Schmid Tensor
           do i = 1, 3
             do j = 1, 3
                 Smat(i, j, :) = rm(i, :) * rn(j, :)
             end do
           end do
 
+          ! Compute Twinning Deformation gradient
           do i = 1, 6
             F_tw(:, :, i) = rImat + gamma1 * Smat(:, :, i)
           end do

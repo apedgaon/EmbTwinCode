@@ -583,6 +583,11 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWu, iterErr)
 
+                if (iterErr.eq.1) then
+                  CALL XPLB_ABQERR(-3,'UMAT Failed to Converge in '//
+     &                             'unlocalized region!', 0,0.d0,' ')
+                end if
+
                 ! store same svars for twinned part which has not formed yet
                 iumatsvst2 = offstatev(2) + 1 + (l - 1) * nstatev(1)
                 iumatsven2 = offstatev(2) + l * nstatev(1)

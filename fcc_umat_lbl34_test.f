@@ -126,7 +126,7 @@
         RHO=PROPS(2)                 ! Initial density [Mg/mm^3]
         CP=PROPS(3)                  ! Specific Heat [mJ/(Mg.K)]
         A11=PROPS(4)                 ! Thermal expansion coefficient [1/K]
-        xkappax=PROPS(5)             ! Inverse specific effective heat [-]
+        xkappax=PROPS(5)             ! Inverse specific effective heat [-] TODO: Ti
 
         rM11=PROPS(6)                ! Slope of C11 vs temp line [MPa/K]
         C11_0=PROPS(7)               ! C11 at 0 K [MPa]
@@ -135,39 +135,39 @@
         rM44=PROPS(10)               ! Slope of C44 vs temp line [MPa/K]
         C44_0=PROPS(11)              ! C44 at 0 K [MPa]
 
-        alphaT=PROPS(12)             ! Taylor factor [-]** Neglect this?
+        alphaT=PROPS(12)             ! Taylor factor [-]** Neglect this?  TODO: Ti
         burg = props(13)             ! Burgers vector [mm]
-        rhossd_0 = props(14)         ! Initial SSD density [mm^-2]
-        chi0 = props(15)             ! Initial effective temperature [-]*
-        chi_ss = props(16)           ! Steady-state effective temperature [-]*
-        a_self = props(17)           ! Dislocation interaction coefficient [-]
-        a_copl = props(18)           ! Dislocation interaction coefficient [-]
-        a_hirth = props(19)          ! Dislocation interaction coefficient [-]
-        a_colli = props(20)          ! Dislocation interaction coefficient [-]
-        a_gliss = props(21)          ! Dislocation interaction coefficient [-]
-        a_lomer = props(22)          ! Dislocation interaction coefficient [-]
-        e_D = props(23)              ! Dislocation formation energy [-]*
-        e_copl = props(24)           ! Dislocation interaction energy [-]*
+        rhossd_0 = props(14)         ! Initial SSD density [mm^-2]  TODO: Ti
+        chi0 = props(15)             ! Initial effective temperature [-]* TODO: Ti
+        chi_ss = props(16)           ! Steady-state effective temperature [-]* TODO: Ti
+        a_self = props(17)           ! Dislocation interaction coefficient [-] TODO: Ti
+        a_copl = props(18)           ! Dislocation interaction coefficient [-] TODO: Ti
+        a_hirth = props(19)          ! Dislocation interaction coefficient [-] TODO: Ti
+        a_colli = props(20)          ! Dislocation interaction coefficient [-] TODO: Ti
+        a_gliss = props(21)          ! Dislocation interaction coefficient [-] TODO: Ti
+        a_lomer = props(22)          ! Dislocation interaction coefficient [-] TODO: Ti
+        e_D = props(23)              ! Dislocation formation energy [-]*  TODO: Ti
+        e_copl = props(24)           ! Dislocation interaction energy [-]* TODO: Ti (currently 0)
 
         t0=PROPS(25)                 ! Time scale [s]
-        THETAP=PROPS(26)             ! Activation temperature [K] 
+        THETAP=PROPS(26)             ! Activation temperature [K] TODO: Ti
         BK=PROPS(27)                 ! Boltzmann's const. [J/K]
-        eta = props(28)              ! Dislocation drag [MPa]*
-        xkappa0=PROPS(29)            ! Dislocation storage coefficient [-]*
-        xkappa2=PROPS(30)            ! Dislocation storage coefficient [-]*
+        eta = props(28)              ! Dislocation drag [MPa]* (currently 0)
+        xkappa0=PROPS(29)            ! Dislocation storage coefficient [-]* TODO: Ti
+        xkappa2=PROPS(30)            ! Dislocation storage coefficient [-]* (currently 0)
         th = props(31)*pi/180.d0     ! Euler angle theta [rad] (Canova convention)
         phi = props(32)*pi/180.d0    ! Euler angle Phi [rad]
         om = props(33)*pi/180.d0     ! Euler angle omega [rad]
         nslip=int(PROPS(34))         ! Number of slip systems
 
-        gdotr = props(35)            ! Reference strain rate for hardening [s^-1]*
-        d_gr  = props(36)            ! Grain diameter [mm]
-        rx = props(37)               ! Ratio a/b (length scale to Burger's vector)
-        rk_inter = props(38)         ! Dislocation trapping const for latent interactions [-]
-        rk_copl =  props(39)         ! Dislocation trapping const for self interactions [-]
-        rs = props(40)               ! Scaling factor for Taylor stress
-        xkappar = props(41)          ! Dislocation energy scaling for chi recovery [mJ]
-        xmu0 = props(42)             ! Polycrystal shear modulus adjustment [MPa]
+        gdotr = props(35)            ! Reference strain rate for hardening [s^-1]* (not used since xkappa2=0)
+        d_gr  = props(36)            ! Grain diameter [mm] (not used since xkappa2=0)
+        rx = props(37)               ! Ratio a/b (length scale to Burger's vector)  TODO: Ti
+        rk_inter = props(38)         ! Dislocation trapping const for latent interactions [-] TODO: Ti
+        rk_copl =  props(39)         ! Dislocation trapping const for self interactions [-] TODO: Ti
+        rs = props(40)               ! Scaling factor for Taylor stress (alpha_T in literature)
+        xkappar = props(41)          ! Dislocation energy scaling for chi recovery [mJ] (currently 0)
+        xmu0 = props(42)             ! Polycrystal shear modulus adjustment [MPa] (currently 0)
 
 !------------------------------------------------------------------
 !  Initialize identity matrices/tensors

@@ -314,13 +314,17 @@ C       Twin Code Implementation Started
         real*8 rmhu(3)             ! Unit vector along mhat
         real*8 rBmatU(6,mcrd*nnode)! B-bar operator in untwinned region
         real*8 rBmatZ(6,mcrd*nnode)! B-bar operator in twinned region
-        real*8 rTdis(6)         ! Discontinuity tensor (m tensor product n)
+        real*8 rTdis(6)            ! Discontinuity tensor (m tensor product n)
         real*8 alpha_h             ! Intermediate discontinuity magnitude
         real*8 alpha_U             ! Discontinuity magnitude in untwinned region
         real*8 alpha_Z             ! Discontinuity magnitude in twinned region
         real*8 rTdL                ! Velocity gradient increment projected on discontinous mode
         real*8 rTBmat              ! B-bar matrix projected on discontinous mode
         real*8 g_tr_err            ! Error norm in residual
+        real*8 rEpVolInc           ! Volumetric strain increment
+        real*8 rbv1, rbv2          ! Linear and quadratic bulk viscosity coefficent
+        real*8 rBVpress            ! Bulk viscosity pressure
+        real*8 rSigma              ! Adjusted stress for RHS
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -389,6 +393,27 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
         if (kstep.gt.0) then
           num_gb_elems = 488  ! remove hard coding
           ptr_gb_elems = SMAIntArrayAccess(1)
+        end if
+
+        ! Compute dilitational wave speed
+        rm11  = props(82)
+        c11_0 = props(83)
+        theta = props(77)
+        c11 = c11_0 + rm11 * theta ! based on varying temperature?
+        rCd = sqrt(c11 / rRho)
+
+        ! Linear bulk viscosity coefficient
+        if (props(8).le.0.d0) then
+          rbv1    = 0.06d0
+        else
+          rbv1    = props(8)
+        end if
+
+        ! Quadratic bulk viscosity coefficient
+        if (props(9).le.0.d0) then
+          rbv2    = 1.2d0
+        else
+          rbv2    = props(9)
         end if
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -545,6 +570,9 @@ C               (Mid-step) strain increment and B or B-bar operator for constitu
      $                          rMSBs)
 C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
+C               Compute volumetric strain increment (for bulk viscosity calculation)
+                rEpVolInc = rStrain(1) + rStrain(2) + rStrain(3)
+
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
@@ -610,13 +638,34 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
                   svars(kblock, offstatev(5) + 2) = iTwEmbStp
                 end if
 
+C               Compute linear + quadratic bulk viscosity terms
+C               Needed for damping the “ringing” in the highest element frequency
+C               (Abaqus->Theory->Procedures->Nonlinear dynamics->Explicit dynamic analysis)
+                !! Tao,The quadratic bulk viscosity is applied
+                !! only if the volumetric strain rate is compressive.
+                if (dtimeCur.ne.0.d0) then
+                  rBVpress = -rRho *
+     $                        rbv1*rCd*rElmtSize*(rEpVolInc/dtimeCur)
+                  if (rEpVolInc.lt.0.d0) then
+                    rBVpress = rBVpress
+     $                      -rRho*(rbv2*rElmtSize*rEpVolInc/dtimeCur)**2
+                  end if
+                else
+                  rBVpress = 0.d0
+                end if
+
 C               Compute the internal force vector
                 DO n = 1, nnode
                   DO i = 1, mcrd
                     DO j = 1, 6
+                      if (j.le.3) then    ! add bulk viscosity
+                        rSigma = rStress(j) - rBVpress
+                      else
+                        rSigma = rStress(j)
+                      end if
                       rhs( kblock , (n-1)*mcrd + i ) =
      $                rhs( kblock , (n-1)*mcrd + i )
-     $              + rBmat( j , (n-1)*mcrd + i ) * rStress(j) * rdOmega
+     $                + rBmat( j , (n-1)*mcrd + i ) * rSigma * rdOmega
                     END DO
                   END DO
                 END DO
@@ -922,12 +971,7 @@ C               Compute the internal force vector
 
             end if
 
-            ! Compute stable time step by dilitational wave speed and elem size
-            rm11  = props(82)
-            c11_0 = props(83)
-            theta = props(77)
-            c11 = c11_0 + rm11 * theta
-            rCd = sqrt(c11 / rRho)
+            ! Compute stable time step increment
             dtimeStable(kblock) = 0.7d0 * rElmtSize / rCd
           end do
         ENDIF

@@ -278,7 +278,7 @@ C       Twin Code Implementation Started
         real*8 c11_0               ! C11 at 0 K
         real*8 c11                 ! C11 at temperature theta
         real*8 theta               ! Temperature
-        real*8 rDilWaveSpd         ! Dilitational wave speed
+        real*8 rCd                 ! Dilitational wave speed
         real*8 rdLu(3, 3)          ! Velocity gradient increment in Untwinned part
         real*8 rdLz(3, 3)          ! Velocity gradient increment in Twinned part
         real*8 rdFu(3, 3)          ! Incremental deformation gradient in the untwinned part
@@ -395,7 +395,6 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         IF ( lflags(iOpCode) .EQ. jMassCalc ) THEN
-          rRho = rRho * 1000.d0
           do kblock = 1, nblock
 C           Material coordinates (integrate mass terms over INITIAL config.)
             DO n = 1, nnode
@@ -928,8 +927,8 @@ C               Compute the internal force vector
             c11_0 = props(83)
             theta = props(77)
             c11 = c11_0 + rm11 * theta
-            rDilWaveSpd = sqrt(c11 / (1000.d0 * rRho))
-            dtimeStable(kblock) = rElmtSize / rDilWaveSpd
+            rCd = sqrt(c11 / rRho)
+            dtimeStable(kblock) = 0.7d0 * rElmtSize / rCd
           end do
         ENDIF
       END  ! Subroutine VUEL

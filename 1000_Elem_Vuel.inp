@@ -3392,7 +3392,7 @@ Bottom_Face, 3, 3
 ** 
 *Step, name=Compression, nlgeom=YES
 *Dynamic, Explicit
-, 4.
+, 0.1
 *Bulk Viscosity
 0.06, 1.2
 ** 

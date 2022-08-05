@@ -869,8 +869,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! End analysis if traction continuity fails
                 if (g_tr_err.gt.1.d-8) then
-                  CALL XPLB_ABQERR(-3,'Traction Continuity failed!',
-     &                             0,0.d0,' ')
+                  CALL XPLB_ABQERR(-3,'Traction Continuity failed! '//
+     &                             'iTwEmbStp = %I, err = %R'  ,
+     &                              iTwEmbStp, g_tr_err,' ')
                 end if
 
                 ! Compute combined discontinuity magnitude and direction

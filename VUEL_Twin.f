@@ -325,6 +325,8 @@ C       Twin Code Implementation Started
         real*8 rbv1, rbv2          ! Linear and quadratic bulk viscosity coefficent
         real*8 rBVpress            ! Bulk viscosity pressure
         real*8 rSigma              ! Adjusted stress for RHS
+        real*8 rSigmaZ             ! Adjusted stress for twinned part for RHS
+        real*8 rSigmaU             ! Adjusted stress for untwinned part for RHS
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -720,6 +722,9 @@ C               (Mid-step) strain increment and B or B-bar operator for constitu
      $                          rMSBs)
 C               Until now, rStrain and rSpin are quantities wrt to mid-step
 
+C               Compute volumetric strain increment (for bulk viscosity calculation)
+                rEpVolInc = rStrain(1) + rStrain(2) + rStrain(3)
+
                 ! Retrieve previous untwinned and twinned deformation gradient
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
                 iumatsven = offstatev(3) + l * nstatev(2)
@@ -947,15 +952,39 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
      &                             alpha_Z * rTdis(:) * rTBmat
                 end do
 
+
+C               Compute linear + quadratic bulk viscosity terms
+C               Needed for damping the “ringing” in the highest element frequency
+C               (Abaqus->Theory->Procedures->Nonlinear dynamics->Explicit dynamic analysis)
+                !! Tao,The quadratic bulk viscosity is applied
+                !! only if the volumetric strain rate is compressive.
+                if (dtimeCur.ne.0.d0) then
+                  rBVpress = -rRho *
+     $                        rbv1*rCd*rElmtSize*(rEpVolInc/dtimeCur)
+                  if (rEpVolInc.lt.0.d0) then
+                    rBVpress = rBVpress
+     $                      -rRho*(rbv2*rElmtSize*rEpVolInc/dtimeCur)**2
+                  end if
+                else
+                  rBVpress = 0.d0
+                end if
+
 C               Compute the internal force vector
                 do n = 1, nnode
                   do i = 1, mcrd
                     do j = 1, 6
+                      if (j.le.3) then    ! add bulk viscosity
+                        rSigmaU = rStress_U(j) - rBVpress
+                        rSigmaZ = rStress_Z(j) - rBVpress
+                      else
+                        rSigmaU = rStress_U(j)
+                        rSigmaZ = rStress_Z(j)
+                      end if
                       rhs( kblock , (n-1)*mcrd + i ) =
      &                rhs( kblock , (n-1)*mcrd + i )
      &                + ((rBWidth/rElmtSize)*rBmatZ(j,(n-1)*mcrd+i)*
-     &                rStress_Z(j) + (1.d0-rBWidth/rElmtSize)*
-     &                rBmatU(j,(n-1)*mcrd+i)*rStress_U(j))*rdOmega
+     &                rSigmaZ + (1.d0-rBWidth/rElmtSize)*
+     &                rBmatU(j,(n-1)*mcrd+i)*rSigmaU)*rdOmega
                     end do
                   end do
                 end do

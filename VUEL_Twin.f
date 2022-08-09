@@ -524,7 +524,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
             end if
 
-            ! Check twinning flag in history (not impl)
+            ! Check twinning flag in history
             if (kinc.eq.0) then
               svars(kblock, offstatev(5) + 1) = 0
               svars(kblock, offstatev(5) + 2) = 0

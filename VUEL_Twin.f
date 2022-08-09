@@ -228,8 +228,8 @@ C       Twin Code Implementation Started
         integer iVelmType
         integer iVforType
         integer iConsType
-        integer nstatev(3)
-        integer offstatev(5)
+        integer nstatev(4)
+        integer offstatev(7)
         integer iTwFlg           ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
         integer ieulererr        ! return error from eulang routine
@@ -364,15 +364,18 @@ C       Natural coordinates of element centroid
         rXiEtaCt(3) = 0.d0
 
         ! Number of state variables array and offsets array
-        nstatev(1) = 148
-        nstatev(2) = 9
-        nstatev(3) = 2
+        nstatev(1) = 148  ! svars for umat
+        nstatev(2) = 9    ! svars for deformation gradient
+        nstatev(3) = 2    ! svars for twinning flag
+        nstatev(4) = 7    ! svars for storing twin normal, discontinuity vector
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)
         offstatev(3) = offstatev(2) + 8 * nstatev(1)
         offstatev(4) = offstatev(3) + 8 * nstatev(2)
         offstatev(5) = offstatev(4) + 8 * nstatev(2)
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 1
+        offstatev(6) = offstatev(5) + nstatev(3)
+        offstatev(7) = offstatev(6) + 8 * nstatev(4)
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 2 + 7*8
 
         ! Define PI
         pi = 4.d0 * atan(1.d0)

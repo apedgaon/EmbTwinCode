@@ -742,26 +742,36 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
                 ! Iterations to satisfy traction continuity
-                rBWidth = 0.01d0
+                rBWidth = 0.0001d0
                 rmh = 0.d0
                 rFu1 = rFu0
 
-                ! Elastoplastic part of previous deformation gradient in the twinned region
                 if (iTwEmbStp.eq.1) then
+                  ! No twinning part in previous step
                   rFz0h = rFz0
+
+                  ! Compute twin normal in current configuration F^-T n
+                  call inverse_3x3(rFu1, rFuinv)
+                  rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
+                  rntwc = rntwc / norm2(rntwc)
+
+                  ! Guess for initial rmh based on twin shear direction
+                  rmtwc = matmul(rFu1, rmtw(:, iTwFlg))
+                  rmtwc = rmtwc / norm2(rmtwc)
+                  rmh = 1.d-3 * rmtwc
                 else
+                  ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)
+
+                  ! Retrieve discontinuous mode normal and direction
+                  iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                  rntwc(1) = svars(kblock, iumatsvst + 1)
+                  rntwc(2) = svars(kblock, iumatsvst + 2)
+                  rntwc(3) = svars(kblock, iumatsvst + 3)
+                  rmh(1) = svars(kblock, iumatsvst + 4)
+                  rmh(2) = svars(kblock, iumatsvst + 5)
+                  rmh(3) = svars(kblock, iumatsvst + 6)
                 end if
-
-                ! Compute twin normal in current configuration F^-T n
-                call inverse_3x3(rFu1, rFuinv)
-                rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
-                rntwc = rntwc / norm2(rntwc)
-
-                ! Guess for initial rmh based on twin shear direction
-                rmtwc = matmul(rFu1, rmtw(:, iTwFlg))
-                rmtwc = rmtwc / norm2(rmtwc)
-                rmh = 1.d-3 * rmtwc
 
                 g_tr_err = 1.d0  ! some random initial value
 
@@ -876,6 +886,15 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             'iTwEmbStp = %I, err = %R'  ,
      &                              iTwEmbStp, g_tr_err,' ')
                 end if
+
+                ! Store discontinuous mode normal and direction
+                iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                svars(kblock, iumatsvst + 1) = rntwc(1)
+                svars(kblock, iumatsvst + 2) = rntwc(2)
+                svars(kblock, iumatsvst + 3) = rntwc(3)
+                svars(kblock, iumatsvst + 4) = rmh(1)
+                svars(kblock, iumatsvst + 5) = rmh(2)
+                svars(kblock, iumatsvst + 6) = rmh(3)
 
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)

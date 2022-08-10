@@ -367,7 +367,7 @@ C       Natural coordinates of element centroid
         nstatev(1) = 148  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
         nstatev(3) = 2    ! svars for twinning flag
-        nstatev(4) = 7    ! svars for storing twin normal, discontinuity vector
+        nstatev(4) = 6    ! svars for storing twin normal, discontinuity vector
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)
         offstatev(3) = offstatev(2) + 8 * nstatev(1)

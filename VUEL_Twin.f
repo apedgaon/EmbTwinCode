@@ -367,7 +367,7 @@ C       Natural coordinates of element centroid
         nstatev(1) = 148  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
         nstatev(3) = 2    ! svars for twinning flag
-        nstatev(4) = 6    ! svars for storing twin normal, discontinuity vector
+        nstatev(4) = 3    ! svars for storing discontinuity vector
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)
         offstatev(3) = offstatev(2) + 8 * nstatev(1)
@@ -375,7 +375,7 @@ C       Natural coordinates of element centroid
         offstatev(5) = offstatev(4) + 8 * nstatev(2)
         offstatev(6) = offstatev(5) + nstatev(3)
         offstatev(7) = offstatev(6) + 8 * nstatev(4)
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 2 + 7*8
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 2 + 3*8
 
         ! Define PI
         pi = 4.d0 * atan(1.d0)
@@ -743,34 +743,29 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! Iterations to satisfy traction continuity
                 rBWidth = 0.0001d0
-                rmh = 0.d0
-                rFu1 = rFu0
+
+                ! Compute twin normal in current configuration F^-T n
+                call inverse_3x3(rFu0, rFuinv)
+                rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
+                rntwc = rntwc / norm2(rntwc)
 
                 if (iTwEmbStp.eq.1) then
                   ! No twinning part in previous step
                   rFz0h = rFz0
 
-                  ! Compute twin normal in current configuration F^-T n
-                  call inverse_3x3(rFu1, rFuinv)
-                  rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
-                  rntwc = rntwc / norm2(rntwc)
-
                   ! Guess for initial rmh based on twin shear direction
-                  rmtwc = matmul(rFu1, rmtw(:, iTwFlg))
+                  rmtwc = matmul(rFu0, rmtw(:, iTwFlg))
                   rmtwc = rmtwc / norm2(rmtwc)
-                  rmh = 1.d-3 * rmtwc
+                  rmh = 1.d-4 * rmtwc
                 else
                   ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)
 
                   ! Retrieve discontinuous mode normal and direction
                   iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
-                  rntwc(1) = svars(kblock, iumatsvst + 1)
-                  rntwc(2) = svars(kblock, iumatsvst + 2)
-                  rntwc(3) = svars(kblock, iumatsvst + 3)
-                  rmh(1) = svars(kblock, iumatsvst + 4)
-                  rmh(2) = svars(kblock, iumatsvst + 5)
-                  rmh(3) = svars(kblock, iumatsvst + 6)
+                  rmh(1) = svars(kblock, iumatsvst + 1)
+                  rmh(2) = svars(kblock, iumatsvst + 2)
+                  rmh(3) = svars(kblock, iumatsvst + 3)
                 end if
 
                 g_tr_err = 1.d0  ! some random initial value
@@ -889,12 +884,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! Store discontinuous mode normal and direction
                 iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
-                svars(kblock, iumatsvst + 1) = rntwc(1)
-                svars(kblock, iumatsvst + 2) = rntwc(2)
-                svars(kblock, iumatsvst + 3) = rntwc(3)
-                svars(kblock, iumatsvst + 4) = rmh(1)
-                svars(kblock, iumatsvst + 5) = rmh(2)
-                svars(kblock, iumatsvst + 6) = rmh(3)
+                svars(kblock, iumatsvst + 1) = rmh(1)
+                svars(kblock, iumatsvst + 2) = rmh(2)
+                svars(kblock, iumatsvst + 3) = rmh(3)
 
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)

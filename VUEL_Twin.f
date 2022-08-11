@@ -265,7 +265,7 @@ C       Twin Code Implementation Started
         real*8 rSpin(3)            ! spin axial vector increment
         real*8 rue(mcrd,nnode)     ! local array for passing displacements increment to strain routine
         real*8 rdVelGrd(3, 3)     ! Velocity Gradient Increment
-        real*8 rImat(3, 3)        ! 2nd Order Identity Tensor
+        real*8 del(3, 3)        ! 2nd Order Identity Tensor
         real*8 rDfgrd0(3, 3)      ! Previous Deformation Gradient
         real*8 rDfgrd1(3, 3)      ! Current Deformation Gradient
         real*8 rGsCoords(3)       ! Quadrature Point Current coordinates
@@ -384,15 +384,15 @@ C       Initialize Identity Matrix(3x3)
         do i = 1, 3
           do j = 1, 3
             if (i.eq.j) then
-                rImat(i, j) = 1.0d0;
+                del(i, j) = 1.0d0;
             else
-                rImat(i, j) = 0.0d0;
+                del(i, j) = 0.0d0;
             end if
           end do
         end do
 
 C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
-        call comp_twin_dfgrd(rImat, Smat, F_tw, rntw, rmtw)
+        call comp_twin_dfgrd(del, Smat, F_tw, rntw, rmtw)
 
         ! Access grain boundary elements
         if (kstep.gt.0) then
@@ -465,6 +465,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C       Define internal force (rhs), stable time step
 C       (dtimeStable), history variables (svars), and energy
         ELSE IF ( lflags(iOpCode) .EQ. jIntForceAndDtStable ) THEN
+          ! Loop over elements in the block
           do kblock = 1,nblock
 
             elmt_number = jElem(kblock)
@@ -527,12 +528,13 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
             end if
 
-            ! Check twinning flag in history
+            ! Set twinning flags 0 in the beginning
             if (kinc.eq.0) then
               svars(kblock, offstatev(5) + 1) = 0
               svars(kblock, offstatev(5) + 2) = 0
             end if
 
+            ! Check twinning flag in history
             iTwFlg = svars(kblock, offstatev(5) + 1)
             iTwEmbStp = svars(kblock, offstatev(5) + 2)
 
@@ -586,13 +588,13 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 iumatsven = offstatev(3) + l * nstatev(2)
                 if ((kstep.eq.1).and.(kinc.le.1)) then
                   svars(kblock, iumatsvst : iumatsven) =
-     &                                    reshape(rImat, (/9/))
+     &                                    reshape(del, (/9/))
                 end if
 
                 ! Get previous def gradients from svars and form current def grd
                 rDfgrd0 =
      &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
-                rDfgrd1 = matmul(rImat + rdVelGrd, rDfgrd0)
+                rDfgrd1 = matmul(del + rdVelGrd, rDfgrd0)
 
                 ! Save deformation gradients to both untwinned and twinned block
                 svars(kblock, iumatsvst : iumatsven) =
@@ -606,8 +608,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute Stress from existing UMAT
                 iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
                 iumatsven = offstatev(1) + l * nstatev(1)
-                ! iumatsvst = 540 + (l - 1) * nstatev(5)
-                ! iumatsven = 539 + l * nstatev(5)
                 call umat_stress(rStress,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rDfgrd0, rDfgrd1,
@@ -632,15 +632,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                     call check_twin_nucleation(rStress, Smat, rDfgrd1,
      &                                         iTwFlg)
                   end if
-                end if
-
-                ! Store twin flag
-                svars(kblock, offstatev(5) + 1) = iTwFlg
-
-                ! If twin detected, mark next step for twin embedding
-                if (iTwFlg.gt.0) then
-                  iTwEmbStp = 1
-                  svars(kblock, offstatev(5) + 2) = iTwEmbStp
                 end if
 
 C               Compute linear + quadratic bulk viscosity terms
@@ -677,6 +668,15 @@ C               Compute the internal force vector
 
               end do
 
+              ! Store twin flag
+              svars(kblock, offstatev(5) + 1) = iTwFlg
+
+              ! If twin detected, mark next step for twin embedding
+              if (iTwFlg.gt.0) then
+                iTwEmbStp = 1
+                svars(kblock, offstatev(5) + 2) = iTwEmbStp
+              end if
+
             else  ! Twinning detected in the previous increment
 
               ! compute inverse of twinning deformation gradient
@@ -684,7 +684,7 @@ C               Compute the internal force vector
 
               ! compute properties for twinned region due to rotation of crystal basis
               call compute_twin_props(rntw(:, iTwFlg), props(77:126),
-     &                                props_tw, 50, rImat, pi)
+     &                                props_tw, 50, del, pi)
 
               ! Quadrature Loop
               do l = 1, iTIntPt

@@ -530,3 +530,35 @@ C         for umat stress to vuel stress
         mat(1, 2) = vec(6)
         mat(2, 1) = vec(6)
       end subroutine
+
+      subroutine compute_twin_evol(props, nprops, tau_tw, theta, dt,
+     &                             rBWidth, rBLength)
+        implicit none
+        integer nprops
+        real*8 props(nprops), tau_tw, theta, dt, rBWidth, rBLength
+        real*8 Gtw, bk, vl, vb, sl, p, q, vldot, vbdot, ramp, fac
+
+        ! Retrieve relevant properties
+        Gtw = props(51)
+        vl = props(52)
+        vb = props(53)
+        sl = props(54)
+        p = props(55)
+        q = props(56)
+        bk = props(27)
+
+        ! ramp could be positive or 0
+        ramp = 1.d0 - (tau_tw / sl)**p
+        if (ramp.lt.0.d0) then
+          ramp = 0.d0
+        end if
+        
+        ! Compute speed of length and width propagation
+        fac = exp(-Gtw / (bk * theta) * ramp**q)
+        vldot = vl * fac
+        vbdot = vb * fac
+
+        ! Compute new length and width
+        rBLength = rBLength + vldot * dt
+        rBWidth = rBWidth + vbdot * dt
+      end subroutine

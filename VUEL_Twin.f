@@ -327,6 +327,9 @@ C       Twin Code Implementation Started
         real*8 rSigma              ! Adjusted stress for RHS
         real*8 rSigmaZ             ! Adjusted stress for twinned part for RHS
         real*8 rSigmaU             ! Adjusted stress for untwinned part for RHS
+        real*8 tau_tw              ! RSS on twin system
+        real*8 rBLength            ! Length of twin inside the element
+        real*8 Smatc(3, 3)         ! Specific Twin Schmid tensor in current configuration
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -887,6 +890,12 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 svars(kblock, iumatsvst + 1) = rmh(1)
                 svars(kblock, iumatsvst + 2) = rmh(2)
                 svars(kblock, iumatsvst + 3) = rmh(3)
+
+                ! RSS on twin system
+                Smatc = matmul(rFu1, matmul(Smat(:, :, iTwFlg), rFuinv))
+                tau_tw = sum(sigmaU * Smatc)
+                call compute_twin_evol(props(77:132), 56, tau_tw, theta,
+     &                                 dtimeCur, rBWidth, rBLength)
 
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)

@@ -1336,7 +1336,7 @@
    1329,          1.5,  0.899999976,           0.
    1330,          1.5,   1.20000005,           0.
    1331,          1.5,          1.5,           0.
-*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=126, Coordinates=3, Variables=2538
+*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=132, Coordinates=3, Variables=2538
 1, 2, 3
 *Element, elset=VU1_ELMT, type=VU1
    1,  122,  123,  134,  133,    1,    2,   13,   12
@@ -2355,8 +2355,8 @@
 0.137, 0.122, 1.000, 0.000, 1.00e-12, 40800.00, 1.38e-23, 0.00
 5.00, 0.000, 79.82, 45.54, 30.53, 18, 1615.38, 2.50e-02
 20.00, 12.0, 180.0, 2.00, 0.0, 0.0, 2.9e-07, 2.9e-07
--36.7, 191340.00, -19.7, 52230.0, 0.5, 68600.0, <SG_kine>,<SG_form>
-<MatModel>,<GaussPts>
+-36.7, 191340.00, -19.7, 52230.0, 0.5, 68600.0, 2.76e-19, 3190.0
+10.0, 250000, 0.6, 1.4, <SG_kine>,<SG_form>,<MatModel>,<GaussPts>
 *Element, elset=ghost_elem, type=C3D8
 2001, 122, 123, 134, 133, 1, 2, 13, 12
 2002, 123, 124, 135, 134, 2, 3, 14, 13

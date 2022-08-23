@@ -548,7 +548,7 @@ C         for umat stress to vuel stress
         bk = props(27)
 
         ! ramp could be positive or 0
-        ramp = 1.d0 - (tau_tw / sl)**p
+        ramp = 1.d0 - (abs(tau_tw) / sl)**p ! TODO: Check if -ve tau_tw makes sense
         if (ramp.lt.0.d0) then
           ramp = 0.d0
         end if

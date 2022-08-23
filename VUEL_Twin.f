@@ -370,7 +370,7 @@ C       Natural coordinates of element centroid
         nstatev(1) = 148  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
         nstatev(3) = 2    ! svars for twinning flag
-        nstatev(4) = 3    ! svars for storing discontinuity vector
+        nstatev(4) = 5    ! svars for storing discontinuity vector
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)
         offstatev(3) = offstatev(2) + 8 * nstatev(1)
@@ -378,7 +378,7 @@ C       Natural coordinates of element centroid
         offstatev(5) = offstatev(4) + 8 * nstatev(2)
         offstatev(6) = offstatev(5) + nstatev(3)
         offstatev(7) = offstatev(6) + 8 * nstatev(4)
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 2 + 3*8
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 2 + 5*8
 
         ! Define PI
         pi = 4.d0 * atan(1.d0)
@@ -744,9 +744,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
-                ! Iterations to satisfy traction continuity
-                rBWidth = 0.0001d0
-
                 ! Compute twin normal in current configuration F^-T n
                 call inverse_3x3(rFu0, rFuinv)
                 rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
@@ -760,6 +757,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rmtwc = matmul(rFu0, rmtw(:, iTwFlg))
                   rmtwc = rmtwc / norm2(rmtwc)
                   rmh = 1.d-4 * rmtwc
+
+                  ! Initial Band width and length of twin
+                  rBWidth = 0.0001d0
+                  rBLength = 0.d0
                 else
                   ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)
@@ -769,6 +770,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rmh(1) = svars(kblock, iumatsvst + 1)
                   rmh(2) = svars(kblock, iumatsvst + 2)
                   rmh(3) = svars(kblock, iumatsvst + 3)
+
+                  ! Retrieve band width and length of twin
+                  rBWidth = svars(kblock, iumatsvst + 4)
+                  rBLength = svars(kblock, iumatsvst + 5)
                 end if
 
                 g_tr_err = 1.d0  ! some random initial value
@@ -891,11 +896,16 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 svars(kblock, iumatsvst + 2) = rmh(2)
                 svars(kblock, iumatsvst + 3) = rmh(3)
 
-                ! RSS on twin system
+                ! Compute twin width and length evolution
                 Smatc = matmul(rFu1, matmul(Smat(:, :, iTwFlg), rFuinv))
                 tau_tw = sum(sigmaU * Smatc)
                 call compute_twin_evol(props(77:132), 56, tau_tw, theta,
      &                                 dtimeCur, rBWidth, rBLength)
+
+                ! Store new twin width and length
+                iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                svars(kblock, iumatsvst + 4) = rBWidth
+                svars(kblock, iumatsvst + 5) = rBLength
 
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)

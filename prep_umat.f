@@ -552,7 +552,7 @@ C         for umat stress to vuel stress
         if (ramp.lt.0.d0) then
           ramp = 0.d0
         end if
-        
+
         ! Compute speed of length and width propagation
         fac = exp(-Gtw / (bk * theta) * ramp**q)
         vldot = vl * fac

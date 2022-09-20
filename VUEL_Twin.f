@@ -896,7 +896,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 svars(kblock, iumatsvst + 2) = rmh(2)
                 svars(kblock, iumatsvst + 3) = rmh(3)
 
-                ! Compute twin width and length evolution
+                ! Compute twin width and length evolution (TODO: This should be rFu1e?)
                 Smatc = matmul(rFu1, matmul(Smat(:, :, iTwFlg), rFuinv))
                 tau_tw = sum(sigmaU * Smatc)
                 call compute_twin_evol(props(77:132), 56, tau_tw, theta,

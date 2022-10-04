@@ -1133,6 +1133,12 @@ C       Contents of r_Array
         integer gb_elems(*)
         pointer (ptr_gb_elems, gb_elems)
 
+        character(len = 50) :: ecfilename
+        character (len = 256) :: ecfilepath
+        integer elmt_conn(8, *)
+        pointer (ptr_elmt_conn, elmt_conn)
+        integer num_elems, dummy
+
         gbfilename = 'gb_elems_1000.txt'
         call vgetoutdir(outdir, lenoutdir)
         gbfilepath = trim(outdir)//pathseperator//trim(gbfilename)
@@ -1153,7 +1159,101 @@ C       Contents of r_Array
           read(121, *) gb_elems(i)
         end do
         close(121)
+
+        ecfilename = 'input_elmt_2.inp'
+        ecfilepath = trim(outdir)//pathseperator//trim(ecfilename)
+        num_elems = 0
+        open(120, file = ecfilepath, status = 'old', iostat = io)
+        do
+          read(120, *, iostat = io)
+          if (io /= 0) exit
+          num_elems = num_elems + 1
+        end do
+        close(120)
+
+        ptr_elmt_conn = SMAIntArrayCreate(2, 8*num_elems, -1)
+
+        open(121, file = ecfilepath, status = 'old',action = 'read')
+        do i = 1, num_elems
+          read(121, *) dummy, elmt_conn(1:8, i)
+        end do
+        close(121)
       end subroutine
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C   Find all the elmts that share a face (4 nodes) with the 
+C   give elmt 
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+      SUBROUTINE Find_Neighbour_Elmts(elmt_n,elmt_conct,
+     1                                nTotalElmts,elmt_list)
+C     Input:
+C          elmt_n: element number;
+C          elmt_conct: elmt connectivity
+C          nTotalElmts: number of elmts
+C     Output:
+C          elmt_list: an Array contains the number of elmts that share
+C                     a face with elmt_n;
+
+      IMPLICIT NONE
+
+      integer elmt_n
+      integer elmt_list(6), nTotalElmts
+      
+      integer elmt_conct(8,nTotalElmts)
+
+      integer i, j, k, elmt_1(8), elmt_2(8), counter, list_counter
+
+C     Define 6 faces:
+C     Face1: 1,2,3,4; Face2: 5,8,7,6; Face3: 1,5,6,2;
+C     Face4: 2,6,7,3; Face5: 3,7,8,4; Face6: 4,5,8,1;
+      integer FACE(6,4), temp(4)
+      data FACE /1,5,1,2,3,4,
+     1           2,8,5,6,7,8,
+     2           3,7,6,7,8,5,
+     3           4,6,2,3,4,1/             
+
+C     Initialize elmt_list, one elmt has 6 neighbour elmts at most
+      DO i = 1,6
+        elmt_list(i) = 0
+      END DO
+
+C     elmt_1 is the connectivity of elmt_n
+      DO i = 1, 8
+        elmt_1(i) = elmt_conct(i,elmt_n)
+      END DO   
+
+C     Locate elmts that share Face 1 to 6 with elmt_n
+      DO i = 1, nTotalElmts
+        IF (i.EQ.elmt_n) THEN
+          CYCLE
+        END IF
+
+        DO j = 1, 8
+          elmt_2(j) = elmt_conct(j,i)
+        END DO
+      
+        DO k = 1, 6  ! loop over 6 faces
+          temp(1) = elmt_1(FACE(k,1))
+          temp(2) = elmt_1(FACE(k,2))
+          temp(3) = elmt_1(FACE(k,3))
+          temp(4) = elmt_1(FACE(k,4))
+          counter = 0
+
+          DO j = 1, 4
+            IF (ANY(elmt_2 == temp(j))) THEN
+              counter = counter + 1
+            END IF 
+          END DO
+
+          IF (counter.EQ.4) THEN
+            elmt_list(k) = i 
+          END IF
+
+        END DO ! k
+        
+      END DO ! i
+
+      END
 
       include 'GSPT_3D_8N.f'
       include 'SHP_FUNC_3D_8N.f'

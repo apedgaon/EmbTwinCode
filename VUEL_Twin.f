@@ -1138,6 +1138,9 @@ C       Contents of r_Array
         integer elmt_conn(8, *)
         pointer (ptr_elmt_conn, elmt_conn)
         integer num_elems, dummy
+        integer elmt_list(6)
+        integer elmt_neighbour(6, *)
+        pointer (ptr_elmt_neighbour, elmt_neighbour)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1178,6 +1181,13 @@ C       Contents of r_Array
           read(121, *) dummy, elmt_conn(1:8, i)
         end do
         close(121)
+
+        ! Create neighbouring element list for all elements
+        ptr_elmt_neighbour = SMAIntArrayCreate(3, 6*num_elems, -1)
+        do i = 1, num_elems
+          call Find_Neighbour_Elmts(i, elmt_conn, num_elems, elmt_list)
+          elmt_neighbour(1:6, i) = elmt_list
+        end do
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

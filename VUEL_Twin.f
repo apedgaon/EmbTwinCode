@@ -1139,6 +1139,7 @@ C       Contents of r_Array
         pointer (ptr_elmt_conn, elmt_conn)
         integer num_elems, dummy
 
+        ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
         call vgetoutdir(outdir, lenoutdir)
         gbfilepath = trim(outdir)//pathseperator//trim(gbfilename)
@@ -1153,13 +1154,13 @@ C       Contents of r_Array
         close(120)
 
         ptr_gb_elems = SMAIntArrayCreate(1, num_gb_elems, -1)
-
         open(121, file = gbfilepath, status = 'old',action = 'read')
         do i = 1, num_gb_elems
           read(121, *) gb_elems(i)
         end do
         close(121)
 
+        ! Read and store element connectivity
         ecfilename = 'input_elmt_2.inp'
         ecfilepath = trim(outdir)//pathseperator//trim(ecfilename)
         num_elems = 0
@@ -1171,8 +1172,7 @@ C       Contents of r_Array
         end do
         close(120)
 
-        ptr_elmt_conn = SMAIntArrayCreate(2, 8*num_elems, -1)
-
+        ptr_elmt_conn = SMAIntArrayCreate(2, 8*num_elems, -1) ! TODO: Later check if we need storing this
         open(121, file = ecfilepath, status = 'old',action = 'read')
         do i = 1, num_elems
           read(121, *) dummy, elmt_conn(1:8, i)

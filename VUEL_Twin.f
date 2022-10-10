@@ -1121,6 +1121,8 @@ C       Contents of r_Array
         else if (lop.eq.j_int_EndAnalysis) then
           if (myThreadID.eq.0) then
             call SMAIntArrayDelete(1)
+            call SMAIntArrayDelete(2)
+            call SMAIntArrayDelete(3)
           end if
         end if
 

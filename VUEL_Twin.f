@@ -335,6 +335,8 @@ C       Twin Code Implementation Started
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
         logical isGbElem           ! logical determining gb elem
         logical, external :: is_gb_elem
+        integer elmt_conn(8, *)
+        pointer (ptr_elmt_conn, elmt_conn)
         integer elmt_neighbour(6, *) ! List of neighbouring element
         pointer (ptr_elmt_neighbour, elmt_neighbour) ! pointer for elmt_neighbour required for SMAArrayAccess
 
@@ -403,6 +405,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
         if (kstep.gt.0) then
           num_gb_elems = 488  ! remove hard coding
           ptr_gb_elems = SMAIntArrayAccess(1)
+          ptr_elmt_conn = SMAIntArrayAccess(2)
           ptr_elmt_neighbour = SMAIntArrayAccess(3)
         end if
 

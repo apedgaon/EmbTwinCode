@@ -964,12 +964,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rTdis(1) = rmhu(1) * rntwc(1)
                 rTdis(2) = rmhu(2) * rntwc(2)
                 rTdis(3) = rmhu(3) * rntwc(3)
-                rTdis(4) = 0.5d0 * (rmhu(2) * rntwc(3) +
-     &                              rmhu(3) * rntwc(2))
-                rTdis(5) = 0.5d0 * (rmhu(1) * rntwc(3) +
-     &                              rmhu(3) * rntwc(1))
-                rTdis(6) = 0.5d0 * (rmhu(1) * rntwc(2) +
-     &                              rmhu(2) * rntwc(1))
                 rTdis(4) = rmhu(2) * rntwc(3) + rmhu(3) * rntwc(2)
                 rTdis(5) = rmhu(1) * rntwc(3) + rmhu(3) * rntwc(1)
                 rTdis(6) = rmhu(1) * rntwc(2) + rmhu(2) * rntwc(1)

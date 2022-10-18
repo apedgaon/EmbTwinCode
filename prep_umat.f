@@ -562,3 +562,163 @@ C         for umat stress to vuel stress
         rBLength = rBLength + vldot * dt
         rBWidth = rBWidth + vbdot * dt
       end subroutine
+
+      subroutine find_next_twin_elem(elmt_number, elmt_conn, num_elems,
+     &                        nodal_coords, num_nodes, st_coord, rn, rm,
+     &                        elmt_neighbour, tw_length, nxt_elmt_num)
+        implicit none
+        integer elmt_number, num_elems, num_nodes, nxt_elmt_num
+        integer elmt_conn(8, num_elems), elmt_neighbour(6, num_elems)
+        real*8 nodal_coords(3, num_nodes), st_coord(3), rn(3), rm(3)
+
+        ! Define 6 faces:
+        ! Face1: 1,2,3,4; Face2: 5,8,7,6; Face3: 1,5,6,2;
+        ! Face4: 2,6,7,3; Face5: 3,7,8,4; Face6: 4,5,8,1;
+        integer FACE(6,4)
+        data FACE /1,5,1,2,3,4,
+     1             2,8,5,6,7,8,
+     2             3,7,6,7,8,5,
+     3             4,6,2,3,4,1/ 
+        real*8 rs(3), face_node_coord(3, 5), rA, rb, t
+        real*8 edge_int_coord(3, 2), rA2, rb2, t2, final_int_coord(3, 2)
+        integer ifc, i, face_nodes(4), cntr1, cntr2, neigh_elmt_no
+        real*8 dir_dp, tw_dist, tw_dist_max, tw_length
+        integer tw_prop_face, tw_prop_face_nodes(4)
+
+        ! Compute rs = rm X rn
+        call cross_product(rm, rn, rs)
+
+        ! Loop over element faces
+        cntr1 = 0
+        tw_dist_max = 0.d0
+        do ifc = 1, 6
+          ! Retrieve node numbers on the nodes on the face
+          face_nodes(1) = elmt_conn(Face(ifc, 1), elmt_number)
+          face_nodes(2) = elmt_conn(Face(ifc, 2), elmt_number)
+          face_nodes(3) = elmt_conn(Face(ifc, 3), elmt_number)
+          face_nodes(4) = elmt_conn(Face(ifc, 4), elmt_number)
+
+          ! retrieve nodal coordinates of 4 nodes on face and compute face centroid
+          do i = 1, 4
+            face_node_coord(1:3, i) = nodal_coords(1:3, face_nodes(i))
+          end do
+          face_node_coord(1:3, 5) = nodal_coords(1:3, face_nodes(1))
+
+          ! Compute edge intersection parameter t
+          cntr2 = 0
+          do i = 1, 4
+            rA = dot_product(face_node_coord(:, i+1) -
+     &                       face_node_coord(:, i), rn)
+            rb = dot_product(st_coord - face_node_coord(:, i), rn)
+            if (abs(rA).lt.1d-6) then
+              t = 100.d0
+            else
+              t = rb / rA
+            end if
+
+            ! If 0 <= t <= 1, then twin plane really intersects this edge
+            if ((t.gt.0.d0).and.(t.lt.1.d0)) then
+              cntr2 = cntr2 + 1
+              edge_int_coord(:, cntr2) = face_node_coord(:, i) +
+     &             t * (face_node_coord(:, i+1) - face_node_coord(:, i)) 
+            end if
+          end do
+
+          ! If intersected on two edges
+          !   compute intersection parameter of twin direction on line
+          !     joining the intersection points of the edges
+          if (cntr2.eq.2) then
+            rA2 = dot_product(edge_int_coord(:, 2) - 
+     &                        edge_int_coord(:, 1), rs)
+            rb2 = dot_product(st_coord - edge_int_coord(:, 1), rs)
+            if (abs(rA2).lt.1d-6) then
+              t2 = 100.d0
+            else
+              t2 = rb2 / rA2
+            end if
+
+            ! Compute coordinates of twin propagation direction itersection coordinates
+            if ((t2.ge.0.d0).and.(t2.le.1.d0)) then
+              cntr1 = cntr1 + 1
+              final_int_coord(:, cntr1) = edge_int_coord(:, 1)
+     &              + t2 * (edge_int_coord(:, 2) - edge_int_coord(:, 1))
+              dir_dp = dot_product(final_int_coord(:, cntr1) - st_coord,
+     &                             rm)
+              tw_dist =sign(norm2(final_int_coord(:, cntr1) - st_coord),
+     &                          dir_dp)
+              if (tw_dist.gt.tw_dist_max) then
+                tw_dist_max = tw_dist
+                tw_prop_face = ifc
+              end if
+            end if
+          end if
+        end do
+
+        tw_length = norm2(final_int_coord(:, 1) - final_int_coord(:, 2))
+
+        tw_prop_face_nodes(1) = elmt_conn(Face(tw_prop_face, 1),
+     &                                    elmt_number)
+        tw_prop_face_nodes(2) = elmt_conn(Face(tw_prop_face, 2),
+     &                                    elmt_number)
+        tw_prop_face_nodes(3) = elmt_conn(Face(tw_prop_face, 3),
+     &                                    elmt_number)
+        tw_prop_face_nodes(4) = elmt_conn(Face(tw_prop_face, 4),
+     &                                    elmt_number)
+        call quicksort(tw_prop_face_nodes, 1, 4)
+
+        do i = 1, 6
+          neigh_elmt_no = elmt_neighbour(i, elmt_number)
+          do ifc = 1, 6
+            face_nodes(1) = elmt_conn(Face(ifc, 1), neigh_elmt_no)
+            face_nodes(2) = elmt_conn(Face(ifc, 2), neigh_elmt_no)
+            face_nodes(3) = elmt_conn(Face(ifc, 3), neigh_elmt_no)
+            face_nodes(4) = elmt_conn(Face(ifc, 4), neigh_elmt_no)
+            call quicksort(face_nodes, 1, 4)
+
+            if (all(face_nodes.eq.tw_prop_face_nodes)) then
+              nxt_elmt_num = neigh_elmt_no
+            end if
+          end do
+        end do
+
+      end subroutine
+
+      subroutine cross_product(a, b, c)
+        implicit none
+        real*8 a(3), b(3), c(3)
+
+        c(1) = a(2) * b(3) - b(2) * a(3)
+        c(2) = b(1) * a(3) - a(1) * b(3)
+        c(3) = a(1) * b(2) - b(1) * a(2)
+
+      end subroutine
+
+! quicksort.f -*-f90-*-
+! Author: t-nissie
+! License: GPLv3
+! Gist: https://gist.github.com/t-nissie/479f0f16966925fa29ea
+!!
+      recursive subroutine quicksort(a, first, last)
+        implicit none
+        integer  a(*), x, t
+        integer first, last
+        integer i, j
+      
+        x = a( (first+last) / 2 )
+        i = first
+        j = last
+        do
+          do while (a(i) < x)
+              i=i+1
+          end do
+          do while (x < a(j))
+              j=j-1
+          end do
+          if (i >= j) exit
+          t = a(i);  a(i) = a(j);  a(j) = t
+          i=i+1
+          j=j-1
+        end do
+        if (first < i-1) call quicksort(a, first, i-1)
+        if (j+1 < last)  call quicksort(a, j+1, last)
+      end subroutine quicksort

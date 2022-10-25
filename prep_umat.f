@@ -578,7 +578,7 @@ C         for umat stress to vuel stress
         data FACE /1,5,1,2,3,4,
      1             2,8,5,6,7,8,
      2             3,7,6,7,8,5,
-     3             4,6,2,3,4,1/ 
+     3             4,6,2,3,4,1/
         real*8 rs(3), face_node_coord(3, 5), rA, rb, t
         real*8 edge_int_coord(3, 2), rA2, rb2, t2, final_int_coord(3, 2)
         integer ifc, i, face_nodes(4), cntr1, cntr2, neigh_elmt_no
@@ -620,7 +620,7 @@ C         for umat stress to vuel stress
             if ((t.gt.0.d0).and.(t.lt.1.d0)) then
               cntr2 = cntr2 + 1
               edge_int_coord(:, cntr2) = face_node_coord(:, i) +
-     &             t * (face_node_coord(:, i+1) - face_node_coord(:, i)) 
+     &             t * (face_node_coord(:, i+1) - face_node_coord(:, i))
             end if
           end do
 
@@ -628,7 +628,7 @@ C         for umat stress to vuel stress
           !   compute intersection parameter of twin direction on line
           !     joining the intersection points of the edges
           if (cntr2.eq.2) then
-            rA2 = dot_product(edge_int_coord(:, 2) - 
+            rA2 = dot_product(edge_int_coord(:, 2) -
      &                        edge_int_coord(:, 1), rs)
             rb2 = dot_product(st_coord - edge_int_coord(:, 1), rs)
             if (abs(rA2).lt.1d-6) then
@@ -703,7 +703,7 @@ C         for umat stress to vuel stress
         integer  a(*), x, t
         integer first, last
         integer i, j
-      
+
         x = a( (first+last) / 2 )
         i = first
         j = last

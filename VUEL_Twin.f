@@ -1120,6 +1120,7 @@ C       Contents of r_Array
             call SMAIntArrayDelete(1)
             call SMAIntArrayDelete(2)
             call SMAIntArrayDelete(3)
+            call SMAFloatArrayDelete(4)
           end if
         end if
 
@@ -1143,6 +1144,11 @@ C       Contents of r_Array
         integer elmt_list(6)
         integer elmt_neighbour(6, *)
         pointer (ptr_elmt_neighbour, elmt_neighbour)
+        character(len = 50) :: ncfilename
+        character (len = 256) :: ncfilepath
+        real*8 nodal_coords(3, *)
+        pointer (ptr_nodal_coords, nodal_coords)
+        integer num_nodes
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1190,6 +1196,26 @@ C       Contents of r_Array
           call Find_Neighbour_Elmts(i, elmt_conn, num_elems, elmt_list)
           elmt_neighbour(1:6, i) = elmt_list
         end do
+
+        ! Read and store nodal coordinates
+        ncfilename = 'input_node_2.inp'
+        ncfilepath = trim(outdir)//pathseperator//trim(ncfilename)
+        num_nodes = 0
+        open(120, file = ncfilepath, status = 'old', iostat = io)
+        do
+          read(120, *, iostat = io)
+          if (io /= 0) exit
+          num_nodes = num_nodes + 1
+        end do
+        close(120)
+
+        ptr_nodal_coords = SMAFloatArrayCreate(4, 3*num_nodes, 0.d0) ! TODO: Later check if we need storing this
+        open(121, file = ncfilepath, status = 'old',action = 'read')
+        do i = 1, num_nodes
+          read(121, *) dummy, nodal_coords(1:3, i)
+        end do
+        close(121)
+        call sleep(20)
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

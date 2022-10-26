@@ -591,6 +591,7 @@ C         for umat stress to vuel stress
         ! Loop over element faces
         cntr1 = 0
         tw_dist_max = 0.d0
+        tw_prop_face = -1
         do ifc = 1, 6
           ! Retrieve node numbers on the nodes on the face
           face_nodes(1) = elmt_conn(Face(ifc, 1), elmt_number)
@@ -653,6 +654,12 @@ C         for umat stress to vuel stress
             end if
           end if
         end do
+
+        if (tw_prop_face.eq.-1) then
+          CALL XPLB_ABQERR(-3,'The Twin does not pass through '//
+     &                     'the Element No. %I!',elmt_number,0.d0,' ')
+          return
+        end if
 
         tw_length = norm2(final_int_coord(:, 1) - final_int_coord(:, 2))
 

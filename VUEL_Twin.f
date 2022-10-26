@@ -407,7 +407,7 @@ C       Initialize Identity Matrix(3x3)
 C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
         call comp_twin_dfgrd(del, Smat, F_tw, rntw, rmtw)
 
-        ! Access grain boundary elements
+        ! Access SMA arrays created in vexternaldb
         if (kstep.gt.0) then
           ptr_size_list = SMAIntArrayAccess(1)
           ptr_gb_elems = SMAIntArrayAccess(2)

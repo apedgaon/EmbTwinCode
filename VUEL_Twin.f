@@ -235,6 +235,8 @@ C       Twin Code Implementation Started
         integer ieulererr        ! return error from eulang routine
         integer iterErr          ! Iteration convergence error
         integer iTwEmbStp        ! Twin Embedding Step
+        integer num_elems        ! Number of vuel elements
+        integer num_nodes        ! Number of nodes
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -335,12 +337,14 @@ C       Twin Code Implementation Started
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
         logical isGbElem           ! logical determining gb elem
         logical, external :: is_gb_elem
-        integer elmt_conn(8, *)
-        pointer (ptr_elmt_conn, elmt_conn)
+        integer elmt_conn(8, *)    ! Element connectivity
+        pointer (ptr_elmt_conn, elmt_conn)   ! Pointer to element connectivity for SMA Access
         integer elmt_neighbour(6, *) ! List of neighbouring element
-        pointer (ptr_elmt_neighbour, elmt_neighbour) ! pointer for elmt_neighbour required for SMAArrayAccess
-        real*8 nodal_coords(3, *)
-        pointer (ptr_nodal_coords, nodal_coords)
+        pointer (ptr_elmt_neighbour, elmt_neighbour) ! pointer for elmt_neighbour required for SMA Access
+        real*8 nodal_coords(3, *)    ! Nodal coordinates
+        pointer (ptr_nodal_coords, nodal_coords)  ! Pointer to nodal coordinates for SMA Access
+        integer size_list(*)    ! list storing num_elems, num_nodes, etc
+        pointer (ptr_size_list, size_list)  ! pointer to size list for SMA Access
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -405,11 +409,15 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
 
         ! Access grain boundary elements
         if (kstep.gt.0) then
-          num_gb_elems = 488  ! remove hard coding
-          ptr_gb_elems = SMAIntArrayAccess(1)
-          ptr_elmt_conn = SMAIntArrayAccess(2)
-          ptr_elmt_neighbour = SMAIntArrayAccess(3)
-          ptr_nodal_coords = SMAFloatArrayAccess(4)
+          ptr_size_list = SMAIntArrayAccess(1)
+          ptr_gb_elems = SMAIntArrayAccess(2)
+          ptr_elmt_conn = SMAIntArrayAccess(3)
+          ptr_elmt_neighbour = SMAIntArrayAccess(4)
+          ptr_nodal_coords = SMAFloatArrayAccess(5)
+
+          num_gb_elems = size_list(1)
+          num_elems = size_list(2)
+          num_nodes = size_list(3)
         end if
 
         ! Compute dilitational wave speed
@@ -1123,7 +1131,8 @@ C       Contents of r_Array
             call SMAIntArrayDelete(1)
             call SMAIntArrayDelete(2)
             call SMAIntArrayDelete(3)
-            call SMAFloatArrayDelete(4)
+            call SMAIntArrayDelete(4)
+            call SMAFloatArrayDelete(5)
           end if
         end if
 
@@ -1152,6 +1161,8 @@ C       Contents of r_Array
         real*8 nodal_coords(3, *)
         pointer (ptr_nodal_coords, nodal_coords)
         integer num_nodes
+        integer size_list(*)
+        pointer (ptr_size_list, size_list)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1167,7 +1178,7 @@ C       Contents of r_Array
         end do
         close(120)
 
-        ptr_gb_elems = SMAIntArrayCreate(1, num_gb_elems, -1)
+        ptr_gb_elems = SMAIntArrayCreate(2, num_gb_elems, -1)
         open(121, file = gbfilepath, status = 'old',action = 'read')
         do i = 1, num_gb_elems
           read(121, *) gb_elems(i)
@@ -1186,7 +1197,7 @@ C       Contents of r_Array
         end do
         close(120)
 
-        ptr_elmt_conn = SMAIntArrayCreate(2, 8*num_elems, -1) ! TODO: Later check if we need storing this
+        ptr_elmt_conn = SMAIntArrayCreate(3, 8*num_elems, -1) ! TODO: Later check if we need storing this
         open(121, file = ecfilepath, status = 'old',action = 'read')
         do i = 1, num_elems
           read(121, *) dummy, elmt_conn(1:8, i)
@@ -1194,7 +1205,7 @@ C       Contents of r_Array
         close(121)
 
         ! Create neighbouring element list for all elements
-        ptr_elmt_neighbour = SMAIntArrayCreate(3, 6*num_elems, -1)
+        ptr_elmt_neighbour = SMAIntArrayCreate(4, 6*num_elems, -1)
         do i = 1, num_elems
           call Find_Neighbour_Elmts(i, elmt_conn, num_elems, elmt_list)
           elmt_neighbour(1:6, i) = elmt_list
@@ -1212,12 +1223,20 @@ C       Contents of r_Array
         end do
         close(120)
 
-        ptr_nodal_coords = SMAFloatArrayCreate(4, 3*num_nodes, 0.d0) ! TODO: Later check if we need storing this
+        ptr_nodal_coords = SMAFloatArrayCreate(5, 3*num_nodes, 0.d0) ! TODO: Later check if we need storing this
         open(121, file = ncfilepath, status = 'old',action = 'read')
         do i = 1, num_nodes
           read(121, *) dummy, nodal_coords(1:3, i)
         end do
         close(121)
+
+        ! store sizes of certain quantities
+        ptr_size_list = SMAIntArrayCreate(1, 3, -1)
+        size_list(1) = num_gb_elems
+        size_list(2) = num_elems
+        size_list(3) = num_nodes
+
+        ! TODO: create elmt_stat(2, *)
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

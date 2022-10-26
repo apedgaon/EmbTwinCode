@@ -339,6 +339,8 @@ C       Twin Code Implementation Started
         pointer (ptr_elmt_conn, elmt_conn)
         integer elmt_neighbour(6, *) ! List of neighbouring element
         pointer (ptr_elmt_neighbour, elmt_neighbour) ! pointer for elmt_neighbour required for SMAArrayAccess
+        real*8 nodal_coords(3, *)
+        pointer (ptr_nodal_coords, nodal_coords)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -407,6 +409,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_gb_elems = SMAIntArrayAccess(1)
           ptr_elmt_conn = SMAIntArrayAccess(2)
           ptr_elmt_neighbour = SMAIntArrayAccess(3)
+          ptr_nodal_coords = SMAFloatArrayAccess(4)
         end if
 
         ! Compute dilitational wave speed
@@ -1215,7 +1218,6 @@ C       Contents of r_Array
           read(121, *) dummy, nodal_coords(1:3, i)
         end do
         close(121)
-        call sleep(20)
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

@@ -345,6 +345,8 @@ C       Twin Code Implementation Started
         pointer (ptr_nodal_coords, nodal_coords)  ! Pointer to nodal coordinates for SMA Access
         integer size_list(*)    ! list storing num_elems, num_nodes, etc
         pointer (ptr_size_list, size_list)  ! pointer to size list for SMA Access
+        integer elmt_stat(2, *)
+        pointer (ptr_elmt_stat, elmt_stat)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -414,6 +416,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_elmt_conn = SMAIntArrayAccess(3)
           ptr_elmt_neighbour = SMAIntArrayAccess(4)
           ptr_nodal_coords = SMAFloatArrayAccess(5)
+          ptr_elmt_stat = SMAIntArrayAccess(6)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -555,7 +558,11 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             end if
 
             ! Check twinning flag in history
-            iTwFlg = svars(kblock, offstatev(5) + 1)
+            !iTwFlg = svars(kblock, offstatev(5) + 1)
+            iTwFlg = 0
+            if (kstep.gt.0) then
+              iTwFlg = elmt_stat(1, elmt_number)
+            end if
             iTwEmbStp = svars(kblock, offstatev(5) + 2)
 
             if (iTwFlg.eq.0) then   ! No twinning detected in previous increment
@@ -689,7 +696,11 @@ C               Compute the internal force vector
               end do
 
               ! Store twin flag
-              svars(kblock, offstatev(5) + 1) = iTwFlg
+              !svars(kblock, offstatev(5) + 1) = iTwFlg
+              if (kstep.gt.0) then
+                elmt_stat(1, elmt_number) = iTwflg ! TODO: Remove iTwFlg from svars
+                elmt_stat(2, elmt_number) = elmt_number
+              end if
 
               ! If twin detected, mark next step for twin embedding
               if (iTwFlg.gt.0) then
@@ -1161,8 +1172,9 @@ C       Contents of r_Array
         real*8 nodal_coords(3, *)
         pointer (ptr_nodal_coords, nodal_coords)
         integer num_nodes
-        integer size_list(*)
+        integer size_list(*), elmt_stat(2, *)
         pointer (ptr_size_list, size_list)
+        pointer (ptr_elmt_stat, elmt_stat)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1230,13 +1242,14 @@ C       Contents of r_Array
         end do
         close(121)
 
-        ! store sizes of certain quantities
+        ! Store sizes of certain quantities
         ptr_size_list = SMAIntArrayCreate(1, 3, -1)
         size_list(1) = num_gb_elems
         size_list(2) = num_elems
         size_list(3) = num_nodes
 
-        ! TODO: create elmt_stat(2, *)
+        ! Create element status file for twinning
+        ptr_elmt_stat = SMAIntArrayCreate(6, 2*num_elems, 0)
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

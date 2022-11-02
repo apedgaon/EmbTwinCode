@@ -699,13 +699,13 @@ C               Compute the internal force vector
               !svars(kblock, offstatev(5) + 1) = iTwFlg
               if (kstep.gt.0) then
                 elmt_stat(1, elmt_number) = iTwflg ! TODO: Remove iTwFlg from svars
-                elmt_stat(2, elmt_number) = elmt_number
               end if
 
               ! If twin detected, mark next step for twin embedding
               if (iTwFlg.gt.0) then
                 iTwEmbStp = 1
                 svars(kblock, offstatev(5) + 2) = iTwEmbStp
+                elmt_stat(2, elmt_number) = elmt_number
               end if
 
             else  ! Twinning detected in the previous increment

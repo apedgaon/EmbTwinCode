@@ -513,6 +513,13 @@ C>>>        Get nodal coordinates, finite deformation
               END DO
             END DO
 
+            ! Update global nodal coordinates
+            if (kstep.gt.0) then
+              do n = 1, nnode
+                nodal_coords(:, elmt_conn(n, elmt_number))=rCoords(:, n)
+              end do
+            end if
+
 C           We must pass the displacement INCREMENT "du" into GSTRAIN
             DO n = 1, nnode
               DO i = 1, mcrd

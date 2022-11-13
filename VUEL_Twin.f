@@ -332,6 +332,8 @@ C       Twin Code Implementation Started
         real*8 tau_tw              ! RSS on twin system
         real*8 rBLength            ! Length of twin inside the element
         real*8 Smatc(3, 3)         ! Specific Twin Schmid tensor in current configuration
+        real*8 rDfgrdm(3, 3)       ! Mean current deformation gradient
+        real*8 rDfgrdminv(3, 3)    ! Inverse of mean current deformation gradient
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -573,6 +575,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             iTwEmbStp = svars(kblock, offstatev(5) + 2)
 
             if (iTwFlg.eq.0) then   ! No twinning detected in previous increment
+              rDfgrdm = 0.d0
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -638,6 +641,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 iumatsven = offstatev(4) + l * nstatev(2)
                 svars(kblock, iumatsvst : iumatsven) =
      &                                  reshape(rDfgrd1, (/9/))
+
+                ! Add to mean deformation gradient
+                rDfgrdm = 1.d0 / iTIntPt * rDfgrd1
 
                 ! Compute Stress from existing UMAT
                 iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
@@ -713,6 +719,10 @@ C               Compute the internal force vector
                 iTwEmbStp = 1
                 svars(kblock, offstatev(5) + 2) = iTwEmbStp
                 elmt_stat(2, elmt_number) = elmt_number
+
+                call inverse_3x3(rDfgrdm, rDfgrdminv)
+                rntwc = matmul(transpose(rDfgrdminv), rntw(:, iTwFlg))
+                rntwc = rntwc / norm2(rntwc)
               end if
 
             else  ! Twinning detected in the previous increment

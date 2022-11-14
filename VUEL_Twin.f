@@ -334,6 +334,7 @@ C       Twin Code Implementation Started
         real*8 Smatc(3, 3)         ! Specific Twin Schmid tensor in current configuration
         real*8 rDfgrdm(3, 3)       ! Mean current deformation gradient
         real*8 rDfgrdminv(3, 3)    ! Inverse of mean current deformation gradient
+        real*8 rElmtCt(3)          ! Element centroid coordinates
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -347,8 +348,13 @@ C       Twin Code Implementation Started
         pointer (ptr_nodal_coords, nodal_coords)  ! Pointer to nodal coordinates for SMA Access
         integer size_list(*)    ! list storing num_elems, num_nodes, etc
         pointer (ptr_size_list, size_list)  ! pointer to size list for SMA Access
-        integer elmt_stat(2, *)
+        integer elmt_stat(*)
         pointer (ptr_elmt_stat, elmt_stat)
+        integer tw_flg(*)
+        pointer (ptr_tw_flg, tw_flg)
+        real*8 tw_nuc(3, *), tw_nor(3, *)
+        pointer (ptr_tw_nuc, tw_nuc)
+        pointer (ptr_tw_nor, tw_nor)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -419,6 +425,9 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_elmt_neighbour = SMAIntArrayAccess(4)
           ptr_nodal_coords = SMAFloatArrayAccess(5)
           ptr_elmt_stat = SMAIntArrayAccess(6)
+          ptr_tw_flg = SMAIntArrayAccess(7)
+          ptr_tw_nuc = SMAFloatArrayAccess(8)
+          ptr_tw_nor = SMAFloatArrayAccess(9)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -570,7 +579,9 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             !iTwFlg = svars(kblock, offstatev(5) + 1)
             iTwFlg = 0
             if (kstep.gt.0) then
-              iTwFlg = elmt_stat(1, elmt_number)
+              if (elmt_stat(elmt_number).ne.0) then
+                iTwFlg = tw_flg(elmt_stat(elmt_number))
+              end if
             end if
             iTwEmbStp = svars(kblock, offstatev(5) + 2)
 
@@ -643,7 +654,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                                  reshape(rDfgrd1, (/9/))
 
                 ! Add to mean deformation gradient
-                rDfgrdm = 1.d0 / iTIntPt * rDfgrd1
+                rDfgrdm = rDfgrdm + 1.d0 / iTIntPt * rDfgrd1
 
                 ! Compute Stress from existing UMAT
                 iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
@@ -708,21 +719,32 @@ C               Compute the internal force vector
 
               end do
 
-              ! Store twin flag
-              !svars(kblock, offstatev(5) + 1) = iTwFlg
-              if (kstep.gt.0) then
-                elmt_stat(1, elmt_number) = iTwflg ! TODO: Remove iTwFlg from svars
-              end if
-
-              ! If twin detected, mark next step for twin embedding
-              if (iTwFlg.gt.0) then
+              ! If twin detected
+              if (iTwFlg.ne.0) then
+                ! Mark next step for twin embedding
                 iTwEmbStp = 1
                 svars(kblock, offstatev(5) + 2) = iTwEmbStp
-                elmt_stat(2, elmt_number) = elmt_number
 
+                ! Update twin ID counter and store to elmt_status
+                size_list(4) = size_list(4) + 1
+                elmt_stat(elmt_number) = size_list(4)
+
+                ! Store twin type
+                tw_flg(size_list(4)) = iTwFlg
+
+                ! Compute element centroid coordinates and store
+                rElmtCt = 0.d0
+                do n = 1, iTIntPt
+                  rElmtCt(:) = rCoords(1:3, n)
+                end do
+                rElmtCt = 1.d0 / iTIntPt * rElmtCt
+                tw_nuc(1:3, size_list(4)) = rElmtCt
+
+                ! Compute current twin normal (F^-T n / || F^-T n ||) and store
                 call inverse_3x3(rDfgrdm, rDfgrdminv)
                 rntwc = matmul(transpose(rDfgrdminv), rntw(:, iTwFlg))
                 rntwc = rntwc / norm2(rntwc)
+                tw_nor(1:3, size_list(4)) = rntwc
               end if
 
             else  ! Twinning detected in the previous increment
@@ -1189,9 +1211,13 @@ C       Contents of r_Array
         real*8 nodal_coords(3, *)
         pointer (ptr_nodal_coords, nodal_coords)
         integer num_nodes
-        integer size_list(*), elmt_stat(2, *)
+        integer size_list(*), elmt_stat(*), tw_flg(*)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
+        pointer (ptr_tw_flg, tw_flg)
+        real*8 tw_nuc(3, *), tw_nor(3, *)
+        pointer (ptr_tw_nuc, tw_nuc)
+        pointer (ptr_tw_nor, tw_nor)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1259,14 +1285,21 @@ C       Contents of r_Array
         end do
         close(121)
 
-        ! Store sizes of certain quantities
-        ptr_size_list = SMAIntArrayCreate(1, 3, -1)
+        ! Store sizes and counters of certain quantities
+        ptr_size_list = SMAIntArrayCreate(1, 4, -1)
         size_list(1) = num_gb_elems
         size_list(2) = num_elems
         size_list(3) = num_nodes
+        size_list(4) = 0
 
-        ! Create element status file for twinning
-        ptr_elmt_stat = SMAIntArrayCreate(6, 2*num_elems, 0)
+        ! Create element status for twinning ID
+        ptr_elmt_stat = SMAIntArrayCreate(6, num_elems, 0)
+
+        ! Create arrays for twin type, nucleation coords, normal
+        ptr_tw_flg = SMAIntArrayCreate(7, 100, 0)
+        ptr_tw_nuc = SMAFloatArrayCreate(8, 100, 0.d0)
+        ptr_tw_nor = SMAFloatArrayCreate(9, 100, 0.d0)
+
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

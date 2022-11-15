@@ -811,10 +811,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
-                ! Compute twin normal in current configuration F^-T n
-                call inverse_3x3(rFu0, rFuinv)
-                rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
-                rntwc = rntwc / norm2(rntwc)
+                ! Retrieve current twin normal
+                rntwc(:) = tw_nor(1:3, elmt_stat(elmt_number))
 
                 if (iTwEmbStp.eq.1) then
                   ! No twinning part in previous step
@@ -903,12 +901,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   ! vector to matrix for stress in twinned and untwinned region
                   call vec_to_sym_mat(rStress_U, sigmaU)
                   call vec_to_sym_mat(rStress_Z, sigmaZ)
-
-                ! Compute twin normal in current configuration F^-T n
-                ! TODO should this be done with F^U or homogeneous F
-                  call inverse_3x3(rFu1, rFuinv)
-                  rntwc = matmul(transpose(rFuinv), rntw(:, iTwFlg))
-                  rntwc = rntwc / norm2(rntwc)
 
                   ! Form residual
                   do aidx = 1, 3

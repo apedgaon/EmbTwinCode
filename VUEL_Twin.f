@@ -237,6 +237,8 @@ C       Twin Code Implementation Started
         integer iTwEmbStp        ! Twin Embedding Step
         integer num_elems        ! Number of vuel elements
         integer num_nodes        ! Number of nodes
+        integer twinID           ! Twin ID
+        integer tw_nxt_elmt      ! Forward element for twin propagation along length
 
         real*8 rXiEtaPt(3,8)     ! Natural coords of 8 Gauss PTS
         real*8 rWeightPt(8)      ! Weights of 8 Gauss PTS
@@ -335,6 +337,7 @@ C       Twin Code Implementation Started
         real*8 rDfgrdm(3, 3)       ! Mean current deformation gradient
         real*8 rDfgrdminv(3, 3)    ! Inverse of mean current deformation gradient
         real*8 rElmtCt(3)          ! Element centroid coordinates
+        real*8 tw_len_max          ! Maximum of twin lenght in an element
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -352,9 +355,10 @@ C       Twin Code Implementation Started
         pointer (ptr_elmt_stat, elmt_stat)
         integer tw_flg(*)
         pointer (ptr_tw_flg, tw_flg)
-        real*8 tw_nuc(3, *), tw_nor(3, *)
+        real*8 tw_nuc(3, *), tw_nor(3, *), tw_dir(3, *)
         pointer (ptr_tw_nuc, tw_nuc)
         pointer (ptr_tw_nor, tw_nor)
+        pointer (ptr_tw_dir, tw_dir)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -428,6 +432,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_tw_flg = SMAIntArrayAccess(7)
           ptr_tw_nuc = SMAFloatArrayAccess(8)
           ptr_tw_nor = SMAFloatArrayAccess(9)
+          ptr_tw_dir = SMAFloatArrayAccess(10)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -575,12 +580,13 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               svars(kblock, offstatev(5) + 2) = 0
             end if
 
-            ! Check twinning flag in history
-            !iTwFlg = svars(kblock, offstatev(5) + 1)
+            ! Evaluate twinning type flag
             iTwFlg = 0
             if (kstep.gt.0) then
-              if (elmt_stat(elmt_number).ne.0) then
-                iTwFlg = tw_flg(elmt_stat(elmt_number))
+              ! Check element status for twinID
+              twinID = elmt_stat(elmt_number)
+              if (twinID.ne.0) then
+                iTwFlg = tw_flg(twinID)
               end if
             end if
             iTwEmbStp = svars(kblock, offstatev(5) + 2)
@@ -727,24 +733,30 @@ C               Compute the internal force vector
 
                 ! Update twin ID counter and store to elmt_status
                 size_list(4) = size_list(4) + 1
-                elmt_stat(elmt_number) = size_list(4)
+                twinID = size_list(4)
+                elmt_stat(elmt_number) = twinID
 
                 ! Store twin type
-                tw_flg(size_list(4)) = iTwFlg
+                tw_flg(twinID) = iTwFlg
 
                 ! Compute element centroid coordinates and store
                 rElmtCt = 0.d0
                 do n = 1, iTIntPt
-                  rElmtCt(:) = rCoords(1:3, n)
+                  rElmtCt = rElmtCt + rCoords(1:3, n)
                 end do
                 rElmtCt = 1.d0 / iTIntPt * rElmtCt
-                tw_nuc(1:3, size_list(4)) = rElmtCt
+                tw_nuc(1:3, twinID) = rElmtCt
 
                 ! Compute current twin normal (F^-T n / || F^-T n ||) and store
                 call inverse_3x3(rDfgrdm, rDfgrdminv)
                 rntwc = matmul(transpose(rDfgrdminv), rntw(:, iTwFlg))
                 rntwc = rntwc / norm2(rntwc)
-                tw_nor(1:3, size_list(4)) = rntwc
+                tw_nor(1:3, twinID) = rntwc
+
+                ! Compute current twin direction F m / || F m || and store
+                rmtwc = matmul(rDfgrdm, rmtw(:, iTwFlg))
+                rmtwc = rmtwc / norm2(rmtwc)
+                tw_dir(1:3, twinID) = rmtwc
               end if
 
             else  ! Twinning detected in the previous increment
@@ -755,6 +767,19 @@ C               Compute the internal force vector
               ! compute properties for twinned region due to rotation of crystal basis
               call compute_twin_props(rntw(:, iTwFlg), props(77:126),
      &                                props_tw, 50, del, pi)
+
+              ! Retrieve current twin normal
+              rntwc(:) = tw_nor(1:3, twinID)
+
+              ! Find max possible twin length and forward element
+              if (iTwEmbStp) then
+                call find_next_twin_elem(elmt_number, elmt_conn,
+     &                    num_elems, nodal_coords, num_nodes,
+     &                    tw_nuc(1:3, twinID), rntwc,
+     &                    tw_dir(1:3, twinID), elmt_neighbour,
+     &                    tw_len_max, tw_nxt_elmt)
+
+              end if
 
               ! Quadrature Loop
               do l = 1, iTIntPt
@@ -810,9 +835,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
-
-                ! Retrieve current twin normal
-                rntwc(:) = tw_nor(1:3, elmt_stat(elmt_number))
 
                 if (iTwEmbStp.eq.1) then
                   ! No twinning part in previous step
@@ -1207,9 +1229,10 @@ C       Contents of r_Array
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
         pointer (ptr_tw_flg, tw_flg)
-        real*8 tw_nuc(3, *), tw_nor(3, *)
+        real*8 tw_nuc(3, *), tw_nor(3, *), tw_dir(3, *)
         pointer (ptr_tw_nuc, tw_nuc)
         pointer (ptr_tw_nor, tw_nor)
+        pointer (ptr_tw_dir, tw_dir)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1291,6 +1314,7 @@ C       Contents of r_Array
         ptr_tw_flg = SMAIntArrayCreate(7, 100, 0)
         ptr_tw_nuc = SMAFloatArrayCreate(8, 100, 0.d0)
         ptr_tw_nor = SMAFloatArrayCreate(9, 100, 0.d0)
+        ptr_tw_dir = SMAFloatArrayCreate(10, 100, 0.d0)
 
       end subroutine
 

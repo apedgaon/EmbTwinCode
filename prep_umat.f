@@ -585,7 +585,7 @@ C         for umat stress to vuel stress
         real*8 dir_dp, tw_dist, tw_dist_max, tw_length
         integer tw_prop_face, tw_prop_face_nodes(4)
 
-        ! Compute rs = rm X rn
+        ! Compute rs = rm X rn, rm = rn x rs
         call cross_product(rm, rn, rs)
 
         ! Loop over element faces
@@ -675,6 +675,10 @@ C         for umat stress to vuel stress
 
         do i = 1, 6
           neigh_elmt_no = elmt_neighbour(i, elmt_number)
+          if (neigh_elmt_no.eq.0) then
+            cycle
+          end if
+
           do ifc = 1, 6
             face_nodes(1) = elmt_conn(Face(ifc, 1), neigh_elmt_no)
             face_nodes(2) = elmt_conn(Face(ifc, 2), neigh_elmt_no)

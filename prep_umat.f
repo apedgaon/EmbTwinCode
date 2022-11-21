@@ -673,6 +673,7 @@ C         for umat stress to vuel stress
      &                                    elmt_number)
         call quicksort(tw_prop_face_nodes, 1, 4)
 
+        nxt_elmt_num = 0
         do i = 1, 6
           neigh_elmt_no = elmt_neighbour(i, elmt_number)
           if (neigh_elmt_no.eq.0) then

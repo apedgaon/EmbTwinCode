@@ -228,8 +228,8 @@ C       Twin Code Implementation Started
         integer iVelmType
         integer iVforType
         integer iConsType
-        integer nstatev(5)
-        integer offstatev(8)
+        integer nstatev(4)
+        integer offstatev(7)
         integer iTwFlg           ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
         integer ieulererr        ! return error from eulang routine
@@ -394,9 +394,8 @@ C       Natural coordinates of element centroid
         ! Number of state variables array and offsets array
         nstatev(1) = 148  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
-        nstatev(3) = 2    ! svars for twinning flag
+        nstatev(3) = 3    ! svars for twinning flag
         nstatev(4) = 5    ! svars for storing discontinuity vector
-        nstatev(5) = 2    ! svars for twinning length and next element
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)
         offstatev(3) = offstatev(2) + 8 * nstatev(1)
@@ -404,8 +403,7 @@ C       Natural coordinates of element centroid
         offstatev(5) = offstatev(4) + 8 * nstatev(2)
         offstatev(6) = offstatev(5) + nstatev(3)
         offstatev(7) = offstatev(6) + 8 * nstatev(4)
-        offstatev(8) = offstatev(7) + nstatev(5)
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 2 + 5*8 + 2
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 3 + 5*8
 
         ! Define PI
         pi = 4.d0 * atan(1.d0)
@@ -577,12 +575,6 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
             end if
 
-            ! Set twinning flags 0 in the beginning
-            if (kinc.eq.0) then
-              svars(kblock, offstatev(5) + 1) = 0
-              svars(kblock, offstatev(5) + 2) = 0
-            end if
-
             ! Evaluate twinning type flag
             iTwFlg = 0
             if (kstep.gt.0) then
@@ -598,9 +590,9 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               ! Mark twinning embedding step as 1 in the beginning
               ! This is used to handle first time twinning deformation gradient
               ! It gets changed to 0 only after handling first time twinning in the element
-              svars(kblock, offstatev(5) + 2) = 1
+              svars(kblock, offstatev(5) + 1) = 1
             end if
-            iTwEmbStp = svars(kblock, offstatev(5) + 2)
+            iTwEmbStp = svars(kblock, offstatev(5) + 1)
 
             if (iTwFlg.eq.0) then   ! No twinning detected in previous increment
               rDfgrdm = 0.d0
@@ -785,11 +777,11 @@ C               Compute the internal force vector
      &                    tw_nuc(1:3, twinID), rntwc,
      &                    tw_dir(1:3, twinID), elmt_neighbour,
      &                    tw_len_max, tw_nxt_elmt)
-                svars(kblock, offstatev(7) + 1) = tw_len_max
-                svars(kblock, offstatev(7) + 2) = tw_nxt_elmt
+                svars(kblock, offstatev(5) + 2) = tw_len_max
+                svars(kblock, offstatev(5) + 3) = tw_nxt_elmt
               else
-                tw_len_max = svars(kblock, offstatev(7) + 1)
-                tw_nxt_elmt = svars(kblock, offstatev(7) + 2)
+                tw_len_max = svars(kblock, offstatev(5) + 2)
+                tw_nxt_elmt = svars(kblock, offstatev(5) + 3)
               end if
 
               ! Set current max twin length to 0
@@ -1120,7 +1112,7 @@ C               Compute the internal force vector
               ! Twin is embedded in this step, unset the flag
               if (iTwEmbStp.eq.1) then
                 iTwEmbStp = 0
-                svars(kblock, offstatev(5) + 2) = iTwEmbStp
+                svars(kblock, offstatev(5) + 1) = iTwEmbStp
               end if
 
               ! If current twin length exceeds max allowable twin length, mark next element

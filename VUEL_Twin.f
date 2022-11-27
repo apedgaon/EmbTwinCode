@@ -1211,6 +1211,11 @@ C       Contents of r_Array
             call SMAIntArrayDelete(3)
             call SMAIntArrayDelete(4)
             call SMAFloatArrayDelete(5)
+            call SMAIntArrayDelete(6)
+            call SMAIntArrayDelete(7)
+            call SMAFloatArrayDelete(8)
+            call SMAFloatArrayDelete(9)
+            call SMAFloatArrayDelete(10)
           end if
         end if
 

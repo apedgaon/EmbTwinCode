@@ -334,11 +334,12 @@ C       Twin Code Implementation Started
         real*8 tau_tw              ! RSS on twin system
         real*8 rBLength            ! Length of twin inside the element
         real*8 Smatc(3, 3)         ! Specific Twin Schmid tensor in current configuration
-        real*8 rDfgrdm(3, 3)       ! Mean current deformation gradient
-        real*8 rDfgrdminv(3, 3)    ! Inverse of mean current deformation gradient
+        real*8 Fe_m(3, 3)          ! Mean current deformation gradient
+        real*8 Fe_minv(3, 3)       ! Inverse of mean current deformation gradient
         real*8 rElmtCt(3)          ! Element centroid coordinates
         real*8 tw_len_max          ! Maximum of twin length in an element
         real*8 rBLengthMax         ! Current maximum twin length
+        real*8 Fe(3, 3)            ! Current Elastic part of deformation gradient
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -595,7 +596,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             iTwEmbStp = svars(kblock, offstatev(5) + 1)
 
             if (iTwFlg.eq.0) then   ! No twinning detected in previous increment
-              rDfgrdm = 0.d0
+              Fe_m = 0.d0
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -662,9 +663,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 svars(kblock, iumatsvst : iumatsven) =
      &                                  reshape(rDfgrd1, (/9/))
 
-                ! Add to mean deformation gradient
-                rDfgrdm = rDfgrdm + 1.d0 / iTIntPt * rDfgrd1
-
                 ! Compute Stress from existing UMAT
                 iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
                 iumatsven = offstatev(1) + l * nstatev(1)
@@ -673,12 +671,15 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           rGsCoords, rDfgrd0, rDfgrd1,
      &                           props(77:126), 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWu, iterErr)
+     &                           kstep, kinc, .true., rWu, iterErr, Fe)
 
                 if (iterErr.eq.1) then
                   CALL XPLB_ABQERR(-3,'UMAT Failed to Converge in '//
      &                             'unlocalized region!', 0,0.d0,' ')
                 end if
+
+                ! Add to mean deformation gradient
+                Fe_m = Fe_m + 1.d0 / iTIntPt * Fe
 
                 ! store same svars for twinned part which has not formed yet
                 iumatsvst2 = offstatev(2) + 1 + (l - 1) * nstatev(1)
@@ -747,13 +748,13 @@ C               Compute the internal force vector
                 tw_nuc(1:3, twinID) = rElmtCt
 
                 ! Compute current twin normal (F^-T n / || F^-T n ||) and store
-                call inverse_3x3(rDfgrdm, rDfgrdminv)
-                rntwc = matmul(transpose(rDfgrdminv), rntw(:, iTwFlg))
+                call inverse_3x3(Fe_m, Fe_minv)
+                rntwc = matmul(transpose(Fe_minv), rntw(:, iTwFlg))
                 rntwc = rntwc / norm2(rntwc)
                 tw_nor(1:3, twinID) = rntwc
 
                 ! Compute current twin direction F m / || F m || and store
-                rmtwc = matmul(rDfgrdm, rmtw(:, iTwFlg))
+                rmtwc = matmul(Fe_m, rmtw(:, iTwFlg))
                 rmtwc = rmtwc / norm2(rmtwc)
                 tw_dir(1:3, twinID) = rmtwc
               end if
@@ -895,7 +896,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             rGsCoords, rFu0, rFu1,
      &                             props(77:126), 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false., rWu, iterErr)
+     &                             kstep, kinc, .false., rWu, iterErr,
+     &                             Fe)
 
                   if (iterErr.eq.1) then
                     call random_number(rmh)
@@ -918,7 +920,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             rGsCoords, rFz0h, rFz1h,
      &                             props_tw, 50, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false., rWz, iterErr)
+     &                             kstep, kinc, .false., rWz, iterErr,
+     &                             Fe)
 
                   if (iterErr.eq.1) then
                     call random_number(rmh)
@@ -1034,7 +1037,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           rGsCoords, rFu0, rFu1,
      &                           props(77:126), 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWu, iterErr)
+     &                           kstep, kinc, .true., rWu, iterErr, Fe)
 
 
                 ! Compute Final Stress (twinned region) from existing UMAT
@@ -1045,7 +1048,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           rGsCoords, rFz0h, rFz1h,
      &                           props_tw, 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWz, iterErr)
+     &                           kstep, kinc, .true., rWz, iterErr, Fe)
 
                 ! Compute discontinuous mode tensor
                 rTdis(1) = rmhu(1) * rntwc(1)

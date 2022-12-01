@@ -142,11 +142,14 @@ C         See UMAT Deformation Gradient Documentation for more details
           rdVelGrd(3, 3) = rStrainInc(3)
       end subroutine
 
-      subroutine comp_twin_dfgrd(rImat, Smat, F_tw, rn, rm)
+      subroutine comp_twin_dfgrd(rImat, props, nprops, pi, Smat, F_tw,
+     &                           rnc, rmc)
           implicit none
-          real*8 rn(3, 18), rm(3, 18)
+          real*8 rn(3, 18), rm(3, 18), rmc(3, 18), rnc(3, 18)
           real*8 gamma1, gamma2, gamma3
           real*8 Smat(3, 3, 18), F_tw(3, 3, 18), rImat(3, 3)
+          integer nprops
+          real*8 props(nprops), th, phi, om, Q_0(3, 3), pi
           integer i, j
 
           ! Tensile Twins {1 0 -1 2} <-1 0 1 1>
@@ -232,10 +235,18 @@ C         See UMAT Deformation Gradient Documentation for more details
           gamma2 = 0.21821257173587794d0     ! {1 1 -2 2} <1 1 -2 -3> (comp)
           gamma3 = 0.09804551470109034d0     ! {1 0 -1 1} <1 0 -1 -2> (comp)
 
+          ! Compute rotation matrix from euler angles and rotate twin basis
+          th = props(31) * pi / 180.d0
+          phi = props(32) * pi / 180.d0
+          om = props(33) * pi / 180.d0
+          call rotmat(th, phi, om, Q_0)
+          rnc = matmul(Q_0, rn)
+          rmc = matmul(Q_0, rm)
+
           ! Form Twin Schmid Tensor
           do i = 1, 3
             do j = 1, 3
-                Smat(i, j, :) = rm(i, :) * rn(j, :)
+                Smat(i, j, :) = rmc(i, :) * rnc(j, :)
             end do
           end do
 

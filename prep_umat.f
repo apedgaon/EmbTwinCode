@@ -461,7 +461,7 @@ C         for umat stress to vuel stress
             cycle
           end if      ! TODO check for compression twins!
 
-          Lambda_tau = (abs(tau) / tau_c)**beta
+          Lambda_tau = (tau / tau_c)**beta
           P_tau = 1.d0 - exp(-Lambda_tau)
           if (P_tau.gt.P_0) then
             iTwinFlag = i

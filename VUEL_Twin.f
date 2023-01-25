@@ -1420,5 +1420,5 @@ C     Locate elmts that share Face 1 to 6 with elmt_n
       include 'SHP_FUNC_3D_8N.f'
       include 'prep_umat.f'
       include 'gdefgrad_3D.f'
-      include 'fcc_umat_lbl34_test.f'
+      include 'fcc_umat_lbl34_Ti.f'
       include 'Gstrain_3D.f'

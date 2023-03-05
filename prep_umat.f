@@ -550,12 +550,12 @@ C         for umat stress to vuel stress
         real*8 Gtw, bk, vl, vb, sl, p, q, vldot, vbdot, ramp, fac
 
         ! Retrieve relevant properties
-        Gtw = props(51)
-        vl = props(52)
-        vb = props(53)
-        sl = props(54)
-        p = props(55)
-        q = props(56)
+        Gtw = props(52)
+        vl = props(53)
+        vb = props(54)
+        sl = props(55)
+        p = props(56)
+        q = props(57)
         bk = props(27)
 
         ! ramp could be positive or 0

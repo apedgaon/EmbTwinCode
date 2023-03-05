@@ -421,7 +421,7 @@ C       Initialize Identity Matrix(3x3)
         end do
 
 C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
-        call comp_twin_dfgrd(del, props(77:126), 50, pi, Smat, F_tw,
+        call comp_twin_dfgrd(del, props(77:127), 51, pi, Smat, F_tw,
      &                       rntw, rmtw)
 
         ! Access SMA arrays created in vexternaldb
@@ -670,7 +670,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call umat_stress(rStress,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rDfgrd0, rDfgrd1,
-     &                           props(77:126), 50, nstatev(1), nnode,
+     &                           props(77:127), 51, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWu, iterErr, Fe)
 
@@ -766,8 +766,8 @@ C               Compute the internal force vector
               call inverse_3x3(F_tw(:, :, iTwFlg), F_tw_inv)
 
               ! compute properties for twinned region due to rotation of crystal basis
-              call compute_twin_props(rntw(:, iTwFlg), props(77:126),
-     &                                props_tw, 50, del, pi)
+              call compute_twin_props(rntw(:, iTwFlg), props(77:127),
+     &                                props_tw, 51, del, pi)
 
               ! Retrieve current twin normal
               rntwc(:) = tw_nor(1:3, twinID)
@@ -895,7 +895,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   call umat_stress(rStress_U,
      &                             svars(kblock, iumatsvst:iumatsven),
      &                             rGsCoords, rFu0, rFu1,
-     &                             props(77:126), 50, nstatev(1), nnode,
+     &                             props(77:127), 51, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWu, iterErr,
      &                             Fe)
@@ -990,7 +990,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute twin width and length evolution (TODO: This should be rFu1e?)
                 Smatc = matmul(rFu1, matmul(Smat(:, :, iTwFlg), rFuinv))
                 tau_tw = sum(sigmaU * Smatc)
-                call compute_twin_evol(props(77:132), 56, tau_tw, theta,
+                call compute_twin_evol(props(77:133), 57, tau_tw, theta,
      &                                 dtimeCur, rBWidth, rBLength)
 
                 ! Store new twin width and length
@@ -1036,7 +1036,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call umat_stress(rStress_U,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rFu0, rFu1,
-     &                           props(77:126), 50, nstatev(1), nnode,
+     &                           props(77:127), 51, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWu, iterErr, Fe)
 

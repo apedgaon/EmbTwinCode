@@ -25,7 +25,7 @@
      &          nshr,    ntens,   nstatv,  props,   nprops,
      &          coords,  drot,    pnewdt,  celent,  dfgrd0,
      &          dfgrd1,  noel,    npt,     layer,   kspt,
-     &          kstep,   kinc, rW, iterErr, Fe)
+     &          kstep,   kinc,    rW,      iterErr, Fe)
 
       implicit real*8(a-h,o-z)
       character*80 cmname 
@@ -115,7 +115,9 @@
      &  dmat(props(34),props(34)), ! Slip interaction matrix appearing in definition of mean free path
      &  burg_vec(props(34)),  ! Array containing Burgers vector for all slip systems
      &  dGamdTau(props(34)),  ! Derivative of dgamma with respect to resolved shear stress
-     &  rW(3,3,3,3)           ! Jacobian dT^e/dF
+     &  rW(3,3,3,3),          ! Jacobian dT^e/dF
+     &  AThExp(3, 3),         ! Thermal expansion tensor in reference conf. [1/K]
+     &  AThExp_c(3, 3)        ! Thermal expansion tensor in crystal basis [1/K]
 
       pi = 4.d0 * atan(1.d0)
 
@@ -125,7 +127,7 @@
         THETA0=PROPS(1)              ! Initial temperature [K]
         RHO=PROPS(2)                 ! Initial density [Mg/mm^3]
         CP=PROPS(3)                  ! Specific Heat [mJ/(Mg.K)]
-        A11=PROPS(4)                 ! Thermal expansion coefficient [1/K]
+        A11=PROPS(4)                 ! Thermal expansion coefficient along basal plane [1/K]
         xkappax=PROPS(5)             ! Inverse specific effective heat [-] TODO: Ti
 
         rM11=PROPS(6)                ! Slope of C11 vs temp line [MPa/K]
@@ -135,7 +137,7 @@
         rM44=PROPS(10)               ! Slope of C44 vs temp line [MPa/K]
         C44_0=PROPS(11)              ! C44 at 0 K [MPa]
 
-        alphaT=PROPS(12)             ! Taylor factor [-]** Neglect this?  TODO: Ti
+        alphaT=PROPS(12)             ! Taylor factor for taylor stress, we have removed rs = muT/mu
         burg = props(13)             ! Burgers vector [mm]
         rhossd_0 = props(14)         ! Initial SSD density [mm^-2]  TODO: Ti
         chi0 = props(15)             ! Initial effective temperature [-]* TODO: Ti
@@ -168,6 +170,7 @@
         rs = props(40)               ! Scaling factor for Taylor stress (alpha_T in literature)
         xkappar = props(41)          ! Dislocation energy scaling for chi recovery [mJ] (currently 0)
         xmu0 = props(42)             ! Polycrystal shear modulus adjustment [MPa] (currently 0)
+        a33 = props(51)              ! Thermal expansion along c-axis [1/K]
 
 !------------------------------------------------------------------
 !  Initialize identity matrices/tensors
@@ -354,16 +357,21 @@
       C_c(3,2,2,3) = c55
       C_c(3,2,3,2) = c55
 
+      ! Form thermal expansion tensor
+      AThExp =
+     & reshape( (/a11,0.d0,0.d0,0.d0,a11,0.d0,0.d0,0.d0,a33 /),(/3,3/))
+
 !  Rotate stiffness tensor and slip vectors from crystal to reference configuration
       call ROTMAT(TH,PHI,OM,q_0)
       call rotate_4th(q_0,C_c,C)
       xs0 = matmul(q_0,xsC)
       xm0 = matmul(q_0,xmC)
+      AThExp_c = matmul(q_0, matmul(AThExp, transpose(q_0)))
       
 !  Compute trial quantities
       Fe_tr = matmul(dfgrd1,FpInv_n)
       Ce_tr = matmul(transpose(Fe_tr),Fe_tr)
-      Ee_tr = 0.5d0*(Ce_tr-del) - a11*(theta - theta0)*del
+      Ee_tr = 0.5d0*(Ce_tr-del) - AThExp_c * (theta - theta0)
       Spk2_tr = reshape( (/((sum(C(i,j,:,:)*Ee_tr), 
      &          i = 1,3), j=1,3)/), (/3,3/))
 
@@ -416,10 +424,12 @@
 !  Compute slip resistances from dislocation densities at t_n
       ! xmu = sqrt((c11-c12)/2.d0*c44)
       xmu = sqrt((c11-c12)/2.d0*c55) + xmu0   !TODO: xmu0 adjustment for Ti
-      call calc_amat(nslip,props,nprops,xsC,xmC,amat) !TODO: Ti version
-      call calc_dmat(nslip,props,nprops,xmC,amat,dmat)  !TODO: Ti version
+      call calc_amat2(nslip,props,nprops,xsC,xmC,amat)
+      !call calc_amat(nslip,props,nprops,xsC,xmC,amat) !TODO: Ti version
+      call calc_dmat2(nslip, props, nprops, xsC, xmC, dmat)
+      !call calc_dmat(nslip,props,nprops,xmC,amat,dmat)  !TODO: Ti version
       call get_burgvec(props, burg_vec)
-      s_n = (xmu/rs)*burg_vec*sqrt(matmul(amat,rhossd_n)) !TODO: rs for Ti
+      s_n = alphaT*xmu*burg_vec*sqrt(matmul(amat,rhossd_n)) !TODO: rs for Ti
       rhomf_n = matmul(dmat,rhossd_n)
       rhossd_i = matmul(dmat,rhossd_n)
 
@@ -491,8 +501,8 @@
       enddo
       enddo
 
-      call calc_jac(nslip,props,nprops,C,dfgrd0,dfgrd1,FpInv_n,Spk2,
-     & gammadot,tau,s,rhossd,rhomf,q_0,smatc,theta,del,dtime,array4)
+!      call calc_jac(nslip,props,nprops,C,dfgrd0,dfgrd1,FpInv_n,Spk2,
+!     & gammadot,tau,s,rhossd,rhomf,q_0,smatc,theta,del,dtime,array4)
 
       call calc_new_jac(dfgrd1, FpInv_n, props, nprops, C, nslip, Smat,
      &                    dGamdTau, Cmat, dgamma, Fe, spk2, rW)
@@ -502,9 +512,9 @@
       dWp = dot_product(tau,dgamma)
       dTheta = (chi_n/chi_ss)*dWp/(rho*cp)
       theta = theta + dTheta
-      dchi = xkappax*dWp*(1.d0 - chi_n/chi_ss)/(alphaT*xmu)
+      dchi = xkappax*dWp*(1.d0 - chi_n/chi_ss)/xmu
       dchi2 = - dot_product(e_D+e_copl*(burg_vec**2)*rhossd_i,drhossd)
-     &          *xkappax*xkappar/(rx*burg*alphaT*xmu)
+     &          *xkappax*xkappar/(rx*burg*xmu)
       chi = chi_n + dchi + dchi2
       ! WRITE(*,*) dchi2
       ! WRITE(*,*) time, dtime
@@ -2490,6 +2500,59 @@ c **********************************************************************
         return
         end subroutine calc_amat
 
+        subroutine calc_amat2(nslip,props,nprops,s0,n0,amat)
+          implicit none
+          integer nslip, nprops
+          real*8 amat(nslip, nslip), props(nprops), s0(3, nslip)
+          real*8 n0(3, nslip), sa_dot_sb, na_dot_nb, t0(3), na_dot_tb
+          integer i, j
+
+          ! ActMat 2011 59 7003
+          amat = 0.d0
+          do j = 1, nslip
+            do i = 1, nslip
+              !sa_dot_sb = abs(dot_product(s0(:,i),s0(:,j)))
+              na_dot_nb = abs(dot_product(n0(:,i),n0(:,j)))
+              if (i.eq.j) then
+                amat(i, j) = 0.1d0
+              else
+                if (na_dot_nb.gt.0.99d0) then
+                  amat(i, j) = 0.12d0
+                else
+                  t0(1) = n0(2, j) * s0(3, j) - n0(3, j) * s0(2, j)
+                  t0(2) = n0(3, j) * s0(1, j) - n0(1, j) * s0(3, j)
+                  t0(3) = n0(1, j) * s0(2, j) - n0(2, j) * s0(1, 2)
+                  na_dot_tb = abs(dot_product(n0(:, i), t0))
+                  amat(i, j) = 0.12d0 * na_dot_tb
+                end if
+              end if
+            end do
+          end do
+        end subroutine calc_amat2
+
+        subroutine calc_amat3(nslip,props,nprops,s0,n0,amat)
+          implicit none
+          integer nslip, nprops
+          real*8 amat(nslip, nslip), props(nprops), s0(3, nslip)
+          real*8 n0(3, nslip), sa_dot_sb, na_dot_nb, t0(3), na_dot_tb
+          integer i, j
+
+          ! IJP 2016 80 222
+          amat = 0.d0
+          do j = 1, nslip
+            do i = 1, nslip
+              sa_dot_sb = abs(dot_product(s0(:,i),s0(:,j)))
+              na_dot_nb = abs(dot_product(n0(:,i),n0(:,j)))
+              if ((na_dot_nb < 0.999d0) .and. 
+     &               (sa_dot_sb > 0.999d0)) then ! Collinear
+                amat(i, j) = 0.7d0
+              else ! Noncollinear
+                amat(i, j) = 0.1d0
+              end if
+            end do
+          end do
+        end subroutine calc_amat3
+
 c **********************************************************************
 ! Subroutine for defining the dislocation interatction matrix that
 ! appears in the Taylor expression for the mean-free path
@@ -2519,6 +2582,33 @@ c **********************************************************************
 
         return
         end subroutine calc_dmat
+
+        subroutine calc_dmat2(nslip, props, nprops, s0, n0, dmat)
+          implicit none
+          integer nslip, nprops
+          real*8 props(nprops), n0(3, nslip), s0(3, nslip)
+          real*8 dmat(nslip, nslip)
+
+          integer i, j
+          real*8 na_dot_nb, t0(3), na_dot_tb
+
+          ! ActMat 2011 59 7003
+          dmat = 0.d0
+          do j = 1, nslip
+            do i = 1, nslip
+              na_dot_nb = abs(dot_product(n0(:,i),n0(:,j)))
+              if (i.ne.j) then
+                if (na_dot_nb.lt.0.99d0) then
+                  t0(1) = n0(2, j) * s0(3, j) - n0(3, j) * s0(2, j)
+                  t0(2) = n0(3, j) * s0(1, j) - n0(1, j) * s0(3, j)
+                  t0(3) = n0(1, j) * s0(2, j) - n0(2, j) * s0(1, 2)
+                  na_dot_tb = abs(dot_product(n0(:, i), t0))
+                  dmat(i, j) = na_dot_tb
+                end if
+              end if
+            end do
+          end do
+        end subroutine
 
 C **********************************************************************
         SUBROUTINE calc_HARDENING(props,nprops,nslip,theta,chi,amat,
@@ -2565,7 +2655,7 @@ C
         rhossd_d = sqrt(rhossd_i)
         do ia = 1,nslip
           do ib = 1,nslip
-            fab(ia,ib) = (xmu/rs)*burg_vec(ia)*amat(ia,ib)
+            fab(ia,ib) = alphaT*xmu*burg_vec(ia)*amat(ia,ib)
      &                   /2.d0/rhossd_f(ia)
           enddo
         enddo
@@ -2584,7 +2674,7 @@ C
           rhossd_s(ia) = (1.d0/(rx*burg)**2)*
      &          DEXP(-(e_D + e_copl*(burg_vec(ia)**2)*rhossd_i(ia))/chi)
           drhossd(ia) = (1.d0/rx**2)*xkappa1*tau(ia)*dgamma(ia)*
-     &             (1.d0 - rhossd(ia)/rhossd_s(ia))/(alphaT*xmu*
+     &             (1.d0 - rhossd(ia)/rhossd_s(ia))/(xmu*
      &             ((xnu(ia))**2)*(burg**2))
         enddo
         

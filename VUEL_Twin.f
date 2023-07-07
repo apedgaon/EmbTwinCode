@@ -361,6 +361,10 @@ C       Twin Code Implementation Started
         pointer (ptr_tw_nuc, tw_nuc)
         pointer (ptr_tw_nor, tw_nor)
         pointer (ptr_tw_dir, tw_dir)
+        real*8 tw_geom(3, *)
+        pointer (ptr_tw_geom, tw_geom)
+        integer tw_dec(3, *)
+        pointer (ptr_tw_dec, tw_dec)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -436,6 +440,8 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_tw_nuc = SMAFloatArrayAccess(8)
           ptr_tw_nor = SMAFloatArrayAccess(9)
           ptr_tw_dir = SMAFloatArrayAccess(10)
+          ptr_tw_geom = SMAFloatArrayAccess(11)
+          ptr_tw_dec = SMAIntArrayAccess(12)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -1220,6 +1226,8 @@ C       Contents of r_Array
             call SMAFloatArrayDelete(8)
             call SMAFloatArrayDelete(9)
             call SMAFloatArrayDelete(10)
+            call SMAFloatArrayDelete(11)
+            call SMAIntArrayDelete(12)
           end if
         end if
 
@@ -1256,6 +1264,10 @@ C       Contents of r_Array
         pointer (ptr_tw_nuc, tw_nuc)
         pointer (ptr_tw_nor, tw_nor)
         pointer (ptr_tw_dir, tw_dir)
+        real*8 tw_geom(3, *)
+        pointer (ptr_tw_geom, tw_geom)
+        integer tw_dec(3, *)
+        pointer (ptr_tw_dec, tw_dec)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1335,9 +1347,12 @@ C       Contents of r_Array
 
         ! Create arrays for twin type, nucleation coords, normal
         ptr_tw_flg = SMAIntArrayCreate(7, 100, 0)
-        ptr_tw_nuc = SMAFloatArrayCreate(8, 100, 0.d0)
-        ptr_tw_nor = SMAFloatArrayCreate(9, 100, 0.d0)
-        ptr_tw_dir = SMAFloatArrayCreate(10, 100, 0.d0)
+        ptr_tw_nuc = SMAFloatArrayCreate(8, 3*100, 0.d0)
+        ptr_tw_nor = SMAFloatArrayCreate(9, 3*100, 0.d0)
+        ptr_tw_dir = SMAFloatArrayCreate(10, 3*100, 0.d0)
+
+        ptr_tw_geom = SMAFloatArrayCreate(11, 3*100, 0.d0)
+        ptr_tw_dec = SMAIntArrayCreate(12, 3*100, 0)
 
       end subroutine
 

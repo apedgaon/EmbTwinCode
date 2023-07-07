@@ -764,6 +764,12 @@ C               Compute the internal force vector
                 rmtwc = matmul(Fe_m, rmtw(:, iTwFlg))
                 rmtwc = rmtwc / norm2(rmtwc)
                 tw_dir(1:3, twinID) = rmtwc
+
+                ! Initialize global twin geometry parameters (length, width, thickness)
+                tw_geom(:, twinID) = 0.d0
+
+                ! Store this element number as twin decider for all geometry paramters
+                tw_dec(:, twinID) = elmt_number
               end if
 
             else  ! Twinning detected in the previous increment

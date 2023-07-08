@@ -1220,6 +1220,10 @@ C       Contents of r_Array
           if (myThreadID.eq.0) then
             call read_gb_elements()
           end if
+        else if (lop.eq.j_int_EndIncrement) then
+          if (myThreadID.eq.0) then
+            call solve_twin_propagation()
+          end if
         else if (lop.eq.j_int_EndAnalysis) then
           if (myThreadID.eq.0) then
             call SMAIntArrayDelete(1)
@@ -1360,6 +1364,50 @@ C       Contents of r_Array
         ptr_tw_geom = SMAFloatArrayCreate(11, 3*100, 0.d0)
         ptr_tw_dec = SMAIntArrayCreate(12, 3*100, 0)
 
+      end subroutine
+
+      subroutine solve_twin_propagation()
+        implicit none
+#include <SMAAspUserSubroutines.hdr>
+        integer elmt_conn(8, *)
+        pointer (ptr_elmt_conn, elmt_conn)
+        integer elmt_neighbour(6, *)
+        pointer (ptr_elmt_neighbour, elmt_neighbour)
+        real*8 nodal_coords(3, *)
+        pointer (ptr_nodal_coords, nodal_coords)
+        integer num_nodes, num_elems
+        integer size_list(*), elmt_stat(*), tw_flg(*)
+        pointer (ptr_size_list, size_list)
+        pointer (ptr_elmt_stat, elmt_stat)
+        pointer (ptr_tw_flg, tw_flg)
+        real*8 tw_nuc(3, *), tw_nor(3, *), tw_dir(3, *)
+        pointer (ptr_tw_nuc, tw_nuc)
+        pointer (ptr_tw_nor, tw_nor)
+        pointer (ptr_tw_dir, tw_dir)
+        real*8 tw_geom(3, *)
+        pointer (ptr_tw_geom, tw_geom)
+        integer tw_dec(3, *)
+        pointer (ptr_tw_dec, tw_dec)
+        integer num_twins
+
+        ! Access data from Abaqus SMA array
+        ptr_size_list = SMAIntArrayAccess(1)
+        num_twins = size_list(4)
+        if (num_twins.eq.0) return ! if no twins yet, return
+
+        ptr_elmt_conn = SMAIntArrayAccess(3)
+        ptr_elmt_neighbour = SMAIntArrayAccess(4)
+        ptr_nodal_coords = SMAFloatArrayAccess(5)
+        ptr_elmt_stat = SMAIntArrayAccess(6)
+        ptr_tw_flg = SMAIntArrayAccess(7)
+        ptr_tw_nuc = SMAFloatArrayAccess(8)
+        ptr_tw_nor = SMAFloatArrayAccess(9)
+        ptr_tw_dir = SMAFloatArrayAccess(10)
+        ptr_tw_geom = SMAFloatArrayAccess(11)
+        ptr_tw_dec = SMAIntArrayAccess(12)
+
+        num_elems = size_list(2)
+        num_nodes = size_list(3)
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

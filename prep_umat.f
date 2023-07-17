@@ -745,3 +745,77 @@ C         for umat stress to vuel stress
         if (first < i-1) call quicksort(a, first, i-1)
         if (j+1 < last)  call quicksort(a, j+1, last)
       end subroutine quicksort
+
+      subroutine detect_twinning(iel, elmt_conn, num_elems,
+     &           nodal_coords, num_nodes, num_dis_pts, n_tw, m_tw, s_tw,
+     &           rad, x_0, l_tw, w_tw, b_tw, xi, twinned)
+        implicit none
+        ! Input variables
+        integer iel, num_dis_pts, num_elems, num_nodes
+        integer elmt_conn(8, num_elems)
+        real*8 nodal_coords(3, num_nodes), n_tw(3), m_tw(3), s_tw(3)
+        real*8 rad, x_0(3), l_tw, w_tw, b_tw, xi(num_dis_pts)
+        logical twinned
+
+        ! Subroutine used variables
+        integer i, j, k, ind
+        logical proj_twinned, b_twinned
+        real*8 x(3), N(8), b_proj, l_proj, w_proj, proj_measure
+
+        !! Code
+        twinned = .false.
+        ! Loop over internal discrete points
+        do k = 2, num_dis_pts - 1
+          do j = 2, num_dis_pts - 1
+            do i = 2, num_dis_pts - 1
+              ! Set thickness and projection flags to false
+              b_twinned = .false.
+              proj_twinned = .false.
+
+              ! Compute shape function and form position vector
+              call shp_fcn_8n(xi(i), xi(j), xi(k), N)
+              x = 0.d0
+              do ind = 1, 8
+                x = x + nodal_coords(:, elmt_conn(ind, iel)) * N(ind)
+              end do
+
+              ! Compute projections along length, width and thickness
+              b_proj = dot_product(x - x_0, n_tw)
+              l_proj = dot_product(x - x_0 - (b_proj * n_tw), m_tw)
+              w_proj = dot_product(x - x_0 - (b_proj * n_tw), s_tw)
+
+              ! thickness decision based on distance between internal points
+              if ((abs(b_proj).lt.rad).or.(abs(b_proj).lt.b_tw)) then
+                b_twinned = .true.
+              end if
+
+              ! Projection measure based on elliptical twin and decide
+              ! whether the point is inside
+              proj_measure = (l_proj/l_tw)**2 + (w_proj/w_tw)**2 - 1.d0
+              if (proj_measure.lt.0.d0) then
+                proj_twinned = .true.
+              end if
+
+              ! If both thickness and projection satisfy intersection, return true
+              if (b_twinned.and.proj_twinned) then
+                twinned = .true.
+                return
+              end if
+            end do
+          end do
+        end do
+      end subroutine
+
+      subroutine shp_fcn_8n(xi, eta, zeta, N)
+        implicit none
+        real*8 xi, eta, zeta, N(8)
+
+        N(1) = 0.125d0 * (1 - xi) * (1 - eta) * (1 - zeta)
+        N(2) = 0.125d0 * (1 + xi) * (1 - eta) * (1 - zeta)
+        N(3) = 0.125d0 * (1 + xi) * (1 + eta) * (1 - zeta)
+        N(4) = 0.125d0 * (1 - xi) * (1 + eta) * (1 - zeta)
+        N(5) = 0.125d0 * (1 - xi) * (1 - eta) * (1 + zeta)
+        N(6) = 0.125d0 * (1 + xi) * (1 - eta) * (1 + zeta)
+        N(7) = 0.125d0 * (1 + xi) * (1 + eta) * (1 + zeta)
+        N(8) = 0.125d0 * (1 - xi) * (1 + eta) * (1 + zeta)
+      end subroutine

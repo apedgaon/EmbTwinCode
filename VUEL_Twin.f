@@ -1388,7 +1388,14 @@ C       Contents of r_Array
         pointer (ptr_tw_geom, tw_geom)
         integer tw_dec(3, *)
         pointer (ptr_tw_dec, tw_dec)
-        integer num_twins
+        integer num_twins, itw, iel, inb, inbel
+        integer iTintPt, l, ind, i
+        real*8 rXiEtaPt(3, 8), rWeightPt(8), rNn(8), rdNndXi(3, 8)
+        real*8 rElmtVol, rJdet, rdOmega, rElmtSize, rCoords(3, 8)
+        integer, parameter :: num_dis = 10, num_dis_pts = num_dis + 1
+        real*8 rad, s_tw(3), xi_dis(num_dis_pts)
+        logical twinned
+
 
         ! Access data from Abaqus SMA array
         ptr_size_list = SMAIntArrayAccess(1)
@@ -1405,9 +1412,60 @@ C       Contents of r_Array
         ptr_tw_dir = SMAFloatArrayAccess(10)
         ptr_tw_geom = SMAFloatArrayAccess(11)
         ptr_tw_dec = SMAIntArrayAccess(12)
-
         num_elems = size_list(2)
         num_nodes = size_list(3)
+
+        call gspt_3d_8n(iTIntPt, rXiEtaPt, rWeightPt)
+        do i = 1, num_dis_pts
+          xi_dis(i) = -1.d0 + (i - 1) * 2.d0 / num_dis
+        end do
+
+        ! Loop over all twins
+        do itw = 1, num_twins
+          ! find nxt twin elmt in length and width
+
+          ! Loop over all elements to find twinned id
+          do iel = 1, num_elems
+            if (elmt_stat(iel).eq.itw) then
+              ! detect twinning
+              do inb = 1, 6
+                inbel = elmt_neighbour(inb, iel)
+                if (inbel.eq.0) cycle
+
+                ! Retrive element nodal coords
+                do ind = 1, 8
+                  rCoords(:, ind) =
+     &                          nodal_coords(:, elmt_conn(ind, inbel))
+                end do
+
+                ! Compute element volume
+                rElmtVol = 0.d0
+                do l = 1, iTIntPt
+                  ! Jacobian determinant
+                  call shp_func_3d_8n(rXiEtaPt(1,l),rCoords,0,
+     &                            rNn,rdNndXi,rJdet)
+                  ! Integration element (dOmega)
+                  rdOmega = rJdet * rWeightPt(l)
+                  ! Element surface area (even for axisymmetric elements)
+                  rElmtVol = rElmtVol + rdOmega
+                end do
+
+                ! Compute element size h
+                rElmtSize = rElmtVol**(1.d0/3.d0)      !   h = cubic root of vol
+
+                rad = rElmtSize * sqrt(3.d0) / num_dis
+                call cross_product(tw_nor(:, itw), tw_dir(:, itw), s_tw)
+
+                call detect_twinning(inbel, elmt_conn, num_elems,
+     &                nodal_coords, num_nodes, num_dis_pts,
+     &                tw_nor(:, itw), tw_dir(:, itw), s_tw, rad,
+     &                tw_nuc(:, itw), tw_geom(1, itw), tw_geom(2, itw),
+     &                tw_geom(3, itw),  xi_dis, twinned)
+              end do
+            end if
+          end do
+          ! if detected, check if these need to update tw_dec
+        end do
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

@@ -931,7 +931,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   call umat_stress(rStress_Z,
      &                             svars(kblock, iumatsvst:iumatsven),
      &                             rGsCoords, rFz0h, rFz1h,
-     &                             props_tw, 50, nstatev(1), nnode,
+     &                             props_tw, 51, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWz, iterErr,
      &                             Fe)
@@ -1048,7 +1048,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call umat_stress(rStress_U,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rFu0, rFu1,
-     &                           props(77:127), 51, nstatev(1), nnode,
+     &                           props(77:127), 50, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWu, iterErr, Fe)
 
@@ -1393,8 +1393,9 @@ C       Contents of r_Array
         real*8 rXiEtaPt(3, 8), rWeightPt(8), rNn(8), rdNndXi(3, 8)
         real*8 rElmtVol, rJdet, rdOmega, rElmtSize, rCoords(3, 8)
         integer, parameter :: num_dis = 10, num_dis_pts = num_dis + 1
-        real*8 rad, s_tw(3), xi_dis(num_dis_pts)
+        real*8 rad, s_tw(3), xi_dis(num_dis_pts), tw_el_len, tw_el_wid
         logical twinned
+        integer nxt_l_elmt, nxt_w_elmt
 
 
         ! Access data from Abaqus SMA array
@@ -1422,11 +1423,21 @@ C       Contents of r_Array
 
         ! Loop over all twins
         do itw = 1, num_twins
-          ! find nxt twin elmt in length and width
-
+          call cross_product(tw_nor(:, itw), tw_dir(:, itw), s_tw)
           ! Loop over all elements to find twinned id
           do iel = 1, num_elems
             if (elmt_stat(iel).eq.itw) then
+              ! find nxt twin elmt in length and width
+              call find_next_twin_elem(iel, elmt_conn, num_elems,
+     &             nodal_coords, num_nodes, tw_nuc(:, itw),
+     &             tw_nor(:, itw), tw_dir(:, itw), elmt_neighbour,
+     &             tw_el_len, nxt_l_elmt)
+
+              call find_next_twin_elem(iel, elmt_conn, num_elems,
+     &             nodal_coords, num_nodes, tw_nuc(:, itw),
+     &             tw_nor(:, itw), s_tw, elmt_neighbour,
+     &             tw_el_wid, nxt_w_elmt)
+
               ! detect twinning
               do inb = 1, 6
                 inbel = elmt_neighbour(inb, iel)
@@ -1454,13 +1465,17 @@ C       Contents of r_Array
                 rElmtSize = rElmtVol**(1.d0/3.d0)      !   h = cubic root of vol
 
                 rad = rElmtSize * sqrt(3.d0) / num_dis
-                call cross_product(tw_nor(:, itw), tw_dir(:, itw), s_tw)
 
                 call detect_twinning(inbel, elmt_conn, num_elems,
      &                nodal_coords, num_nodes, num_dis_pts,
      &                tw_nor(:, itw), tw_dir(:, itw), s_tw, rad,
      &                tw_nuc(:, itw), tw_geom(1, itw), tw_geom(2, itw),
      &                tw_geom(3, itw),  xi_dis, twinned)
+
+                if (twinned) then
+                  if (inbel.eq.nxt_l_elmt) tw_dec(1, itw) = inbel
+                  if (inbel.eq.nxt_w_elmt) tw_dec(2, itw) = inbel
+                end if
               end do
             end if
           end do

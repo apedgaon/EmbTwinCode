@@ -1048,7 +1048,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call umat_stress(rStress_U,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rFu0, rFu1,
-     &                           props(77:127), 50, nstatev(1), nnode,
+     &                           props(77:127), 51, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWu, iterErr, Fe)
 
@@ -1059,7 +1059,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call umat_stress(rStress_Z,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rFz0h, rFz1h,
-     &                           props_tw, 50, nstatev(1), nnode,
+     &                           props_tw, 51, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWz, iterErr, Fe)
 

@@ -1451,7 +1451,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
               ! Loop over neighbours
               do inb = 1, 6
                 inbel = elmt_neighbour(inb, iel)
-                if (inbel.eq.0) cycle
+                if (inbel.eq.0) cycle ! Face is not attached to neighbouring element
+                if (elmt_stat(inbel).ne.0) cycle ! Already twinned element
 
                 ! Retrive element nodal coords
                 do ind = 1, 8

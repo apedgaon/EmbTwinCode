@@ -1366,9 +1366,13 @@ C       Contents of r_Array
 
       end subroutine
 
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C          Detect Twin propagation in neighbouring elements            C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       subroutine solve_twin_propagation()
         implicit none
 #include <SMAAspUserSubroutines.hdr>
+        ! Define variables and cray pointers
         integer elmt_conn(8, *)
         pointer (ptr_elmt_conn, elmt_conn)
         integer elmt_neighbour(6, *)
@@ -1398,11 +1402,12 @@ C       Contents of r_Array
         integer nxt_l_elmt, nxt_w_elmt
 
 
-        ! Access data from Abaqus SMA array
+        ! Access number of twins from Abaqus SMA array
         ptr_size_list = SMAIntArrayAccess(1)
         num_twins = size_list(4)
         if (num_twins.eq.0) return ! if no twins yet, return
 
+        ! Access rest of the twin data
         ptr_elmt_conn = SMAIntArrayAccess(3)
         ptr_elmt_neighbour = SMAIntArrayAccess(4)
         ptr_nodal_coords = SMAFloatArrayAccess(5)
@@ -1416,29 +1421,34 @@ C       Contents of r_Array
         num_elems = size_list(2)
         num_nodes = size_list(3)
 
+        ! Num gauss pts, natural coords and weight vals required for elmt size
         call gspt_3d_8n(iTIntPt, rXiEtaPt, rWeightPt)
+
+        ! Natural coords at discretization points (10 currently on each axis)
         do i = 1, num_dis_pts
           xi_dis(i) = -1.d0 + (i - 1) * 2.d0 / num_dis
         end do
 
-        ! Loop over all twins
+        ! Loop over all the twins
         do itw = 1, num_twins
+          ! Compute the twin lateral direction
           call cross_product(tw_nor(:, itw), tw_dir(:, itw), s_tw)
-          ! Loop over all elements to find twinned id
+
+          ! Loop over all elements
           do iel = 1, num_elems
+            ! Only if element has current twin status
             if (elmt_stat(iel).eq.itw) then
-              ! find nxt twin elmt in length and width
+              ! Find nxt twin elmt in front and lateral direction
               call find_next_twin_elem(iel, elmt_conn, num_elems,
      &             nodal_coords, num_nodes, tw_nuc(:, itw),
      &             tw_nor(:, itw), tw_dir(:, itw), elmt_neighbour,
      &             tw_el_len, nxt_l_elmt)
-
               call find_next_twin_elem(iel, elmt_conn, num_elems,
      &             nodal_coords, num_nodes, tw_nuc(:, itw),
      &             tw_nor(:, itw), s_tw, elmt_neighbour,
      &             tw_el_wid, nxt_w_elmt)
 
-              ! detect twinning
+              ! Loop over neighbours
               do inb = 1, 6
                 inbel = elmt_neighbour(inb, iel)
                 if (inbel.eq.0) cycle
@@ -1464,14 +1474,17 @@ C       Contents of r_Array
                 ! Compute element size h
                 rElmtSize = rElmtVol**(1.d0/3.d0)      !   h = cubic root of vol
 
+                ! Radius of search for each discretization point in detect_twinning subroutine
                 rad = rElmtSize * sqrt(3.d0) / num_dis
 
+                ! Detect Twinning in this neighbouring element
                 call detect_twinning(inbel, elmt_conn, num_elems,
      &                nodal_coords, num_nodes, num_dis_pts,
      &                tw_nor(:, itw), tw_dir(:, itw), s_tw, rad,
      &                tw_nuc(:, itw), tw_geom(1, itw), tw_geom(2, itw),
      &                tw_geom(3, itw),  xi_dis, twinned)
 
+                ! Update the decider if this is twinned and the nxt twn element in either direction
                 if (twinned) then
                   if (inbel.eq.nxt_l_elmt) tw_dec(1, itw) = inbel
                   if (inbel.eq.nxt_w_elmt) tw_dec(2, itw) = inbel
@@ -1479,7 +1492,6 @@ C       Contents of r_Array
               end do
             end if
           end do
-          ! if detected, check if these need to update tw_dec
         end do
       end subroutine
 

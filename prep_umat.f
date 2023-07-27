@@ -574,6 +574,40 @@ C         for umat stress to vuel stress
         rBWidth = rBWidth + vbdot * dt
       end subroutine
 
+      subroutine compute_twin_velocities(props, nprops, tau_tw, theta,
+     &                                   l_dot, w_dot, b_dot)
+        implicit none
+        integer nprops
+        real*8 props(nprops), tau_tw, theta, l_dot, w_dot, b_dot
+        real*8 Gtw, bk, vl, vb, sl, p, q, ramp, fac
+
+        ! Retrieve relevant properties
+        Gtw = props(52)
+        vl = props(53)
+        vb = props(54)
+        sl = props(55)
+        p = props(56)
+        q = props(57)
+        bk = props(27)
+
+        ! Compute contribution of ramp of < tau_tw / sl >
+        if (tau_tw.lt.0.d0) then
+          ramp = 1.d0
+        else
+          ramp = 1.d0 - (tau_tw / sl)**p
+        end if
+
+        ! Handle total ramp < 1 - <tau_tw/sl>^p >
+        if (ramp.lt.0.d0) then
+          ramp = 0.d0
+        end if
+
+        ! Compute speed of length and width propagation
+        fac = exp(-Gtw / (bk * theta) * ramp**q)
+        l_dot = vl * fac
+        w_dot = l_dot * 0.85d0 ! TODO: New expression for w_dot needed
+        b_dot = vb * fac
+      end subroutine
       subroutine find_next_twin_elem(elmt_number, elmt_conn, num_elems,
      &                        nodal_coords, num_nodes, st_coord, rn, rm,
      &                        elmt_neighbour, tw_length, nxt_elmt_num)

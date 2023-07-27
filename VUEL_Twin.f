@@ -366,6 +366,8 @@ C       Twin Code Implementation Started
         integer tw_dec(3, *)
         pointer (ptr_tw_dec, tw_dec)
 
+        real*8 l_dot, w_dot, b_dot, rBLatWidth
+
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
 
@@ -783,23 +785,9 @@ C               Compute the internal force vector
 
               ! Retrieve current twin normal
               rntwc(:) = tw_nor(1:3, twinID)
-
-              ! Find max possible twin length and forward element
-              if (iTwEmbStp) then
-                call find_next_twin_elem(elmt_number, elmt_conn,
-     &                    num_elems, nodal_coords, num_nodes,
-     &                    tw_nuc(1:3, twinID), rntwc,
-     &                    tw_dir(1:3, twinID), elmt_neighbour,
-     &                    tw_len_max, tw_nxt_elmt)
-                svars(kblock, offstatev(5) + 2) = tw_len_max
-                svars(kblock, offstatev(5) + 3) = tw_nxt_elmt
-              else
-                tw_len_max = svars(kblock, offstatev(5) + 2)
-                tw_nxt_elmt = svars(kblock, offstatev(5) + 3)
-              end if
-
-              ! Set current max twin length to 0
-              rBLengthMax = 0.d0
+              rBLength = tw_geom(1, twinID)
+              rBLatWidth = tw_geom(2, twinID)
+              rBWidth = tw_geom(3, twinID)
 
               ! Quadrature Loop
               do l = 1, iTIntPt
@@ -864,10 +852,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rmtwc = matmul(rFu0, rmtw(:, iTwFlg))
                   rmtwc = rmtwc / norm2(rmtwc)
                   rmh = 1.d-4 * rmtwc
-
-                  ! Initial Band width and length of twin
-                  rBWidth = 0.0001d0
-                  rBLength = 0.d0
                 else
                   ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)
@@ -877,10 +861,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rmh(1) = svars(kblock, iumatsvst + 1)
                   rmh(2) = svars(kblock, iumatsvst + 2)
                   rmh(3) = svars(kblock, iumatsvst + 3)
-
-                  ! Retrieve band width and length of twin
-                  rBWidth = svars(kblock, iumatsvst + 4)
-                  rBLength = svars(kblock, iumatsvst + 5)
                 end if
 
                 g_tr_err = 1.d0  ! some random initial value
@@ -1000,18 +980,27 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 svars(kblock, iumatsvst + 3) = rmh(3)
 
                 ! Compute twin width and length evolution (TODO: This should be rFu1e?)
+                call inverse_3x3(rFu1, rFuinv)
                 Smatc = matmul(rFu1, matmul(Smat(:, :, iTwFlg), rFuinv))
                 tau_tw = sum(sigmaU * Smatc)
                 call compute_twin_evol(props(77:133), 57, tau_tw, theta,
      &                                 dtimeCur, rBWidth, rBLength)
 
-                ! Store new twin width and length
-                iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
-                svars(kblock, iumatsvst + 4) = rBWidth
-                svars(kblock, iumatsvst + 5) = rBLength
+                call compute_twin_velocities(props(77:133), 57, tau_tw,
+     &                                       theta, l_dot, w_dot, b_dot)
 
-                ! Find maximum current twin length
-                rBLengthMax = max(rBLengthMax, rBLength)
+                if (tw_dec(1, twinID).eq.elmt_number) then
+                  tw_geom(1, twinID) = tw_geom(1, twinID) +
+     &                                        1.d0 / iTIntPt * l_dot
+                end if
+                if (tw_dec(2, twinID).eq.elmt_number) then
+                  tw_geom(2, twinID) = tw_geom(2, twinID) +
+     &                                        1.d0 / iTIntPt * w_dot
+                end if
+                if (tw_dec(3, twinID).eq.elmt_number) then
+                  tw_geom(3, twinID) = tw_geom(3, twinID) +
+     &                                        1.d0 / iTIntPt * b_dot
+                end if
 
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)
@@ -1030,7 +1019,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute discontinuity magnitude in untwinned and twinned region
                 alpha_U = alpha_h / rTdL
                 alpha_Z = (rElmtSize/rBWidth - 1.d0) * alpha_U
-
 
                 ! Save deformation gradients to both untwinned and twinned block
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
@@ -1129,13 +1117,6 @@ C               Compute the internal force vector
               if (iTwEmbStp.eq.1) then
                 iTwEmbStp = 0
                 svars(kblock, offstatev(5) + 1) = iTwEmbStp
-              end if
-
-              ! If current twin length exceeds max allowable twin length, mark next element
-              if (rBLengthMax.gt.tw_len_max) then
-                if (tw_nxt_elmt.ne.0) then
-                  elmt_stat(tw_nxt_elmt) = twinID
-                end if
               end if
             end if
 

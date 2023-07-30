@@ -579,7 +579,8 @@ C         for umat stress to vuel stress
         implicit none
         integer nprops
         real*8 props(nprops), tau_tw, theta, l_dot, w_dot, b_dot
-        real*8 Gtw, bk, vl, vb, sl, p, q, ramp, fac
+        real*8 Gtw, bk, vl, vb, sl, p, q, fac
+        real*8, external :: ramp
 
         ! Retrieve relevant properties
         Gtw = props(52)
@@ -590,20 +591,8 @@ C         for umat stress to vuel stress
         q = props(57)
         bk = props(27)
 
-        ! Compute contribution of ramp of < tau_tw / sl >
-        if (tau_tw.lt.0.d0) then
-          ramp = 1.d0
-        else
-          ramp = 1.d0 - (tau_tw / sl)**p
-        end if
-
-        ! Handle total ramp < 1 - <tau_tw/sl>^p >
-        if (ramp.lt.0.d0) then
-          ramp = 0.d0
-        end if
-
         ! Compute speed of length and width propagation
-        fac = exp(-Gtw / (bk * theta) * ramp**q)
+        fac = exp(-Gtw/(bk*theta)*ramp(1.d0 - ramp(tau_tw / sl)**p)**q)
         l_dot = vl * fac
         w_dot = l_dot * 0.85d0 ! TODO: New expression for w_dot needed
         b_dot = vb * fac
@@ -853,3 +842,15 @@ C         for umat stress to vuel stress
         N(7) = 0.125d0 * (1 + xi) * (1 + eta) * (1 + zeta)
         N(8) = 0.125d0 * (1 - xi) * (1 + eta) * (1 + zeta)
       end subroutine
+
+C     Ramp Function
+      function ramp(x)
+        implicit none
+        real*8 x, ramp
+
+        if (x.lt.0.d0) then
+          ramp = 0.d0
+        else
+          ramp = x
+        end if
+      end function

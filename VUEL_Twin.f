@@ -768,7 +768,9 @@ C               Compute the internal force vector
                 tw_dir(1:3, twinID) = rmtwc
 
                 ! Initialize global twin geometry parameters (length, width, thickness)
-                tw_geom(:, twinID) = 0.d0
+                tw_geom(1, twinID) = 0.d0
+                tw_geom(2, twinID) = 0.d0
+                tw_geom(3, twinID) = 1.d-4
 
                 ! Store this element number as twin decider for all geometry paramters
                 tw_dec(:, twinID) = elmt_number

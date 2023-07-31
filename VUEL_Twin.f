@@ -985,23 +985,21 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call inverse_3x3(rFu1, rFuinv)
                 Smatc = matmul(rFu1, matmul(Smat(:, :, iTwFlg), rFuinv))
                 tau_tw = sum(sigmaU * Smatc)
-                call compute_twin_evol(props(77:133), 57, tau_tw, theta,
-     &                                 dtimeCur, rBWidth, rBLength)
-
                 call compute_twin_velocities(props(77:133), 57, tau_tw,
      &                                       theta, l_dot, w_dot, b_dot)
 
+                ! Update length, width and thickness only if this element is a decider
                 if (tw_dec(1, twinID).eq.elmt_number) then
                   tw_geom(1, twinID) = tw_geom(1, twinID) +
-     &                                        1.d0 / iTIntPt * l_dot
+     &                                 1.d0 / iTIntPt * l_dot * dtimeCur
                 end if
                 if (tw_dec(2, twinID).eq.elmt_number) then
                   tw_geom(2, twinID) = tw_geom(2, twinID) +
-     &                                        1.d0 / iTIntPt * w_dot
+     &                                 1.d0 / iTIntPt * w_dot * dtimeCur
                 end if
                 if (tw_dec(3, twinID).eq.elmt_number) then
                   tw_geom(3, twinID) = tw_geom(3, twinID) +
-     &                                        1.d0 / iTIntPt * b_dot
+     &                                 1.d0 / iTIntPt * b_dot * dtimeCur
                 end if
 
                 ! Compute combined discontinuity magnitude and direction

@@ -1380,7 +1380,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         integer, parameter :: num_dis = 10, num_dis_pts = num_dis + 1
         real*8 rad, s_tw(3), xi_dis(num_dis_pts), tw_el_len, tw_el_wid
         logical twinned
-        integer nxt_l_elmt, nxt_w_elmt
+        integer nxt_l_elmt, nxt_w_elmt, nxt_lm_elmt, nxt_wm_elmt
 
 
         ! Access number of twins from Abaqus SMA array
@@ -1419,11 +1419,19 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
           do iel = 1, num_elems
             ! Only if element has current twin status
             if (elmt_stat(iel).eq.itw) then
-              ! Find nxt twin elmt in front and lateral direction
+              ! Find nxt twin elmt in front (+-) and lateral (+-) direction
+              call find_next_twin_elem(iel, elmt_conn, num_elems,
+     &             nodal_coords, num_nodes, tw_nuc(:, itw),
+     &             tw_nor(:, itw), -tw_dir(:, itw), elmt_neighbour,
+     &             tw_el_len, nxt_lm_elmt)
               call find_next_twin_elem(iel, elmt_conn, num_elems,
      &             nodal_coords, num_nodes, tw_nuc(:, itw),
      &             tw_nor(:, itw), tw_dir(:, itw), elmt_neighbour,
      &             tw_el_len, nxt_l_elmt)
+              call find_next_twin_elem(iel, elmt_conn, num_elems,
+     &             nodal_coords, num_nodes, tw_nuc(:, itw),
+     &             tw_nor(:, itw), -s_tw, elmt_neighbour,
+     &             tw_el_wid, nxt_wm_elmt)
               call find_next_twin_elem(iel, elmt_conn, num_elems,
      &             nodal_coords, num_nodes, tw_nuc(:, itw),
      &             tw_nor(:, itw), s_tw, elmt_neighbour,
@@ -1468,7 +1476,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
                 ! Update the decider if this is twinned and the nxt twn element in either direction
                 if (twinned) then
+                  if (inbel.eq.nxt_lm_elmt) tw_dec(1, itw) = inbel
                   if (inbel.eq.nxt_l_elmt) tw_dec(1, itw) = inbel
+                  if (inbel.eq.nxt_wm_elmt) tw_dec(2, itw) = inbel
                   if (inbel.eq.nxt_w_elmt) tw_dec(2, itw) = inbel
                 end if
               end do

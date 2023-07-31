@@ -769,6 +769,9 @@ C         for umat stress to vuel stress
         if (j+1 < last)  call quicksort(a, j+1, last)
       end subroutine quicksort
 
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C     Detects Twinning in the neighbouring elements of iel             C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       subroutine detect_twinning(iel, elmt_conn, num_elems,
      &           nodal_coords, num_nodes, num_dis_pts, n_tw, m_tw, s_tw,
      &           rad, x_0, l_tw, w_tw, b_tw, xi, twinned)
@@ -829,6 +832,9 @@ C         for umat stress to vuel stress
         end do
       end subroutine
 
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C     Computes shape functions of linear hex element                   C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       subroutine shp_fcn_8n(xi, eta, zeta, N)
         implicit none
         real*8 xi, eta, zeta, N(8)
@@ -843,7 +849,9 @@ C         for umat stress to vuel stress
         N(8) = 0.125d0 * (1 - xi) * (1 + eta) * (1 + zeta)
       end subroutine
 
-C     Ramp Function
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C     Ramp Function                                                    C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       function ramp(x)
         implicit none
         real*8 x, ramp

@@ -386,6 +386,7 @@ C         for umat stress to vuel stress
           rStress(6) = rUmatStress(4)
       end subroutine
       
+      ! Simple finite strain linear elastic umat
       subroutine umat_crys2(stress,  statev,  ddsdde,  sse,     spd,
      &               scd,     rpl,     ddsddt,  drplde,  drpldt,
      &               stran,  dstran, time,    dtime,   temp,
@@ -414,6 +415,80 @@ C         for umat stress to vuel stress
      &  time(2)              ! Step time (1) and total time (2)
         character*80 cmname
 
+        ! Local subroutine variables
+        real*8 c11, c12, c44, c33, c55, c13, theta, pi
+        real*8 th, phi, om, detF
+        real*8 rCe(3, 3), rEe(3, 3), del(3, 3), rS(3, 3)
+        real*8 C_c(3, 3, 3, 3), C(3, 3, 3, 3), rSig(3, 3)
+        real*8 q_0(3, 3)
+
+        pi = 4.d0 * atan(1.d0) ! PI
+
+        ! Identity tensor
+        del = 0.d0
+        del(1, 1) = 1.d0
+        del(2, 2) = 1.d0
+        del(3, 3) = 1.d0
+
+        ! Retrieve temperature, euler angels and elastic properties
+        theta = props(1)
+        th = props(31)*pi/180.d0     ! Euler angle theta [rad] (Canova convention)
+        phi = props(32)*pi/180.d0    ! Euler angle Phi [rad]
+        om = props(33)*pi/180.d0     ! Euler angle omega [rad]
+
+        call compute_elastconst_hcp(props,nprops,theta,c11,c12,c44,
+     &                              c33, c55, c13)
+
+        ! Construct Stiffness in unrotated configuration
+        C_c(:,:,:,:) = 0.d0
+        do i = 1,3
+          do j = 1,3
+            do k = 1,3
+              do l = 1,3
+                C_c(i,j,k,l) = C12 * del(i,j) * del(k,l) +
+     &            C44 * (del(i,k)*del(j,l)+del(i,l)*del(k,j))
+              end do
+            end do
+          end do
+        end do
+        C_c(1,1,1,1) = C11
+        C_c(2,2,2,2) = C11
+        C_c(3,3,3,3) = C33
+        C_c(1,1,3,3) = c13
+        C_c(3,3,1,1) = c13
+        C_c(2,2,3,3) = c13
+        C_c(3,3,2,2) = c13
+        C_c(1,3,1,3) = c55
+        C_c(1,3,3,1) = c55
+        C_c(3,1,1,3) = c55
+        C_c(3,1,3,1) = c55
+        C_c(2,3,2,3) = c55
+        C_c(2,3,3,2) = c55
+        C_c(3,2,2,3) = c55
+        C_c(3,2,3,2) = c55
+
+        ! Rotate Stiffness along crystal orientation
+        call ROTMAT(TH,PHI,OM,q_0)
+        call rotate_4th(q_0,C_c,C)
+
+        ! Find Green Lagrange strain and then 2nd PK stress (linear elastic)
+        rCe = matmul(transpose(dfgrd1), dfgrd1)
+        rEe = 0.5d0 * (rCe - del)
+        rS = reshape( (/((sum(c(i,j,:,:)*rEe),
+     &          i = 1,3), j=1,3)/), (/3,3/))
+
+        ! Push forward 2nd PK to Cauchy stress
+        detF = determinant(dfgrd1)
+        rSig = 1.d0 / detF *
+     &    matmul(dfgrd1, matmul(rS, transpose(dfgrd1)))
+
+        ! Vector output of Cauchy stress
+        stress(1) = rSig(1, 1)
+        stress(2) = rSig(2, 2)
+        stress(3) = rSig(3, 3)
+        stress(4) = rSig(1, 2)
+        stress(5) = rSig(1, 3)
+        stress(6) = rSig(2, 3)
       end subroutine
 
       subroutine check_twin_nucleation(stress, Smat, dfgrd, iTwinFlag)

@@ -653,7 +653,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Step 1, Inc 1, set def gradient to identity
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
                 iumatsven = offstatev(3) + l * nstatev(2)
-                if ((kstep.eq.1).and.(kinc.le.1)) then
+                if (kinc.le.1) then
                   svars(kblock, iumatsvst : iumatsven) =
      &                                    reshape(del, (/9/))
                 end if

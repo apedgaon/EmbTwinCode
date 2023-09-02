@@ -109,14 +109,21 @@ C       B
           rB(2, (n-1)*mcrd + 2 ) = rdNdx(2,n)
           rB(3, (n-1)*mcrd + 3 ) = rdNdx(3,n)
 
-          rB(4, (n-1)*mcrd + 2 ) = rdNdxCt(3,n)
-          rB(4, (n-1)*mcrd + 3 ) = rdNdxCt(2,n)
+C         (1-eps)*B0_shr + eps*B_shr
+          rB(4, (n-1)*mcrd + 2 ) = (1-rEps)*rdNdxCt(3,n) + 
+     &                             rEps*rdNdx(3,n)
+          rB(4, (n-1)*mcrd + 3 ) = (1-rEps)*rdNdxCt(2,n) + 
+     &                             rEps*rdNdx(2,n)
 
-          rB(5, (n-1)*mcrd + 1 ) = rdNdxCt(3,n)
-          rB(5, (n-1)*mcrd + 3 ) = rdNdxCt(1,n)
+          rB(5, (n-1)*mcrd + 1 ) = (1-rEps)*rdNdxCt(3,n) + 
+     &                             rEps*rdNdx(3,n)
+          rB(5, (n-1)*mcrd + 3 ) = (1-rEps)*rdNdxCt(1,n) + 
+     &                             rEps*rdNdx(1,n)
 
-          rB(6, (n-1)*mcrd + 1 ) = rdNdxCt(2,n)
-          rB(6, (n-1)*mcrd + 2 ) = rdNdxCt(1,n)          
+          rB(6, (n-1)*mcrd + 1 ) = (1-rEps)*rdNdxCt(2,n) + 
+     &                             rEps*rdNdx(2,n)
+          rB(6, (n-1)*mcrd + 2 ) = (1-rEps)*rdNdxCt(1,n) + 
+     &                             rEps*rdNdx(1,n)    
         END DO
 
 C       B_vol

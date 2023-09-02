@@ -367,6 +367,7 @@ C       Twin Code Implementation Started
         pointer (ptr_tw_dec, tw_dec)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
+        real*8 rNRFac
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -470,6 +471,9 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
         else
           rbv2    = props(9)
         end if
+
+        ! Traction Continuity Newton Raphson Correction Factor
+        rNRFac = 0.25d0
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
@@ -891,9 +895,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             kstep, kinc, .false., rWu, iterErr,
      &                             Fe)
 
+                  ! Large change suggested by NR, reduce step by correction factor
                   if (iterErr.eq.1) then
-                    call random_number(rmh)
-                    rmh = 1.d-3 * rmh
+                    rmh = rNRFac * rmh
                     cycle
                   end if
 
@@ -915,9 +919,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             kstep, kinc, .false., rWz, iterErr,
      &                             Fe)
 
+                  ! Large change suggested by NR, reduce step by correction factor
                   if (iterErr.eq.1) then
-                    call random_number(rmh)
-                    rmh = 1.d-3 * rmh
+                    rmh = rNRFac * rmh
                     cycle
                   end if
 

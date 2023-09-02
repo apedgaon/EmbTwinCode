@@ -698,10 +698,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! Check for twin nucleation
                 if (isGbElem) then
-                  if (iTwFlg.eq.0) then
-                    call check_twin_nucleation(rStress, Smat, Fe,
-     &                                         iTwFlg)
-                  end if
+                  call check_twin_nucleation(rStress, Smat, Fe, iTwFlg)
                 end if
 
 C               Compute linear + quadratic bulk viscosity terms

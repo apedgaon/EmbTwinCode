@@ -851,10 +851,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   ! No twinning part in previous step
                   rFz0h = rFz0
 
-                  ! Guess for initial rmh based on twin shear direction
-                  rmtwc = matmul(rFu0, rmtw(:, iTwFlg))
-                  rmtwc = rmtwc / norm2(rmtwc)
-                  rmh = 1.d-4 * rmtwc
+                  ! Guess for initial rmh based on stored twin shear direction
+                  rmtwc = tw_dir(1:3, twinID)
+                  rmh = 1.d-5 * rmtwc
                 else
                   ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)

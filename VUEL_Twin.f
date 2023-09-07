@@ -377,17 +377,6 @@ C       Twin Code Implementation Started
                                !                   2 --> B-bar incompressible
                                !                   3 --> B-bar incompressible with localization behavior
 
-        iConsType = jprops(3)  ! Constitution:     0 --> isotropic elastic
-                               !                   1 --> isotropic J2 plasticity or MTS
-                               !                   2 --> TEPLA
-                               !                         (NOT IMPLEMENTED)
-                               !                   3 --> Brown-Kim-Anand model
-                               !                         (NOT IMPLEMENTED)
-                               !                   4 --> models (1) outside and (3) inside localization band 
-                               !                         (NOT IMPLEMENTED)
-                               !                   5 --> models (2) outside and (3) inside localization band 
-                               !                         (NOT IMPLEMENTED)
-
         rEpsilon  = props(10)  ! Pressure mode stabilization parameter; see Ortiz et al (1987), Eq. (21).
 
         !call sleep(20)

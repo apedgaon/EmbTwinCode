@@ -394,13 +394,14 @@ C       Natural coordinates of element centroid
         nstatev(3) = 1    ! svars for twin embedding flag
         nstatev(4) = 3    ! svars for storing discontinuity vector
         offstatev(1) = 0
-        offstatev(2) = 8 * nstatev(1)
-        offstatev(3) = offstatev(2) + 8 * nstatev(1)
-        offstatev(4) = offstatev(3) + 8 * nstatev(2)
-        offstatev(5) = offstatev(4) + 8 * nstatev(2)
-        offstatev(6) = offstatev(5) + nstatev(3)
-        offstatev(7) = offstatev(6) + 8 * nstatev(4)
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 1 + 3*8
+        offstatev(2) = 8 * nstatev(1)                 ! umat svars for 8 gs pts
+        offstatev(3) = offstatev(2) + 8 * nstatev(1)  ! umat svars for 8 gs pts for twinned region
+        offstatev(4) = offstatev(3) + 8 * nstatev(2)  ! def grd svars for 8 gs pts
+        offstatev(5) = offstatev(4) + 8 * nstatev(2)  ! def grd svars for 8 gs pts for twinned region
+        offstatev(6) = offstatev(5) + nstatev(3)      ! element twin embedding flag
+        offstatev(7) = offstatev(6) + 8 * nstatev(4)  ! discontinuity vector for 8 gs pts
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 1 + 3*8 = 2537
+        ! Set variables=2537 for user elements in the input file
 
         ! Define PI
         pi = 4.d0 * atan(1.d0)

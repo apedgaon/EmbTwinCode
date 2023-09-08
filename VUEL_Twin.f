@@ -462,7 +462,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           rbv2    = props(9)
         end if
 
-        ! Traction Continuity Newton Raphson Correction Factor
+        ! Newton Raphson Correction Factor for Traction Continuity
         rNRFac = 0.25d0
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

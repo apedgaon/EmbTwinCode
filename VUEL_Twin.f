@@ -497,7 +497,7 @@ C             Assemble lumped mass matrix
                 DO i = 1, mcrd
                   amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
      $               = amass( kblock , (n-1)*mcrd+i , (n-1)*mcrd+i )
-     $                 + rRho * rNn(n) * rdOmega   ! check \sum N(A)*rho*N(B)*dOmega (unlumped)
+     $                 + rRho * rNn(n) * rdOmega
                 END DO
               END DO
             end do

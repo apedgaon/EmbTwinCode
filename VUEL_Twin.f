@@ -856,8 +856,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rmh(3) = svars(kblock, iumatsvst + 3)
                 end if
 
-                g_tr_err = 1.d0  ! some random initial value
-
                 do iter = 1, 100
                   ! Compute m tensor product with n
                   do j = 1, 3

@@ -579,7 +579,8 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
             end if
 
-            ! Evaluate twinning type flag
+            ! Evaluate twinID and twinning system flag
+            twinID = 0
             iTwFlg = 0
             if (kstep.gt.0) then
               ! Check element status for twinID

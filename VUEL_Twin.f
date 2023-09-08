@@ -1326,12 +1326,13 @@ C       Contents of r_Array
         ! Create element status for twinning ID
         ptr_elmt_stat = SMAIntArrayCreate(6, num_elems, 0)
 
-        ! Create arrays for twin type, nucleation coords, normal
+        ! Create arrays for twin type, nucleation coords, normal and direction
         ptr_tw_flg = SMAIntArrayCreate(7, 100, 0)
         ptr_tw_nuc = SMAFloatArrayCreate(8, 3*100, 0.d0)
         ptr_tw_nor = SMAFloatArrayCreate(9, 3*100, 0.d0)
         ptr_tw_dir = SMAFloatArrayCreate(10, 3*100, 0.d0)
 
+        ! Create global twin size array and the decider element id array
         ptr_tw_geom = SMAFloatArrayCreate(11, 3*100, 0.d0)
         ptr_tw_dec = SMAIntArrayCreate(12, 3*100, 0)
 

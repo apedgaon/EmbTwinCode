@@ -783,6 +783,13 @@ C               Compute the internal force vector
               rBLatWidth = tw_geom(2, twinID)
               rBWidth = tw_geom(3, twinID)
 
+              ! DEBUGGING
+              print*, "time = ", time(2)
+              print*, "twinID = ", twinID
+              print*, "elmt no = ", elmt_number
+              print*, "iTwFlg = ", iTwFlg
+              print*, "iTwEmbStp = ", iTwEmbStp
+              print*, "rntw = ", rntw(:, iTwFlg)
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -856,7 +863,14 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rmh(3) = svars(kblock, iumatsvst + 3)
                 end if
 
+                ! DEBUGGING
+                print*, "l = ", l
+                print*, "rmtw = ", rmtw(:, iTwFlg)
+
                 do iter = 1, 100
+                  ! DEBUGGING
+                  print*, "iter = ", iter
+
                   ! Compute m tensor product with n
                   do j = 1, 3
                     do i = 1, 3
@@ -885,6 +899,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                   ! Large change suggested by NR, reduce step by correction factor
                   if (iterErr.eq.1) then
+                    ! DEBUGGING
+                    print*, "Convergence umat failed in the matrix"
                     rmh = rNRFac * rmh
                     cycle
                   end if
@@ -909,6 +925,12 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                   ! Large change suggested by NR, reduce step by correction factor
                   if (iterErr.eq.1) then
+                    ! DEBUGGING
+                    print*, "Convergence umat failed in the band"
+                    print*, "rmh = ", rmh
+                    print*, "rFu1 = ", rFu1
+                    print*, "rFz1 = ", rFz1
+                    print*, "rFz1h = ", rFz1h
                     rmh = rNRFac * rmh
                     cycle
                   end if
@@ -959,6 +981,25 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! End analysis if traction continuity fails
                 if (g_tr_err.gt.1.d-8) then
+                  ! DEBUGGING
+                  print*, "twinID = ", twinID
+                  print*, "elmt_no = ", elmt_number
+                  print*, "itwflg = ", iTwFlg
+                  print*, "rntwc = ", rntwc
+                  print*, "rmtwc = ", rmtwc
+                  print*, "rmh = ", rmh
+                  print*, "rFu0 = ", rFu0
+                  print*, "rdVelGrd = ", rdVelGrd
+                  print*, "Ftwinv = ", F_tw_inv
+                  print*, "l = ", l
+                  iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+                  iumatsven = offstatev(1) + l * nstatev(1)
+                  print*, "svars = ", svars(kblock, iumatsvst:iumatsven)
+                  print*, "rStress_U = ", rStress_U
+                  print*, "rFu1 = ", rFu1
+                  print*, "rFz1 = ", rFz1
+                  print*, "rFz1h = ", rFz1h
+
                   CALL XPLB_ABQERR(-3,'Traction Continuity failed! '//
      &                             'iTwEmbStp = %I, err = %R'  ,
      &                              iTwEmbStp, g_tr_err,' ')

@@ -950,7 +950,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                   ! check for residual convergence
                   g_tr_err = norm2(g_tr)
+                  ! DEBUGGING
+                  print*, "g_tr_err = ", g_tr_err
                   if (g_tr_err.lt.1.d-8) then
+                    print*, "converged rmh = ", rmh
                     exit
                   end if
 

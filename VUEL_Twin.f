@@ -335,11 +335,12 @@ C       Twin Code Implementation Started
         real*8 rBLength            ! Length of twin inside the element
         real*8 Smatc(3, 3)         ! Specific Twin Schmid tensor in current configuration
         real*8 Fe_m(3, 3)          ! Mean current deformation gradient
-        real*8 Fe_minv(3, 3)       ! Inverse of mean current deformation gradient
+        real*8 Fe_inv(3, 3)       ! Inverse of mean current deformation gradient
         real*8 rElmtCt(3)          ! Element centroid coordinates
         real*8 tw_len_max          ! Maximum of twin length in an element
         real*8 rBLengthMax         ! Current maximum twin length
-        real*8 Fe(3, 3)            ! Current Elastic part of deformation gradient
+        real*8 Fe(3, 3, 8)         ! Current Elastic part of deformation gradient
+        real*8 FeZ(3, 3)           ! Current Elastic part of dfgrd in twinned region
 
         integer gb_elems(*)        ! Grain boundary element array
         pointer (ptr_gb_elems, gb_elems) ! pointer for gb_elems required for SMAArrayAccess
@@ -400,7 +401,7 @@ C       Natural coordinates of element centroid
         offstatev(5) = offstatev(4) + 8 * nstatev(2)  ! def grd svars for 8 gs pts for twinned region
         offstatev(6) = offstatev(5) + nstatev(3)      ! element twin embedding flag
         offstatev(7) = offstatev(6) + 8 * nstatev(4)  ! discontinuity vector for 8 gs pts
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 1 + 3*8 = 2537
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 1 + 6*8 = 2561
         ! Set variables=2537 for user elements in the input file
 
         ! Define PI
@@ -675,7 +676,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           rGsCoords, rDfgrd0, rDfgrd1,
      &                           props(77:127), 51, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWu, iterErr, Fe)
+     &                           kstep, kinc, .true., rWu, iterErr,
+     &                           Fe(:, :, l))
 
                 if (iterErr.eq.1) then
                   CALL XPLB_ABQERR(-3,'UMAT Failed to Converge in '//
@@ -683,7 +685,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 end if
 
                 ! Add to mean deformation gradient
-                Fe_m = Fe_m + 1.d0 / iTIntPt * Fe
+                Fe_m = Fe_m + 1.d0 / iTIntPt * Fe(:, :, l)
 
                 ! store same svars for twinned part which has not formed yet
                 iumatsvst2 = offstatev(2) + 1 + (l - 1) * nstatev(1)
@@ -693,7 +695,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! Check for twin nucleation
                 if (isGbElem) then
-                  call check_twin_nucleation(rStress, Smat, Fe, iTwFlg)
+                  call check_twin_nucleation(rStress, Smat, Fe(:, :, l),
+     &                                       iTwFlg)
                 end if
 
 C               Compute linear + quadratic bulk viscosity terms
@@ -748,16 +751,29 @@ C               Compute the internal force vector
                 rElmtCt = 1.d0 / iTIntPt * rElmtCt
                 tw_nuc(1:3, twinID) = rElmtCt
 
-                ! Compute current twin normal (F^-T n / || F^-T n ||) and store
-                call inverse_3x3(Fe_m, Fe_minv)
-                rntwc = matmul(transpose(Fe_minv), rntw(:, iTwFlg))
-                rntwc = rntwc / norm2(rntwc)
-                tw_nor(1:3, twinID) = rntwc
+                do l = 1, 8
+                  ! Compute current twin normal (F^-T n / || F^-T n ||)
+                  call inverse_3x3(Fe(:, :, l), Fe_inv)
+                  rntwc = matmul(transpose(Fe_inv), rntw(:, iTwFlg))
+                  rntwc = rntwc / norm2(rntwc)
 
-                ! Compute current twin direction F m / || F m || and store
-                rmtwc = matmul(Fe_m, rmtw(:, iTwFlg))
-                rmtwc = rmtwc / norm2(rmtwc)
-                tw_dir(1:3, twinID) = rmtwc
+                  ! Compute current twin direction F m / || F m ||
+                  rmtwc = matmul(Fe(:, :, l), rmtw(:, iTwFlg))
+                  rmtwc = rmtwc / norm2(rmtwc)
+
+                  ! Store current normal and direction
+                  iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                  svars(kblock, iumatsvst + 1) = rntwc(1)
+                  svars(kblock, iumatsvst + 2) = rntwc(2)
+                  svars(kblock, iumatsvst + 3) = rntwc(3)
+                  svars(kblock, iumatsvst + 4) = rmtwc(1)
+                  svars(kblock, iumatsvst + 5) = rmtwc(2)
+                  svars(kblock, iumatsvst + 6) = rmtwc(3)
+                end do
+
+                ! Store global twin normal and direction (reference config.)
+                tw_nor(1:3, twinID) = rntw(:, iTwFlg)
+                tw_dir(1:3, twinID) = rmtw(:, iTwFlg)
 
                 ! Initialize global twin geometry parameters (length, width, thickness)
                 tw_geom(1, twinID) = 0.d0
@@ -777,8 +793,7 @@ C               Compute the internal force vector
               call compute_twin_props(rntw(:, iTwFlg), props(77:127),
      &                                props_tw, 51, del, pi)
 
-              ! Retrieve current twin normal
-              rntwc(:) = tw_nor(1:3, twinID)
+              ! Retrieve twin geometry
               rBLength = tw_geom(1, twinID)
               rBLatWidth = tw_geom(2, twinID)
               rBWidth = tw_geom(3, twinID)
@@ -845,22 +860,24 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
+                ! Retrieve discontinuous mode normal
+                iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                rntwc(1) = svars(kblock, iumatsvst + 1)
+                rntwc(2) = svars(kblock, iumatsvst + 2)
+                rntwc(3) = svars(kblock, iumatsvst + 3)
+                rmh(1) = svars(kblock, iumatsvst + 4)
+                rmh(2) = svars(kblock, iumatsvst + 5)
+                rmh(3) = svars(kblock, iumatsvst + 6)
+
                 if (iTwEmbStp.eq.1) then
                   ! No twinning part in previous step
                   rFz0h = rFz0
 
-                  ! Guess for initial rmh based on stored twin shear direction
-                  rmtwc = tw_dir(1:3, twinID)
-                  rmh = 1.d-5 * rmtwc
+                  ! Guess for initial rmh is some factor times shear direction
+                  rmh = 1.d-5 * rmh
                 else
                   ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)
-
-                  ! Retrieve discontinuous mode normal and direction
-                  iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
-                  rmh(1) = svars(kblock, iumatsvst + 1)
-                  rmh(2) = svars(kblock, iumatsvst + 2)
-                  rmh(3) = svars(kblock, iumatsvst + 3)
                 end if
 
                 ! DEBUGGING
@@ -895,7 +912,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             props(77:127), 51, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWu, iterErr,
-     &                             Fe)
+     &                             Fe(:, :, l))
 
                   ! Large change suggested by NR, reduce step by correction factor
                   if (iterErr.eq.1) then
@@ -921,7 +938,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             props_tw, 51, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWz, iterErr,
-     &                             Fe)
+     &                             FeZ)
 
                   ! Large change suggested by NR, reduce step by correction factor
                   if (iterErr.eq.1) then
@@ -949,7 +966,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   end do
 
                   ! check for residual convergence
-                  g_tr_err = norm2(g_tr)
+                  g_tr_err = norm2(g_tr)      ! (absolute error)
+                  ! g_tr_err = norm2(g_tr) / norm2(matmul(sigmaU, rntwc)) (relative error?)
                   ! DEBUGGING
                   print*, "g_tr_err = ", g_tr_err
                   if (g_tr_err.lt.1.d-8) then
@@ -1009,14 +1027,34 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 end if
 
                 ! Store discontinuous mode normal and direction
-                iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
-                svars(kblock, iumatsvst + 1) = rmh(1)
-                svars(kblock, iumatsvst + 2) = rmh(2)
-                svars(kblock, iumatsvst + 3) = rmh(3)
+                call inverse_3x3(Fe(:, :, l), Fe_inv)
+                rntwc = matmul(transpose(Fe_inv), rntw(:, iTwFlg))
+                rntwc = rntwc / norm2(rntwc)
 
-                ! Compute twin width and length evolution (TODO: This should be rFu1e?)
-                call inverse_3x3(rFu1, rFuinv)
-                Smatc = matmul(rFu1, matmul(Smat(:, :, iTwFlg), rFuinv))
+                rmtwc = matmul(Fe(:, :, l), rmtw(:, iTwFlg))
+                rmtwc = rmtwc / norm2(rmtwc)
+
+                iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                svars(kblock, iumatsvst + 1) = rntwc(1)
+                svars(kblock, iumatsvst + 2) = rntwc(2)
+                svars(kblock, iumatsvst + 3) = rntwc(3)
+                svars(kblock, iumatsvst + 4) = rmh(1)
+                svars(kblock, iumatsvst + 5) = rmh(2)
+                svars(kblock, iumatsvst + 6) = rmh(3)
+
+                ! Save deformation gradients to both untwinned and twinned block
+                iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
+                iumatsven = offstatev(3) + l * nstatev(2)
+                svars(kblock, iumatsvst : iumatsven) =
+     &                                  reshape(rFu1, (/9/))
+                iumatsvst = offstatev(4) + 1 + (l - 1) * nstatev(2)
+                iumatsven = offstatev(4) + l * nstatev(2)
+                svars(kblock, iumatsvst : iumatsven) =
+     &                                  reshape(rFz1, (/9/))
+
+                ! Compute twin length, width and thickness evolution
+                Smatc =
+     &             matmul(Fe(:,:,l), matmul(Smat(:, :, iTwFlg), Fe_inv))
                 tau_tw = sum(sigmaU * Smatc)
                 call compute_twin_velocities(props(77:133), 57, tau_tw,
      &                                       theta, l_dot, w_dot, b_dot)
@@ -1038,8 +1076,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)
                 rmhu = rmh / alpha_h
-                rmtwc = matmul(rFu1, rmtw(:, iTwFlg))
-                rmtwc = rmtwc / norm2(rmtwc)
 
                 ! Compute velocity gradient increment projected on discontinuity tensor
                 rTdL = 0.d0
@@ -1052,37 +1088,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute discontinuity magnitude in untwinned and twinned region
                 alpha_U = alpha_h / rTdL
                 alpha_Z = (rElmtSize/rBWidth - 1.d0) * alpha_U
-
-                ! Save deformation gradients to both untwinned and twinned block
-                iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
-                iumatsven = offstatev(3) + l * nstatev(2)
-                svars(kblock, iumatsvst : iumatsven) =
-     &                                  reshape(rFu1, (/9/))
-                iumatsvst = offstatev(4) + 1 + (l - 1) * nstatev(2)
-                iumatsven = offstatev(4) + l * nstatev(2)
-                svars(kblock, iumatsvst : iumatsven) =
-     &                                  reshape(rFz1, (/9/))
-
-                ! Compute Final Stress (untwinned region) from existing UMAT
-                iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
-                iumatsven = offstatev(1) + l * nstatev(1)
-                call umat_stress(rStress_U,
-     &                           svars(kblock, iumatsvst:iumatsven),
-     &                           rGsCoords, rFu0, rFu1,
-     &                           props(77:127), 51, nstatev(1), nnode,
-     &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWu, iterErr, Fe)
-
-
-                ! Compute Final Stress (twinned region) from existing UMAT
-                iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
-                iumatsven = offstatev(2) + l * nstatev(1)
-                call umat_stress(rStress_Z,
-     &                           svars(kblock, iumatsvst:iumatsven),
-     &                           rGsCoords, rFz0h, rFz1h,
-     &                           props_tw, 51, nstatev(1), nnode,
-     &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWz, iterErr, Fe)
 
                 ! Compute discontinuous mode tensor
                 rTdis(1) = rmhu(1) * rntwc(1)
@@ -1106,6 +1111,29 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rBmatZ(:, aidx) = rBmatZ(:, aidx) +
      &                             alpha_Z * rTdis(:) * rTBmat
                 end do
+
+                ! Compute Final Stress (untwinned region) from existing UMAT
+                iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+                iumatsven = offstatev(1) + l * nstatev(1)
+                call umat_stress(rStress_U,
+     &                           svars(kblock, iumatsvst:iumatsven),
+     &                           rGsCoords, rFu0, rFu1,
+     &                           props(77:127), 51, nstatev(1), nnode,
+     &                           elmt_number, l, mcrd, time, dtimeCur,
+     &                           kstep, kinc, .true., rWu, iterErr,
+     &                           Fe(:, :, l))
+
+
+                ! Compute Final Stress (twinned region) from existing UMAT
+                iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
+                iumatsven = offstatev(2) + l * nstatev(1)
+                call umat_stress(rStress_Z,
+     &                           svars(kblock, iumatsvst:iumatsven),
+     &                           rGsCoords, rFz0h, rFz1h,
+     &                           props_tw, 51, nstatev(1), nnode,
+     &                           elmt_number, l, mcrd, time, dtimeCur,
+     &                           kstep, kinc, .true., rWz, iterErr,
+     &                           FeZ)
 
 
 C               Compute linear + quadratic bulk viscosity terms

@@ -1336,7 +1336,7 @@
    1329,          1.5,  0.899999976,           0.
    1330,          1.5,   1.20000005,           0.
    1331,          1.5,          1.5,           0.
-*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=133, Coordinates=3, Variables=2537
+*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=133, Coordinates=3, Variables=2561
 1, 2, 3
 *Element, elset=VU1_ELMT, type=VU1
    1,  122,  123,  134,  133,    1,    2,   13,   12

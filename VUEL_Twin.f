@@ -738,6 +738,9 @@ C               Compute the internal force vector
                 ! Update twin ID counter and store to elmt_status
                 size_list(4) = size_list(4) + 1
                 twinID = size_list(4)
+                if (twinID.gt.100) then
+                  call xplb_abqerr(-3,'twinID > 100', 0, 0.d0, ' ')
+                end if
                 elmt_stat(elmt_number) = twinID
 
                 ! Store twin type

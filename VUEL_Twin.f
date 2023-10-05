@@ -369,6 +369,7 @@ C       Twin Code Implementation Started
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac
+        integer nAltInit
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -887,7 +888,31 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 print*, "l = ", l
                 print*, "rmtw = ", rmtw(:, iTwFlg)
 
-                do iter = 1, 100
+                nAltInit = 0
+                iter = 0
+                do while(nAltInit.le.8)
+                  if (iter.eq.100) then
+                    nAltInit = nAltInit + 1
+                    rmh(1) = svars(kblock, iumatsvst + 4)
+                    rmh(2) = svars(kblock, iumatsvst + 5)
+                    rmh(3) = svars(kblock, iumatsvst + 6)
+                    if (iTwEmbStp) rmh = 1.d-5 * rmh
+                    if (nAltInit.eq.1)  then
+                      rmh = 7.d-5*matmul(rFu0, rmtw(:,iTwFlg))
+                    end if
+                    if (nAltInit.eq.2)  rmh = 1.1d0 * rmh
+                    if (nAltInit.eq.3)  rmh = 1.2.d0 * rmh
+                    if (nAltInit.eq.4)  rmh = 1.3.d0 * rmh
+                    if (nAltInit.eq.5)  rmh = 0.9d0 * rmh
+                    if (nAltInit.eq.6)  rmh = 0.8d0 * rmh
+                    if (nAltInit.eq.7)  rmh = 0.7d0 * rmh
+                    if (nAltInit.eq.8)  rmh = 0.d0
+                    iter = 0
+                    print*, "nAltInit = ", nAltInit
+                    cycle
+                  end if
+
+                  iter = iter + 1
                   ! DEBUGGING
                   print*, "iter = ", iter
 

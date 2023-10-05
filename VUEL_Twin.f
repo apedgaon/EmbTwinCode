@@ -311,6 +311,7 @@ C       Twin Code Implementation Started
         real*8 sigmaU(3, 3)        ! Tensor Stress in untwinned region
         real*8 rdmh(3)             ! change in jump + direction
         real*8 rmh(3)              ! jump + direction
+        real*8 rmh0(3)             ! initial jump + direction
         real*8 rntwc(3)            ! Twin normal in current configuration
         real*8 rFuinv(3, 3)        ! inverse of def grad in untwinned region
         real*8 mtpn(3, 3)          ! mhat tensor product n
@@ -890,6 +891,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 nAltInit = 0
                 iter = 0
+                rmh0 = 0.d0
+                rdmh = 0.d0
                 do while(nAltInit.le.8)
                   if (iter.eq.100) then
                     nAltInit = nAltInit + 1
@@ -901,8 +904,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                       rmh = 7.d-5*matmul(rFu0, rmtw(:,iTwFlg))
                     end if
                     if (nAltInit.eq.2)  rmh = 1.1d0 * rmh
-                    if (nAltInit.eq.3)  rmh = 1.2.d0 * rmh
-                    if (nAltInit.eq.4)  rmh = 1.3.d0 * rmh
+                    if (nAltInit.eq.3)  rmh = 1.2d0 * rmh
+                    if (nAltInit.eq.4)  rmh = 1.3d0 * rmh
                     if (nAltInit.eq.5)  rmh = 0.9d0 * rmh
                     if (nAltInit.eq.6)  rmh = 0.8d0 * rmh
                     if (nAltInit.eq.7)  rmh = 0.7d0 * rmh
@@ -946,7 +949,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   if (iterErr.eq.1) then
                     ! DEBUGGING
                     print*, "Convergence umat failed in the matrix"
-                    rmh = rNRFac * rmh
+                    rmh = rmh0 + rNRFac * rdmh
                     cycle
                   end if
 
@@ -976,7 +979,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                     print*, "rFu1 = ", rFu1
                     print*, "rFz1 = ", rFz1
                     print*, "rFz1h = ", rFz1h
-                    rmh = rNRFac * rmh
+                    rmh = rmh0 + rNRFac * rdmh
                     cycle
                   end if
 
@@ -1025,7 +1028,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rdmh = matmul(z_tr_inv, g_tr)
 
                   ! Compute updated m hat
-                  rmh = rmh + rdmh
+                  rmh0 = rmh
+                  rmh = rmh0 + rdmh
                 end do
 
                 ! End analysis if traction continuity fails

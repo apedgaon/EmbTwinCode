@@ -370,7 +370,8 @@ C       Twin Code Implementation Started
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac
-        integer nAltInit
+        integer nAltInit, iTwCreate, max_twins, num_twins
+        real*8 rmhMag
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -382,6 +383,7 @@ C       Twin Code Implementation Started
 
         rEpsilon  = props(10)  ! Pressure mode stabilization parameter; see Ortiz et al (1987), Eq. (21).
 
+        iVforType = 0
         !call sleep(20)
         rRho = props(78)
         call GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
@@ -424,6 +426,10 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
         call comp_twin_dfgrd(del, props(77:127), 51, pi, Smat, F_tw,
      &                       rntw, rmtw)
 
+        ! Twin details
+        max_twins = 1
+        num_twins = 0
+
         ! Access SMA arrays created in vexternaldb
         if (kstep.gt.0) then
           ptr_size_list = SMAIntArrayAccess(1)
@@ -442,6 +448,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
           num_nodes = size_list(3)
+          num_twins = size_list(4)
         end if
 
         ! Compute dilitational wave speed
@@ -593,6 +600,13 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               end if
             end if
 
+            iTwCreate = 1
+            if (twinID.ne.0) then
+              if (tw_dec(1, twinID).ne.elmt_number) then
+                iTwCreate = 0
+              end if
+            end if
+
             ! Evaluate twin embedding step
             if (kinc.eq.0) then
               ! Mark twinning embedding step as 1 in the beginning
@@ -602,7 +616,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             end if
             iTwEmbStp = svars(kblock, offstatev(5) + 1)
 
-            if (iTwFlg.eq.0) then   ! No twinning detected in previous increment
+       if((iTwFlg.eq.0).or.((iTwCreate.eq.0).and.(iTwEmbStp.eq.1))) then   ! No twinning detected in previous increment
               Fe_m = 0.d0
               ! Quadrature Loop
               do l = 1, iTIntPt
@@ -696,9 +710,11 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                                svars(kblock, iumatsvst:iumatsven)
 
                 ! Check for twin nucleation
-                if (isGbElem) then
-                  call check_twin_nucleation(rStress, Smat, Fe(:, :, l),
-     &                                       iTwFlg)
+                if (num_twins.lt.max_twins) then
+                  if (isGbElem) then
+                    call check_twin_nucleation(rStress, Smat, Fe(:,:,l),
+     &                                         iTwFlg)
+                  end if
                 end if
 
 C               Compute linear + quadratic bulk viscosity terms
@@ -735,27 +751,7 @@ C               Compute the internal force vector
 
               end do
 
-              ! If twin detected
               if (iTwFlg.ne.0) then
-                ! Update twin ID counter and store to elmt_status
-                size_list(4) = size_list(4) + 1
-                twinID = size_list(4)
-                if (twinID.gt.100) then
-                  call xplb_abqerr(-3,'twinID > 100', 0, 0.d0, ' ')
-                end if
-                elmt_stat(elmt_number) = twinID
-
-                ! Store twin type
-                tw_flg(twinID) = iTwFlg
-
-                ! Compute element centroid coordinates and store
-                rElmtCt = 0.d0
-                do n = 1, iTIntPt
-                  rElmtCt = rElmtCt + rCoords(1:3, n)
-                end do
-                rElmtCt = 1.d0 / iTIntPt * rElmtCt
-                tw_nuc(1:3, twinID) = rElmtCt
-
                 do l = 1, 8
                   ! Compute current twin normal (F^-T n / || F^-T n ||)
                   call inverse_3x3(Fe(:, :, l), Fe_inv)
@@ -775,6 +771,30 @@ C               Compute the internal force vector
                   svars(kblock, iumatsvst + 5) = rmtwc(2)
                   svars(kblock, iumatsvst + 6) = rmtwc(3)
                 end do
+
+                if (iTwCreate.eq.0) then
+                  iTwEmbStp = 2
+                  svars(kblock, offstatev(5) + 1) = iTwEmbStp
+                end if
+              end if
+
+              ! If twin detected
+              if ((iTwFlg.ne.0).and.(iTwCreate.eq.1)) then
+                ! Update twin ID counter and store to elmt_status
+                size_list(4) = size_list(4) + 1
+                twinID = size_list(4)
+                elmt_stat(elmt_number) = twinID
+
+                ! Store twin type
+                tw_flg(twinID) = iTwFlg
+
+                ! Compute element centroid coordinates and store
+                rElmtCt = 0.d0
+                do n = 1, iTIntPt
+                  rElmtCt = rElmtCt + rCoords(1:3, n)
+                end do
+                rElmtCt = 1.d0 / iTIntPt * rElmtCt
+                tw_nuc(1:3, twinID) = rElmtCt
 
                 ! Store global twin normal and direction (reference config.)
                 tw_nor(1:3, twinID) = rntw(:, iTwFlg)
@@ -802,6 +822,9 @@ C               Compute the internal force vector
               rBLength = tw_geom(1, twinID)
               rBLatWidth = tw_geom(2, twinID)
               rBWidth = tw_geom(3, twinID)
+              print*, "length = ", rBLength
+              print*, "width = ", rBLatWidth
+              print*, "thickness = ", rBWidth
 
               ! DEBUGGING
               print*, "time = ", time(2)
@@ -874,12 +897,20 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmh(2) = svars(kblock, iumatsvst + 5)
                 rmh(3) = svars(kblock, iumatsvst + 6)
 
-                if (iTwEmbStp.eq.1) then
+                if (iTwEmbStp.ne.0) then
                   ! No twinning part in previous step
                   rFz0h = rFz0
 
                   ! Guess for initial rmh is some factor times shear direction
-                  rmh = 1.d-5 * rmh
+                  rmhMag = 7.d-5
+                  if (iTwFlg.le.6) then
+                    rmhMag = 0.175d0 / (rElmtSize/rBWidth - 1.d0)
+                  else if ((iTwFlg.ge.7).and.(iTwFlg.le.12)) then
+                    rmhMag = 0.218d0 / (rElmtSize/rBWidth - 1.d0)
+                  else
+                    rmhMag = 0.098d0 / (rElmtSize/rBWidth - 1.d0)
+                  end if
+                  rmh = rmhMag * rmh
                 else
                   ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)
@@ -893,25 +924,17 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 iter = 0
                 rmh0 = 0.d0
                 rdmh = 0.d0
-                do while(nAltInit.le.8)
+                g_tr_err = 1.d3
+                do while(nAltInit.le.2)
                   if (iter.eq.100) then
                     nAltInit = nAltInit + 1
-                    rmh(1) = svars(kblock, iumatsvst + 4)
-                    rmh(2) = svars(kblock, iumatsvst + 5)
-                    rmh(3) = svars(kblock, iumatsvst + 6)
-                    if (iTwEmbStp) rmh = 1.d-5 * rmh
-                    if (nAltInit.eq.1)  then
-                      rmh = 7.d-5*matmul(rFu0, rmtw(:,iTwFlg))
+                    if (nAltInit.eq.1) then
+                      rmh = 0.d0
                     end if
-                    if (nAltInit.eq.2)  rmh = 1.1d0 * rmh
-                    if (nAltInit.eq.3)  rmh = 1.2d0 * rmh
-                    if (nAltInit.eq.4)  rmh = 1.3d0 * rmh
-                    if (nAltInit.eq.5)  rmh = 0.9d0 * rmh
-                    if (nAltInit.eq.6)  rmh = 0.8d0 * rmh
-                    if (nAltInit.eq.7)  rmh = 0.7d0 * rmh
-                    if (nAltInit.eq.8)  rmh = 0.d0
+
                     iter = 0
                     print*, "nAltInit = ", nAltInit
+                    g_tr_err = 1.d3
                     cycle
                   end if
 
@@ -949,7 +972,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   if (iterErr.eq.1) then
                     ! DEBUGGING
                     print*, "Convergence umat failed in the matrix"
-                    rmh = rmh0 + rNRFac * rdmh
+                    print*, "rmh = ", rmh
+                    if (iter.eq.1) exit
+                    rdmh = rNRFac * rdmh
+                    rmh = rmh0 + rdmh
                     cycle
                   end if
 
@@ -976,10 +1002,12 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                     ! DEBUGGING
                     print*, "Convergence umat failed in the band"
                     print*, "rmh = ", rmh
-                    print*, "rFu1 = ", rFu1
-                    print*, "rFz1 = ", rFz1
-                    print*, "rFz1h = ", rFz1h
-                    rmh = rmh0 + rNRFac * rdmh
+                    if (iter.eq.1) exit
+                    ! print*, "rFu1 = ", rFu1
+                    ! print*, "rFz1 = ", rFz1
+                    ! print*, "rFz1h = ", rFz1h
+                    rdmh = rNRFac * rdmh
+                    rmh = rmh0 + rdmh
                     cycle
                   end if
 
@@ -1207,14 +1235,14 @@ C               Compute the internal force vector
               end do
 
               ! Twin is embedded in this step, unset the flag
-              if (iTwEmbStp.eq.1) then
+              if (iTwEmbStp.ne.0) then
                 iTwEmbStp = 0
                 svars(kblock, offstatev(5) + 1) = iTwEmbStp
               end if
             end if
 
             ! Compute stable time step increment
-            dtimeStable(kblock) = 0.7d0 * rElmtSize / rCd
+            dtimeStable(kblock) = 0.6d0 * rElmtSize / rCd
           end do
         ENDIF
       END  ! Subroutine VUEL
@@ -1291,12 +1319,19 @@ C       Contents of r_Array
         myThreadID = get_thread_id()
 
         if (lop.eq.j_int_StartAnalysis) then
+          call MutexInit(1)      ! initialize Mutex #1
           if (myThreadID.eq.0) then
+            print *, 'Total number of threads = ', GETNUMTHREADS()
+            print *, 'Start of the analysis'
             call read_gb_elements()
           end if
         else if (lop.eq.j_int_EndIncrement) then
-          if (myThreadID.eq.0) then
-            call solve_twin_propagation()
+          if (mod(kInc,400).eq.0) then
+            call Mutexlock(1)
+            if (myThreadID.eq.0) then
+              call solve_twin_propagation(kInc)
+            end if
+            call MutexUnlock(1)
           end if
         else if (lop.eq.j_int_EndAnalysis) then
           if (myThreadID.eq.0) then
@@ -1444,7 +1479,7 @@ C       Contents of r_Array
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C          Detect Twin propagation in neighbouring elements            C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-      subroutine solve_twin_propagation()
+      subroutine solve_twin_propagation(kInc)
         implicit none
 #include <SMAAspUserSubroutines.hdr>
         ! Define variables and cray pointers
@@ -1475,6 +1510,11 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         real*8 rad, s_tw(3), xi_dis(num_dis_pts), tw_el_len, tw_el_wid
         logical twinned
         integer nxt_l_elmt, nxt_w_elmt, nxt_lm_elmt, nxt_wm_elmt
+        character (len = 1) :: pathseperator = '/'
+        character (len = 256) :: outdir, elstfilepath
+        integer :: lenoutdir
+        integer kInc
+        character*20 str_kinc
 
 
         ! Access number of twins from Abaqus SMA array
@@ -1514,22 +1554,22 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             ! Only if element has current twin status
             if (elmt_stat(iel).eq.itw) then
               ! Find nxt twin elmt in front (+-) and lateral (+-) direction
-              call find_next_twin_elem(iel, elmt_conn, num_elems,
-     &             nodal_coords, num_nodes, tw_nuc(:, itw),
-     &             tw_nor(:, itw), -tw_dir(:, itw), elmt_neighbour,
-     &             tw_el_len, nxt_lm_elmt)
-              call find_next_twin_elem(iel, elmt_conn, num_elems,
-     &             nodal_coords, num_nodes, tw_nuc(:, itw),
-     &             tw_nor(:, itw), tw_dir(:, itw), elmt_neighbour,
-     &             tw_el_len, nxt_l_elmt)
-              call find_next_twin_elem(iel, elmt_conn, num_elems,
-     &             nodal_coords, num_nodes, tw_nuc(:, itw),
-     &             tw_nor(:, itw), -s_tw, elmt_neighbour,
-     &             tw_el_wid, nxt_wm_elmt)
-              call find_next_twin_elem(iel, elmt_conn, num_elems,
-     &             nodal_coords, num_nodes, tw_nuc(:, itw),
-     &             tw_nor(:, itw), s_tw, elmt_neighbour,
-     &             tw_el_wid, nxt_w_elmt)
+C              call find_next_twin_elem(iel, elmt_conn, num_elems,
+C     &             nodal_coords, num_nodes, tw_nuc(:, itw),
+C     &             tw_nor(:, itw), -tw_dir(:, itw), elmt_neighbour,
+C     &             tw_el_len, nxt_lm_elmt)
+C              call find_next_twin_elem(iel, elmt_conn, num_elems,
+C     &             nodal_coords, num_nodes, tw_nuc(:, itw),
+C     &             tw_nor(:, itw), tw_dir(:, itw), elmt_neighbour,
+C     &             tw_el_len, nxt_l_elmt)
+C              call find_next_twin_elem(iel, elmt_conn, num_elems,
+C     &             nodal_coords, num_nodes, tw_nuc(:, itw),
+C     &             tw_nor(:, itw), -s_tw, elmt_neighbour,
+C     &             tw_el_wid, nxt_wm_elmt)
+C              call find_next_twin_elem(iel, elmt_conn, num_elems,
+C     &             nodal_coords, num_nodes, tw_nuc(:, itw),
+C     &             tw_nor(:, itw), s_tw, elmt_neighbour,
+C     &             tw_el_wid, nxt_w_elmt)
 
               ! Loop over neighbours
               do inb = 1, 6
@@ -1570,15 +1610,30 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
                 ! Update the decider if this is twinned and the nxt twn element in either direction
                 if (twinned) then
-                  if (inbel.eq.nxt_lm_elmt) tw_dec(1, itw) = inbel
-                  if (inbel.eq.nxt_l_elmt) tw_dec(1, itw) = inbel
-                  if (inbel.eq.nxt_wm_elmt) tw_dec(2, itw) = inbel
-                  if (inbel.eq.nxt_w_elmt) tw_dec(2, itw) = inbel
+                  elmt_stat(inbel) = itw
+                  ! if (inbel.eq.nxt_lm_elmt) tw_dec(1, itw) = inbel
+                  ! if (inbel.eq.nxt_l_elmt) tw_dec(1, itw) = inbel
+                  ! if (inbel.eq.nxt_wm_elmt) tw_dec(2, itw) = inbel
+                  ! if (inbel.eq.nxt_w_elmt) tw_dec(2, itw) = inbel
                 end if
               end do
             end if
           end do
         end do
+
+        if (mod(kInc,10000).eq.0) then
+          write(str_kinc, '(I0)') kInc
+          call vgetoutdir(outdir, lenoutdir)
+          elstfilepath = trim(outdir)//pathseperator//'elmt_stat_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+
+          open(120, file = elstfilepath, status = 'new')
+          do iel=1,num_elems
+            write(120,*) elmt_stat(iel)
+          end do
+
+          close(120)
+        end if
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

@@ -511,7 +511,7 @@ C         for umat stress to vuel stress
         iTwinFlag = 0
 
         ! Set material parameters
-        tau_c = 20.d0      ! TODO: Different critical stress for different types of twin
+        tau_c = 200.d0      ! TODO: Different critical stress for different types of twin
         beta = 11.1d0
         P_0 = 0.85d0
 

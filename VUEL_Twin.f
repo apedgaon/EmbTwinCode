@@ -402,7 +402,7 @@ C       Natural coordinates of element centroid
         offstatev(3) = offstatev(2) + 8 * nstatev(1)  ! umat svars for 8 gs pts for twinned region
         offstatev(4) = offstatev(3) + 8 * nstatev(2)  ! def grd svars for 8 gs pts
         offstatev(5) = offstatev(4) + 8 * nstatev(2)  ! def grd svars for 8 gs pts for twinned region
-        offstatev(6) = offstatev(6) + 8 * nstatev(4)  ! discontinuity vector for 8 gs pts
+        offstatev(6) = offstatev(5) + 8 * nstatev(3)  ! discontinuity vector for 8 gs pts
         ! 148*8 + 148*8 + 9*8 + 9*8 + 6*8 = 2560
         ! Set "variables=2560" for user elements in the input file
 
@@ -779,7 +779,7 @@ C               Compute the internal force vector
                   rmtwc = rmtwc / norm2(rmtwc)
 
                   ! Store current normal and direction
-                  iumatsvst = offstatev(5) + (l - 1) * nstatev(4)
+                  iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
                   svars(kblock, iumatsvst + 1) = rntwc(1)
                   svars(kblock, iumatsvst + 2) = rntwc(2)
                   svars(kblock, iumatsvst + 3) = rntwc(3)
@@ -873,7 +873,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
                 ! Retrieve discontinuous mode normal
-                iumatsvst = offstatev(5) + (l - 1) * nstatev(4)
+                iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
                 rntwc(1) = svars(kblock, iumatsvst + 1)
                 rntwc(2) = svars(kblock, iumatsvst + 2)
                 rntwc(3) = svars(kblock, iumatsvst + 3)
@@ -1078,7 +1078,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmtwc = matmul(Fe(:, :, l), rmtw(:, iTwFlg))
                 rmtwc = rmtwc / norm2(rmtwc)
 
-                iumatsvst = offstatev(5) + (l - 1) * nstatev(4)
+                iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
                 svars(kblock, iumatsvst + 1) = rntwc(1)
                 svars(kblock, iumatsvst + 2) = rntwc(2)
                 svars(kblock, iumatsvst + 3) = rntwc(3)

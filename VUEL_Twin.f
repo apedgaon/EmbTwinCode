@@ -355,7 +355,7 @@ C       Twin Code Implementation Started
         pointer (ptr_nodal_coords, nodal_coords)  ! Pointer to nodal coordinates for SMA Access
         integer size_list(*)    ! list storing num_elems, num_nodes, etc
         pointer (ptr_size_list, size_list)  ! pointer to size list for SMA Access
-        integer elmt_stat(*)
+        integer elmt_stat(2, *)
         pointer (ptr_elmt_stat, elmt_stat)
         integer tw_flg(*)
         pointer (ptr_tw_flg, tw_flg)
@@ -370,7 +370,7 @@ C       Twin Code Implementation Started
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac
-        integer nAltInit, iTwCreate, max_twins, num_twins
+        integer nAltInit, max_twins, num_twins
         real*8 rmhMag
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
@@ -592,32 +592,18 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             ! Evaluate twinID and twinning system flag
             twinID = 0
             iTwFlg = 0
+            iTwEmbStp = 0
             if (kstep.gt.0) then
               ! Check element status for twinID
-              twinID = elmt_stat(elmt_number)
+              twinID = elmt_stat(1, elmt_number)
+              iTwEmbStp = elmt_stat(2, elmt_number)
               if (twinID.ne.0) then
                 iTwFlg = tw_flg(twinID)
               end if
             end if
 
-            iTwCreate = 1
-            if (twinID.ne.0) then
-              if (tw_dec(1, twinID).ne.elmt_number) then
-                iTwCreate = 0
-              end if
-            end if
-
-            ! Evaluate twin embedding step
-            if (kinc.eq.0) then
-              ! Mark twinning embedding step as 1 in the beginning
-              ! This is used to handle first time twinning deformation gradient
-              ! It gets changed to 0 only after handling first time twinning in the element
-              svars(kblock, offstatev(5) + 1) = 1
-            end if
-            iTwEmbStp = svars(kblock, offstatev(5) + 1)
-
-       if((iTwFlg.eq.0).or.((iTwCreate.eq.0).and.(iTwEmbStp.eq.1))) then   ! No twinning detected in previous increment
-              Fe_m = 0.d0
+            if((twinID.eq.0).or.(iTwEmbStp.eq.2)) then   ! No twinning detected in previous increment
+              Fe_m = 0.d0                                ! or twinning detected by tracking
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -751,39 +737,12 @@ C               Compute the internal force vector
 
               end do
 
-              if (iTwFlg.ne.0) then
-                do l = 1, 8
-                  ! Compute current twin normal (F^-T n / || F^-T n ||)
-                  call inverse_3x3(Fe(:, :, l), Fe_inv)
-                  rntwc = matmul(transpose(Fe_inv), rntw(:, iTwFlg))
-                  rntwc = rntwc / norm2(rntwc)
-
-                  ! Compute current twin direction F m / || F m ||
-                  rmtwc = matmul(Fe(:, :, l), rmtw(:, iTwFlg))
-                  rmtwc = rmtwc / norm2(rmtwc)
-
-                  ! Store current normal and direction
-                  iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
-                  svars(kblock, iumatsvst + 1) = rntwc(1)
-                  svars(kblock, iumatsvst + 2) = rntwc(2)
-                  svars(kblock, iumatsvst + 3) = rntwc(3)
-                  svars(kblock, iumatsvst + 4) = rmtwc(1)
-                  svars(kblock, iumatsvst + 5) = rmtwc(2)
-                  svars(kblock, iumatsvst + 6) = rmtwc(3)
-                end do
-
-                if (iTwCreate.eq.0) then
-                  iTwEmbStp = 2
-                  svars(kblock, offstatev(5) + 1) = iTwEmbStp
-                end if
-              end if
-
-              ! If twin detected
-              if ((iTwFlg.ne.0).and.(iTwCreate.eq.1)) then
+              ! If twin nucleated
+              if ((iTwFlg.ne.0).and.(iTwEmbStp.eq.0)) then
                 ! Update twin ID counter and store to elmt_status
                 size_list(4) = size_list(4) + 1
                 twinID = size_list(4)
-                elmt_stat(elmt_number) = twinID
+                elmt_stat(1, elmt_number) = twinID
 
                 ! Store twin type
                 tw_flg(twinID) = iTwFlg
@@ -807,6 +766,33 @@ C               Compute the internal force vector
 
                 ! Store this element number as twin decider for all geometry paramters
                 tw_dec(:, twinID) = elmt_number
+              end if
+
+              ! If twin nucleated or propagated
+              if (iTwFlg.ne.0) then
+                do l = 1, 8
+                  ! Compute current twin normal (F^-T n / || F^-T n ||)
+                  call inverse_3x3(Fe(:, :, l), Fe_inv)
+                  rntwc = matmul(transpose(Fe_inv), rntw(:, iTwFlg))
+                  rntwc = rntwc / norm2(rntwc)
+
+                  ! Compute current twin direction F m / || F m ||
+                  rmtwc = matmul(Fe(:, :, l), rmtw(:, iTwFlg))
+                  rmtwc = rmtwc / norm2(rmtwc)
+
+                  ! Store current normal and direction
+                  iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                  svars(kblock, iumatsvst + 1) = rntwc(1)
+                  svars(kblock, iumatsvst + 2) = rntwc(2)
+                  svars(kblock, iumatsvst + 3) = rntwc(3)
+                  svars(kblock, iumatsvst + 4) = rmtwc(1)
+                  svars(kblock, iumatsvst + 5) = rmtwc(2)
+                  svars(kblock, iumatsvst + 6) = rmtwc(3)
+                end do
+
+                ! Set twin embedding flag to 1
+                iTwEmbStp = 1
+                elmt_stat(2, elmt_number) = iTwEmbStp
               end if
 
             else  ! Twinning detected in the previous increment
@@ -1375,7 +1361,7 @@ C       Contents of r_Array
         real*8 nodal_coords(3, *)
         pointer (ptr_nodal_coords, nodal_coords)
         integer num_nodes
-        integer size_list(*), elmt_stat(*), tw_flg(*)
+        integer size_list(*), elmt_stat(2, *), tw_flg(*)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
         pointer (ptr_tw_flg, tw_flg)
@@ -1462,7 +1448,7 @@ C       Contents of r_Array
         size_list(4) = 0
 
         ! Create element status for twinning ID
-        ptr_elmt_stat = SMAIntArrayCreate(6, num_elems, 0)
+        ptr_elmt_stat = SMAIntArrayCreate(6, 2*num_elems, 0)
 
         ! Create arrays for twin type, nucleation coords, normal and direction
         ptr_tw_flg = SMAIntArrayCreate(7, 100, 0)
@@ -1490,7 +1476,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         real*8 nodal_coords(3, *)
         pointer (ptr_nodal_coords, nodal_coords)
         integer num_nodes, num_elems
-        integer size_list(*), elmt_stat(*), tw_flg(*)
+        integer size_list(*), elmt_stat(2, *), tw_flg(*)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
         pointer (ptr_tw_flg, tw_flg)
@@ -1552,7 +1538,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
           ! Loop over all elements
           do iel = 1, num_elems
             ! Only if element has current twin status
-            if (elmt_stat(iel).eq.itw) then
+            if (elmt_stat(1, iel).eq.itw) then
               ! Find nxt twin elmt in front (+-) and lateral (+-) direction
 C              call find_next_twin_elem(iel, elmt_conn, num_elems,
 C     &             nodal_coords, num_nodes, tw_nuc(:, itw),
@@ -1575,7 +1561,7 @@ C     &             tw_el_wid, nxt_w_elmt)
               do inb = 1, 6
                 inbel = elmt_neighbour(inb, iel)
                 if (inbel.eq.0) cycle ! Face is not attached to neighbouring element
-                if (elmt_stat(inbel).ne.0) cycle ! Already twinned element
+                if (elmt_stat(1, inbel).ne.0) cycle ! Already twinned element
 
                 ! Retrive element nodal coords
                 do ind = 1, 8
@@ -1610,7 +1596,8 @@ C     &             tw_el_wid, nxt_w_elmt)
 
                 ! Update the decider if this is twinned and the nxt twn element in either direction
                 if (twinned) then
-                  elmt_stat(inbel) = itw
+                  elmt_stat(1, inbel) = itw
+                  elmt_stat(2, inbel) = 2       ! Set twin embedding step to 2
                   ! if (inbel.eq.nxt_lm_elmt) tw_dec(1, itw) = inbel
                   ! if (inbel.eq.nxt_l_elmt) tw_dec(1, itw) = inbel
                   ! if (inbel.eq.nxt_wm_elmt) tw_dec(2, itw) = inbel
@@ -1629,7 +1616,7 @@ C     &             tw_el_wid, nxt_w_elmt)
 
           open(120, file = elstfilepath, status = 'new')
           do iel=1,num_elems
-            write(120,*) elmt_stat(iel)
+            write(120,*) elmt_stat(1, iel)
           end do
 
           close(120)

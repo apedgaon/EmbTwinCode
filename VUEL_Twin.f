@@ -228,8 +228,8 @@ C       Twin Code Implementation Started
         integer iVelmType
         integer iVforType
         integer iConsType
-        integer nstatev(4)
-        integer offstatev(7)
+        integer nstatev(3)
+        integer offstatev(6)
         integer iTwFlg           ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
         integer ieulererr        ! return error from eulang routine
@@ -396,17 +396,15 @@ C       Natural coordinates of element centroid
         ! Number of state variables array and offsets array
         nstatev(1) = 148  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
-        nstatev(3) = 1    ! svars for twin embedding flag
-        nstatev(4) = 6    ! svars for storing discontinuity vector
+        nstatev(3) = 6    ! svars for storing discontinuity vectors
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)                 ! umat svars for 8 gs pts
         offstatev(3) = offstatev(2) + 8 * nstatev(1)  ! umat svars for 8 gs pts for twinned region
         offstatev(4) = offstatev(3) + 8 * nstatev(2)  ! def grd svars for 8 gs pts
         offstatev(5) = offstatev(4) + 8 * nstatev(2)  ! def grd svars for 8 gs pts for twinned region
-        offstatev(6) = offstatev(5) + nstatev(3)      ! element twin embedding flag
-        offstatev(7) = offstatev(6) + 8 * nstatev(4)  ! discontinuity vector for 8 gs pts
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 1 + 6*8 = 2561
-        ! Set variables=2537 for user elements in the input file
+        offstatev(6) = offstatev(6) + 8 * nstatev(4)  ! discontinuity vector for 8 gs pts
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 6*8 = 2560
+        ! Set "variables=2560" for user elements in the input file
 
         ! Define PI
         pi = 4.d0 * atan(1.d0)
@@ -781,7 +779,7 @@ C               Compute the internal force vector
                   rmtwc = rmtwc / norm2(rmtwc)
 
                   ! Store current normal and direction
-                  iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                  iumatsvst = offstatev(5) + (l - 1) * nstatev(4)
                   svars(kblock, iumatsvst + 1) = rntwc(1)
                   svars(kblock, iumatsvst + 2) = rntwc(2)
                   svars(kblock, iumatsvst + 3) = rntwc(3)
@@ -875,7 +873,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
                 ! Retrieve discontinuous mode normal
-                iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                iumatsvst = offstatev(5) + (l - 1) * nstatev(4)
                 rntwc(1) = svars(kblock, iumatsvst + 1)
                 rntwc(2) = svars(kblock, iumatsvst + 2)
                 rntwc(3) = svars(kblock, iumatsvst + 3)
@@ -1080,7 +1078,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmtwc = matmul(Fe(:, :, l), rmtw(:, iTwFlg))
                 rmtwc = rmtwc / norm2(rmtwc)
 
-                iumatsvst = offstatev(6) + (l - 1) * nstatev(4)
+                iumatsvst = offstatev(5) + (l - 1) * nstatev(4)
                 svars(kblock, iumatsvst + 1) = rntwc(1)
                 svars(kblock, iumatsvst + 2) = rntwc(2)
                 svars(kblock, iumatsvst + 3) = rntwc(3)

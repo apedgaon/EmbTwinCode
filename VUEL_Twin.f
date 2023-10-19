@@ -1221,7 +1221,7 @@ C               Compute the internal force vector
               ! Twin is embedded in this step, unset the flag
               if (iTwEmbStp.ne.0) then
                 iTwEmbStp = 0
-                svars(kblock, offstatev(5) + 1) = iTwEmbStp
+                elmt_stat(2, elmt_number) = iTwEmbStp
               end if
             end if
 

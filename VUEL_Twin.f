@@ -909,7 +909,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmh0 = 0.d0
                 rdmh = 0.d0
                 g_tr_err = 1.d3
-                do while(nAltInit.lt.2)
+                do while(nAltInit.le.1)
                   if (iter.eq.100) then
                     nAltInit = nAltInit + 1
                     if (nAltInit.eq.1) then

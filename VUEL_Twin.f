@@ -446,7 +446,6 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
           num_nodes = size_list(3)
-          num_twins = size_list(4)
         end if
 
         ! Compute dilitational wave speed
@@ -599,6 +598,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
                 iTwFlg = tw_flg(twinID)
               end if
             end if
+            num_twins = size_list(4)
 
             if((twinID.eq.0).or.(iTwEmbStp.eq.2)) then   ! No twinning detected in previous increment
               Fe_m = 0.d0                                ! or twinning detected by tracking

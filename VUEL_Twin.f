@@ -817,6 +817,7 @@ C               Compute the internal force vector
               print*, "iTwFlg = ", iTwFlg
               print*, "iTwEmbStp = ", iTwEmbStp
               print*, "rntw = ", rntw(:, iTwFlg)
+              print*, "rmtw = ", rmtw(:, iTwFlg)
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -902,7 +903,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! DEBUGGING
                 print*, "l = ", l
-                print*, "rmtw = ", rmtw(:, iTwFlg)
+                print*, "rmh = ", rmh
 
                 nAltInit = 0
                 iter = 0

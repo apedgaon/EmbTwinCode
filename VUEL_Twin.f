@@ -312,6 +312,7 @@ C       Twin Code Implementation Started
         real*8 rdmh(3)             ! change in jump + direction
         real*8 rmh(3)              ! jump + direction
         real*8 rmh0(3)             ! initial jump + direction
+        real*8 rmhdot(3)           ! Rate of change of jump + direction
         real*8 rntwc(3)            ! Twin normal in current configuration
         real*8 rFuinv(3, 3)        ! inverse of def grad in untwinned region
         real*8 mtpn(3, 3)          ! mhat tensor product n
@@ -396,15 +397,15 @@ C       Natural coordinates of element centroid
         ! Number of state variables array and offsets array
         nstatev(1) = 148  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
-        nstatev(3) = 6    ! svars for storing discontinuity vectors
+        nstatev(3) = 9    ! svars for storing discontinuity vectors
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)                 ! umat svars for 8 gs pts
         offstatev(3) = offstatev(2) + 8 * nstatev(1)  ! umat svars for 8 gs pts for twinned region
         offstatev(4) = offstatev(3) + 8 * nstatev(2)  ! def grd svars for 8 gs pts
         offstatev(5) = offstatev(4) + 8 * nstatev(2)  ! def grd svars for 8 gs pts for twinned region
         offstatev(6) = offstatev(5) + 8 * nstatev(3)  ! discontinuity vector for 8 gs pts
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 6*8 = 2560
-        ! Set "variables=2560" for user elements in the input file
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 9*8 = 2584
+        ! Set "variables=2584" for user elements in the input file
 
         ! Define PI
         pi = 4.d0 * atan(1.d0)
@@ -910,16 +911,25 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmh0 = 0.d0
                 rdmh = 0.d0
                 g_tr_err = 1.d3
-                do while(nAltInit.le.1)
+                do while(nAltInit.le.2)
                   if (iter.eq.100) then
                     nAltInit = nAltInit + 1
                     if (nAltInit.eq.1) then
                       rmh = 0.d0
+                    else if (nAltInit.eq.2) then
+                      iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
+                      rmh(1) = svars(kblock, iumatsvst + 4)
+                      rmh(2) = svars(kblock, iumatsvst + 5)
+                      rmh(3) = svars(kblock, iumatsvst + 6)
+                      rmhdot(1) = svars(kblock, iumatsvst + 7)
+                      rmhdot(2) = svars(kblock, iumatsvst + 8)
+                      rmhdot(3) = svars(kblock, iumatsvst + 9)
+                      rmh = rmh + rmhdot * dtimeCur
                     end if
 
                     iter = 0
-                    print*, "nAltInit = ", nAltInit
                     g_tr_err = 1.d3
+                    print*, "nAltInit = ", nAltInit
                     cycle
                   end if
 
@@ -958,7 +968,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                     ! DEBUGGING
                     print*, "Convergence umat failed in the matrix"
                     print*, "rmh = ", rmh
-                    if (iter.eq.1) exit
+                    if (iter.eq.1) then
+                      iter = 100
+                      cycle
+                    end if
                     rdmh = rNRFac * rdmh
                     rmh = rmh0 + rdmh
                     cycle
@@ -987,7 +1000,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                     ! DEBUGGING
                     print*, "Convergence umat failed in the band"
                     print*, "rmh = ", rmh
-                    if (iter.eq.1) exit
+                    if (iter.eq.1) then
+                      iter = 100
+                      cycle
+                    end if
                     ! print*, "rFu1 = ", rFu1
                     ! print*, "rFz1 = ", rFz1
                     ! print*, "rFz1h = ", rFz1h
@@ -1080,12 +1096,22 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmtwc = rmtwc / norm2(rmtwc)
 
                 iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
+                rmh0(1) = svars(kblock, iumatsvst + 4)
+                rmh0(2) = svars(kblock, iumatsvst + 5)
+                rmh0(3) = svars(kblock, iumatsvst + 6)
+
+                rmhdot = (rmh - rmh0) / dtimeCur
+
                 svars(kblock, iumatsvst + 1) = rntwc(1)
                 svars(kblock, iumatsvst + 2) = rntwc(2)
                 svars(kblock, iumatsvst + 3) = rntwc(3)
                 svars(kblock, iumatsvst + 4) = rmh(1)
                 svars(kblock, iumatsvst + 5) = rmh(2)
                 svars(kblock, iumatsvst + 6) = rmh(3)
+
+                svars(kblock, iumatsvst + 7) = rmhdot(1)
+                svars(kblock, iumatsvst + 8) = rmhdot(2)
+                svars(kblock, iumatsvst + 9) = rmhdot(3)
 
                 ! Save deformation gradients to both untwinned and twinned block
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)

@@ -911,7 +911,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmh0 = 0.d0
                 rdmh = 0.d0
                 g_tr_err = 1.d3
-                do while(nAltInit.le.2)
+                do while(nAltInit.le.3)
                   if (iter.eq.100) then
                     nAltInit = nAltInit + 1
                     if (nAltInit.eq.1) then
@@ -925,6 +925,19 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                       rmhdot(2) = svars(kblock, iumatsvst + 8)
                       rmhdot(3) = svars(kblock, iumatsvst + 9)
                       rmh = rmh + rmhdot * dtimeCur
+                    else if (nAltInit.eq.3) then
+                      iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
+                      rmh(1) = svars(kblock, iumatsvst + 4)
+                      rmh(2) = svars(kblock, iumatsvst + 5)
+                      rmh(3) = svars(kblock, iumatsvst + 6)
+                      rmhu = rmh / norm2(rmh)
+                      rTdL = 0.d0
+                      do j = 1, 3
+                        do i = 1, 3
+                          rTdL = rTdL + rmhu(i)*rntwc(j)*rdVelGrd(i, j)
+                        end do
+                      end do
+                      rmh = -rTdL/(rElmtSize/rBWidth - 1.d0) * rmhu
                     end if
 
                     iter = 0

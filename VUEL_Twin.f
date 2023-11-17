@@ -228,8 +228,8 @@ C       Twin Code Implementation Started
         integer iVelmType
         integer iVforType
         integer iConsType
-        integer nstatev(3)
-        integer offstatev(6)
+        integer nstatev(4)
+        integer offstatev(7)
         integer iTwFlg           ! Twinning index that nucleated
         integer num_gb_elems     ! Number of Grain Boundary Elements
         integer ieulererr        ! return error from eulang routine
@@ -294,6 +294,7 @@ C       Twin Code Implementation Started
         real*8 rFz1(3, 3)          ! Current twinned deformation gradient
         real*8 rFz1h(3, 3)         ! Fe Fp part of current twinned deformation gradient
         real*8 rBWidth             ! Band width of twin
+        real*8 rBWidthOff          ! Band width offset
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
         real*8 rStress_U(6)     ! Stress in untwinned region
         real*8 rStress_Z(6)     ! Stress in twinned region
@@ -398,13 +399,15 @@ C       Natural coordinates of element centroid
         nstatev(1) = 148  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
         nstatev(3) = 9    ! svars for storing discontinuity vectors
+        nstatev(4) = 1    ! svars for storing band width offset
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)                 ! umat svars for 8 gs pts
         offstatev(3) = offstatev(2) + 8 * nstatev(1)  ! umat svars for 8 gs pts for twinned region
         offstatev(4) = offstatev(3) + 8 * nstatev(2)  ! def grd svars for 8 gs pts
         offstatev(5) = offstatev(4) + 8 * nstatev(2)  ! def grd svars for 8 gs pts for twinned region
         offstatev(6) = offstatev(5) + 8 * nstatev(3)  ! discontinuity vector for 8 gs pts
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 9*8 = 2584
+        offstatev(7) = offstatev(6) + nstatev(4)
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 9*8 + 1 = 2585
         ! Set "variables=2584" for user elements in the input file
 
         ! Define PI
@@ -601,7 +604,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             end if
             num_twins = size_list(4)
 
-            if((twinID.eq.0).or.(iTwEmbStp.eq.2)) then   ! No twinning detected in previous increment
+            if((twinID.eq.0).or.(iTwEmbStp.ge.2)) then   ! No twinning detected in previous increment
               Fe_m = 0.d0                                ! or twinning detected by tracking
               ! Quadrature Loop
               do l = 1, iTIntPt
@@ -789,6 +792,15 @@ C               Compute the internal force vector
                   svars(kblock, iumatsvst + 6) = rmtwc(3)
                 end do
 
+                ! Twin band width offset
+                if (iTwEmbStp.eq.3) then
+                  rBWidthOff = tw_geom(3, twinID)
+                else
+                  rBWidthOff = 0.d0
+                end if
+                iumatsvst = offstatev(6) + 1
+                svars(kblock, iumatsvst) = rBWidthOff
+
                 ! Set twin embedding flag to 1
                 iTwEmbStp = 1
                 elmt_stat(2, elmt_number) = iTwEmbStp
@@ -806,10 +818,14 @@ C               Compute the internal force vector
               ! Retrieve twin geometry
               rBLength = tw_geom(1, twinID)
               rBLatWidth = tw_geom(2, twinID)
-              rBWidth = tw_geom(3, twinID)
+              iumatsvst = offstatev(6) + 1
+              rBWidthOff = svars(kblock, iumatsvst)
+              rBWidth = tw_geom(3, twinID) - rBWidthOff
+              if (rBWidth.lt.1.d-4) rBWidth = 1.d-4
               print*, "length = ", rBLength
               print*, "width = ", rBLatWidth
               print*, "thickness = ", rBWidth
+              print*, "rBWidthOff = ", rBWidthOff
 
               ! DEBUGGING
               print*, "time = ", time(2)
@@ -1535,7 +1551,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         real*8 rElmtVol, rJdet, rdOmega, rElmtSize, rCoords(3, 8)
         integer, parameter :: num_dis = 10, num_dis_pts = num_dis + 1
         real*8 rad, s_tw(3), xi_dis(num_dis_pts), tw_el_len, tw_el_wid
-        logical twinned
+        logical twinned, bexp
         integer nxt_l_elmt, nxt_w_elmt, nxt_lm_elmt, nxt_wm_elmt
         character (len = 1) :: pathseperator = '/'
         character (len = 256) :: outdir, elstfilepath
@@ -1633,12 +1649,16 @@ C     &             tw_el_wid, nxt_w_elmt)
      &                nodal_coords, num_nodes, num_dis_pts,
      &                tw_nor(:, itw), tw_dir(:, itw), s_tw, rad,
      &                tw_nuc(:, itw), tw_geom(1, itw), tw_geom(2, itw),
-     &                tw_geom(3, itw),  xi_dis, twinned)
+     &                tw_geom(3, itw),  xi_dis, twinned, bexp)
 
                 ! Update the decider if this is twinned and the nxt twn element in either direction
                 if (twinned) then
                   elmt_stat(1, inbel) = itw
-                  elmt_stat(2, inbel) = 2       ! Set twin embedding step to 2
+                  if (bexp) then
+                    elmt_stat(2, inbel) = 3
+                  else
+                    elmt_stat(2, inbel) = 2   ! Set twin embedding step to 2
+                  end if
                   ! if (inbel.eq.nxt_lm_elmt) tw_dec(1, itw) = inbel
                   ! if (inbel.eq.nxt_l_elmt) tw_dec(1, itw) = inbel
                   ! if (inbel.eq.nxt_wm_elmt) tw_dec(2, itw) = inbel

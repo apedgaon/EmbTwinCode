@@ -849,14 +849,14 @@ C     Detects Twinning in the neighbouring elements of iel             C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       subroutine detect_twinning(iel, elmt_conn, num_elems,
      &           nodal_coords, num_nodes, num_dis_pts, n_tw, m_tw, s_tw,
-     &           rad, x_0, l_tw, w_tw, b_tw, xi, twinned)
+     &           rad, x_0, l_tw, w_tw, b_tw, xi, twinned, bexp)
         implicit none
         ! Input variables
         integer iel, num_dis_pts, num_elems, num_nodes
         integer elmt_conn(8, num_elems)
         real*8 nodal_coords(3, num_nodes), n_tw(3), m_tw(3), s_tw(3)
         real*8 rad, x_0(3), l_tw, w_tw, b_tw, xi(num_dis_pts)
-        logical twinned
+        logical twinned, bexp
 
         ! Subroutine used variables
         integer i, j, k, ind
@@ -865,6 +865,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         !! Code
         twinned = .false.
+        bexp = .false.
         ! Loop over internal discrete points
         do k = 2, num_dis_pts - 1
           do j = 2, num_dis_pts - 1
@@ -900,6 +901,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
               ! If both thickness and projection satisfy intersection, return true
               if (b_twinned.and.proj_twinned) then
                 twinned = .true.
+                if (abs(b_proj).lt.b_tw) then
+                  bexp = .true.
+                end if
                 return
               end if
             end do

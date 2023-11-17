@@ -1669,7 +1669,7 @@ C     &             tw_el_wid, nxt_w_elmt)
           end do
         end do
 
-        if (mod(kInc,10000).eq.0) then
+        if (mod(kInc,1000).eq.0) then
           write(str_kinc, '(I0)') kInc
           call vgetoutdir(outdir, lenoutdir)
           elstfilepath = trim(outdir)//pathseperator//'elmt_stat_'

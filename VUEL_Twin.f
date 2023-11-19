@@ -373,7 +373,7 @@ C       Twin Code Implementation Started
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac
         integer nAltInit, max_twins, num_twins
-        real*8 rmhMag
+        real*8 rmhMag, bhratio, hbratio
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -899,6 +899,11 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmh(2) = svars(kblock, iumatsvst + 5)
                 rmh(3) = svars(kblock, iumatsvst + 6)
 
+                ! b/h ratio and handle b >= h
+                bhratio = rBWidth / rElmtSize
+                if (bhratio.ge.0.9999d0) bhratio = 0.9999d0
+                hbratio = 1.d0 / bhratio
+
                 if (iTwEmbStp.ne.0) then
                   ! No twinning part in previous step
                   rFz0h = rFz0
@@ -906,11 +911,11 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   ! Guess for initial rmh is some factor times shear direction
                   rmhMag = 7.d-5
                   if (iTwFlg.le.6) then
-                    rmhMag = 0.175d0 / (rElmtSize/rBWidth - 1.d0)
+                    rmhMag = 0.175d0 / (hbratio - 1.d0)
                   else if ((iTwFlg.ge.7).and.(iTwFlg.le.12)) then
-                    rmhMag = 0.218d0 / (rElmtSize/rBWidth - 1.d0)
+                    rmhMag = 0.218d0 / (hbratio - 1.d0)
                   else
-                    rmhMag = 0.098d0 / (rElmtSize/rBWidth - 1.d0)
+                    rmhMag = 0.098d0 / (hbratio - 1.d0)
                   end if
                   rmh = rmhMag * rmh
                 else
@@ -953,7 +958,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                           rTdL = rTdL + rmhu(i)*rntwc(j)*rdVelGrd(i, j)
                         end do
                       end do
-                      rmh = -rTdL/(rElmtSize/rBWidth - 1.d0) * rmhu
+                      rmh = -rTdL/(hbratio - 1.d0) * rmhu
                     else
                       call random_number(rmh)
                       rmh = 1.d-4 * rmh
@@ -978,7 +983,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                   ! Compute jump velocity gradient increments
                   rdLu = rdVelGrd - mtpn
-                  rdLz = rdVelGrd + (rElmtSize/rBWidth - 1.d0) * mtpn
+                  rdLz = rdVelGrd + (hbratio - 1.d0) * mtpn
 
                   ! Compute new deformation gradient in the untwinned region
                   rdFu = matmul(rdLu, rFu0)
@@ -1075,7 +1080,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                         do k = 1, 3
                           do p = 1, 3
                             z_tr(aidx, j) = z_tr(aidx, j) +
-     &                      rntwc(i) * ((rElmtSize/rBWidth-1.d0)*
+     &                      rntwc(i) * ((hbratio - 1.d0)*
      &                      rWz(i,aidx,j,k)*rFz0h(p,k)+rWu(i,aidx,j,k)*
      &                      rFu0(p,k)) * rntwc(p)
                           end do
@@ -1190,7 +1195,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 
                 ! Compute discontinuity magnitude in untwinned and twinned region
                 alpha_U = alpha_h / rTdL
-                alpha_Z = (rElmtSize/rBWidth - 1.d0) * alpha_U
+                alpha_Z = (hbratio - 1.d0) * alpha_U
 
                 ! Compute discontinuous mode tensor
                 rTdis(1) = rmhu(1) * rntwc(1)
@@ -1267,10 +1272,10 @@ C               Compute the internal force vector
                         rSigmaZ = rStress_Z(j)
                       end if
                       rhs( kblock , (n-1)*mcrd + i ) =
-     &                rhs( kblock , (n-1)*mcrd + i )
-     &                + ((rBWidth/rElmtSize)*rBmatZ(j,(n-1)*mcrd+i)*
-     &                rSigmaZ + (1.d0-rBWidth/rElmtSize)*
-     &                rBmatU(j,(n-1)*mcrd+i)*rSigmaU)*rdOmega
+     &                rhs( kblock , (n-1)*mcrd + i ) +
+     &                ((bhratio)*rBmatZ(j,(n-1)*mcrd+i)*rSigmaZ +
+     &                (1.d0 - bhratio)*rBmatU(j,(n-1)*mcrd+i)*rSigmaU)
+     &                *rdOmega
                     end do
                   end do
                 end do

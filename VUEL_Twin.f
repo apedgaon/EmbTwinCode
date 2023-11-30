@@ -369,6 +369,8 @@ C       Twin Code Implementation Started
         pointer (ptr_tw_geom, tw_geom)
         integer tw_dec(3, *)
         pointer (ptr_tw_dec, tw_dec)
+        real*8 elmt_stress(12, *)
+        pointer (ptr_elmt_stress, elmt_stress)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac
@@ -446,6 +448,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_tw_dir = SMAFloatArrayAccess(10)
           ptr_tw_geom = SMAFloatArrayAccess(11)
           ptr_tw_dec = SMAIntArrayAccess(12)
+          ptr_elmt_stress = SMAFloatArrayAccess(13)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -590,6 +593,10 @@ C           b) shape functions and their derivatives wrt mid-step global coords
               isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
             end if
 
+            if (kstep.gt.0) then
+              elmt_stress(:, elmt_number) = 0.d0
+            end if
+
             ! Evaluate twinID and twinning system flag
             twinID = 0
             iTwFlg = 0
@@ -602,7 +609,8 @@ C           b) shape functions and their derivatives wrt mid-step global coords
                 iTwFlg = tw_flg(twinID)
               end if
             end if
-            num_twins = size_list(4)
+            num_twins = 0
+            if (kstep.gt.0) num_twins = size_list(4)
 
             if((twinID.eq.0).or.(iTwEmbStp.ge.2)) then   ! No twinning detected in previous increment
               Fe_m = 0.d0                                ! or twinning detected by tracking
@@ -690,6 +698,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! Add to mean deformation gradient
                 Fe_m = Fe_m + 1.d0 / iTIntPt * Fe(:, :, l)
+                if (kstep.gt.0) then
+                  elmt_stress(1:6, elmt_number) = rStress / iTIntPt +
+     &                                     elmt_stress(1:6, elmt_number)
+                end if
 
                 ! store same svars for twinned part which has not formed yet
                 iumatsvst2 = offstatev(2) + 1 + (l - 1) * nstatev(1)
@@ -1244,6 +1256,12 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           FeZ)
 
 
+                elmt_stress(1:6, elmt_number) = rStress_U / iTIntPt +
+     &                                     elmt_stress(1:6, elmt_number)
+                elmt_stress(7:12, elmt_number) = rStress_Z / iTIntPt +
+     &                                    elmt_stress(7:12, elmt_number)
+
+
 C               Compute linear + quadratic bulk viscosity terms
 C               Needed for damping the “ringing” in the highest element frequency
 C               (Abaqus->Theory->Procedures->Nonlinear dynamics->Explicit dynamic analysis)
@@ -1395,6 +1413,7 @@ C       Contents of r_Array
             call SMAFloatArrayDelete(10)
             call SMAFloatArrayDelete(11)
             call SMAIntArrayDelete(12)
+            call SMAFloatArrayDelete(13)
           end if
         end if
 
@@ -1435,6 +1454,8 @@ C       Contents of r_Array
         pointer (ptr_tw_geom, tw_geom)
         integer tw_dec(3, *)
         pointer (ptr_tw_dec, tw_dec)
+        real*8 elmt_stress(12, *)
+        pointer (ptr_elmt_stress, elmt_stress)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1522,6 +1543,9 @@ C       Contents of r_Array
         ptr_tw_geom = SMAFloatArrayCreate(11, 3*100, 0.d0)
         ptr_tw_dec = SMAIntArrayCreate(12, 3*100, 0)
 
+        ! Elmt average stress components
+        ptr_elmt_stress = SMAFloatArrayCreate(13, 12*num_elems, 0.d0)
+
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -1550,6 +1574,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         pointer (ptr_tw_geom, tw_geom)
         integer tw_dec(3, *)
         pointer (ptr_tw_dec, tw_dec)
+        real*8 elmt_stress(12, *)
+        pointer (ptr_elmt_stress, elmt_stress)
         integer num_twins, itw, iel, inb, inbel
         integer iTintPt, l, ind, i
         real*8 rXiEtaPt(3, 8), rWeightPt(8), rNn(8), rdNndXi(3, 8)
@@ -1581,6 +1607,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         ptr_tw_dir = SMAFloatArrayAccess(10)
         ptr_tw_geom = SMAFloatArrayAccess(11)
         ptr_tw_dec = SMAIntArrayAccess(12)
+        ptr_elmt_stress = SMAFloatArrayAccess(13)
         num_elems = size_list(2)
         num_nodes = size_list(3)
 
@@ -1686,6 +1713,16 @@ C     &             tw_el_wid, nxt_w_elmt)
           end do
 
           close(120)
+
+          elstfilepath = trim(outdir)//pathseperator//'elmt_stress_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+
+          open(121, file = elstfilepath, status = 'new')
+          do iel=1,num_elems
+            write(121,*) elmt_stress(:, iel)
+          end do
+
+          close(121)
         end if
       end subroutine
 

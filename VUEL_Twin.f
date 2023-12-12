@@ -1702,27 +1702,7 @@ C     &             tw_el_wid, nxt_w_elmt)
         end do
 
         if (mod(kInc,1000).eq.0) then
-          write(str_kinc, '(I0)') kInc
-          call vgetoutdir(outdir, lenoutdir)
-          elstfilepath = trim(outdir)//pathseperator//'elmt_stat_'
-     &                  //trim(adjustl(str_kinc))//'.dat'
-
-          open(120, file = elstfilepath, status = 'new')
-          do iel=1,num_elems
-            write(120,*) elmt_stat(1, iel)
-          end do
-
-          close(120)
-
-          elstfilepath = trim(outdir)//pathseperator//'elmt_stress_'
-     &                  //trim(adjustl(str_kinc))//'.dat'
-
-          open(121, file = elstfilepath, status = 'new')
-          do iel=1,num_elems
-            write(121,*) elmt_stress(:, iel)
-          end do
-
-          close(121)
+          call write_vuel_data(kInc)
         end if
       end subroutine
 
@@ -1801,6 +1781,52 @@ C     Locate elmts that share Face 1 to 6 with elmt_n
 
       END
 
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+      subroutine write_vuel_data(kInc)
+        implicit none
+#include <SMAAspUserSubroutines.hdr>
+        integer kInc
+        integer num_nodes, num_elems, iel, io
+        integer size_list(*), elmt_stat(2, *)
+        pointer (ptr_size_list, size_list)
+        pointer (ptr_elmt_stat, elmt_stat)
+        real*8 elmt_stress(12, *)
+        pointer (ptr_elmt_stress, elmt_stress)
+        character (len = 1) :: pathseperator = '/'
+        character (len = 256) :: outdir, elstfilepath
+        integer :: lenoutdir
+        character*20 str_kinc
+
+        ptr_size_list = SMAIntArrayAccess(1)
+        ptr_elmt_stat = SMAIntArrayAccess(6)
+        ptr_elmt_stress = SMAFloatArrayAccess(13)
+        num_elems = size_list(2)
+        num_nodes = size_list(3)
+
+        write(str_kinc, '(I0)') kInc
+        call vgetoutdir(outdir, lenoutdir)
+        elstfilepath = trim(outdir)//pathseperator//'elmt_stat_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+
+        open(newunit = io, file = elstfilepath, status = 'new')
+        do iel=1,num_elems
+          write(io,*) elmt_stat(1, iel)
+        end do
+
+        close(io)
+
+        elstfilepath = trim(outdir)//pathseperator//'elmt_stress_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+
+        open(newunit = io, file = elstfilepath, status = 'new')
+        do iel=1,num_elems
+          write(io,*) elmt_stress(:, iel)
+        end do
+
+        close(io)
+
+      end subroutine
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       include 'GSPT_3D_8N.f'
       include 'SHP_FUNC_3D_8N.f'
       include 'prep_umat.f'

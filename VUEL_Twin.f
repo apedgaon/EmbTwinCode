@@ -1130,6 +1130,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   print*, "rFu1 = ", rFu1
                   print*, "rFz1 = ", rFz1
                   print*, "rFz1h = ", rFz1h
+                  print*, "kinc = ", kinc
+                  call write_vuel_results(kinc)
 
                   CALL XPLB_ABQERR(-3,'Traction Continuity failed! '//
      &                             'iTwEmbStp = %I, err = %R'  ,
@@ -1702,7 +1704,7 @@ C     &             tw_el_wid, nxt_w_elmt)
         end do
 
         if (mod(kInc,1000).eq.0) then
-          call write_vuel_data(kInc)
+          call write_vuel_results(kInc)
         end if
       end subroutine
 
@@ -1782,7 +1784,7 @@ C     Locate elmts that share Face 1 to 6 with elmt_n
       END
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-      subroutine write_vuel_data(kInc)
+      subroutine write_vuel_results(kInc)
         implicit none
 #include <SMAAspUserSubroutines.hdr>
         integer kInc

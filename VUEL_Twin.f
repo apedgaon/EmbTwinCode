@@ -1147,22 +1147,33 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rmtwc = rmtwc / norm2(rmtwc)
 
                 iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
-                rmh0(1) = svars(kblock, iumatsvst + 4)
-                rmh0(2) = svars(kblock, iumatsvst + 5)
-                rmh0(3) = svars(kblock, iumatsvst + 6)
-
-                rmhdot = (rmh - rmh0) / dtimeCur
-
                 svars(kblock, iumatsvst + 1) = rntwc(1)
                 svars(kblock, iumatsvst + 2) = rntwc(2)
                 svars(kblock, iumatsvst + 3) = rntwc(3)
-                svars(kblock, iumatsvst + 4) = rmh(1)
-                svars(kblock, iumatsvst + 5) = rmh(2)
-                svars(kblock, iumatsvst + 6) = rmh(3)
+                if (iTwEmbStp) then ! Set rmh and rmhdot to 0 since twin
+                  ! embedding has a very different rmh from rest of analysis
+                  svars(kblock, iumatsvst + 4) = 0.d0
+                  svars(kblock, iumatsvst + 5) = 0.d0
+                  svars(kblock, iumatsvst + 6) = 0.d0
 
-                svars(kblock, iumatsvst + 7) = rmhdot(1)
-                svars(kblock, iumatsvst + 8) = rmhdot(2)
-                svars(kblock, iumatsvst + 9) = rmhdot(3)
+                  svars(kblock, iumatsvst + 7) = 0.d0
+                  svars(kblock, iumatsvst + 8) = 0.d0
+                  svars(kblock, iumatsvst + 9) = 0.d0
+                else ! Store rmh and rmhdot
+                  rmh0(1) = svars(kblock, iumatsvst + 4)
+                  rmh0(2) = svars(kblock, iumatsvst + 5)
+                  rmh0(3) = svars(kblock, iumatsvst + 6)
+                  rmhdot = (rmh - rmh0) / dtimeCur
+
+                  svars(kblock, iumatsvst + 4) = rmh(1)
+                  svars(kblock, iumatsvst + 5) = rmh(2)
+                  svars(kblock, iumatsvst + 6) = rmh(3)
+
+                  svars(kblock, iumatsvst + 7) = rmhdot(1)
+                  svars(kblock, iumatsvst + 8) = rmhdot(2)
+                  svars(kblock, iumatsvst + 9) = rmhdot(3)
+                end if
+
 
                 ! Save deformation gradients to both untwinned and twinned block
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)

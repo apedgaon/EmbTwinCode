@@ -1492,7 +1492,7 @@ C       Contents of r_Array
         close(121)
 
         ! Read and store element connectivity
-        ecfilename = 'input_elmt_2.inp'
+        ecfilename = 'input_elmt_1000.inp'
         ecfilepath = trim(outdir)//pathseperator//trim(ecfilename)
         num_elems = 0
         open(120, file = ecfilepath, status = 'old', iostat = io)
@@ -1518,7 +1518,7 @@ C       Contents of r_Array
         end do
 
         ! Read and store nodal coordinates
-        ncfilename = 'input_node_2.inp'
+        ncfilename = 'input_node_1000.inp'
         ncfilepath = trim(outdir)//pathseperator//trim(ncfilename)
         num_nodes = 0
         open(120, file = ncfilepath, status = 'old', iostat = io)

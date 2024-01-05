@@ -508,8 +508,6 @@ C         for umat stress to vuel stress
         real*8 dfgrd(3, 3)    ! Deformation Gradient
         real*8 dfgrdinv(3, 3) ! Deformation Gradient Inverse
 
-        iTwinFlag = 0
-
         ! Set material parameters
         tau_c = 200.d0      ! TODO: Different critical stress for different types of twin
         beta = 11.1d0

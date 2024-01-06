@@ -371,11 +371,14 @@ C       Twin Code Implementation Started
         pointer (ptr_tw_dec, tw_dec)
         real*8 elmt_stress(12, *)
         pointer (ptr_elmt_stress, elmt_stress)
+        real*8 nuc_prob(*)
+        pointer (ptr_nuc_prob, nuc_prob)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac
         integer nAltInit, max_twins, num_twins
         real*8 rmhMag, bhratio, hbratio
+        real*8 PtauMax
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -449,6 +452,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_tw_geom = SMAFloatArrayAccess(11)
           ptr_tw_dec = SMAIntArrayAccess(12)
           ptr_elmt_stress = SMAFloatArrayAccess(13)
+          ptr_nuc_prob = SMAFloatArrayAccess(14)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -612,6 +616,8 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             num_twins = 0
             if (kstep.gt.0) num_twins = size_list(4)
 
+            PtauMax = 0.d0
+
             if((twinID.eq.0).or.(iTwEmbStp.ge.2)) then   ! No twinning detected in previous increment
               Fe_m = 0.d0                                ! or twinning detected by tracking
               ! Quadrature Loop
@@ -713,7 +719,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 if (num_twins.lt.max_twins) then
                   if (isGbElem) then
                     call check_twin_nucleation(rStress, Smat, Fe(:,:,l),
-     &                                         iTwFlg)
+     &                                         iTwFlg, PtauMax)
                   end if
                 end if
 
@@ -816,6 +822,10 @@ C               Compute the internal force vector
                 ! Set twin embedding flag to 1
                 iTwEmbStp = 1
                 elmt_stat(2, elmt_number) = iTwEmbStp
+              end if
+
+              if (isGbElem) then
+                nuc_prob(elmt_number) = PtauMax
               end if
 
             else  ! Twinning detected in the previous increment
@@ -1427,6 +1437,7 @@ C       Contents of r_Array
             call SMAFloatArrayDelete(11)
             call SMAIntArrayDelete(12)
             call SMAFloatArrayDelete(13)
+            call SMAFloatArrayDelete(14)
           end if
         end if
 
@@ -1469,6 +1480,8 @@ C       Contents of r_Array
         pointer (ptr_tw_dec, tw_dec)
         real*8 elmt_stress(12, *)
         pointer (ptr_elmt_stress, elmt_stress)
+        real*8 nuc_prob(*)
+        pointer (ptr_nuc_prob, nuc_prob)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1559,6 +1572,9 @@ C       Contents of r_Array
         ! Elmt average stress components
         ptr_elmt_stress = SMAFloatArrayCreate(13, 12*num_elems, 0.d0)
 
+        ! Nucleation probability
+        ptr_nuc_prob = SMAFloatArrayCreate(14, num_elems, 0.d0)
+
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -1603,6 +1619,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         integer kInc
         character*20 str_kinc
 
+        if (mod(kInc,1000).eq.0) then
+          call write_vuel_results(kInc)
+        end if
 
         ! Access number of twins from Abaqus SMA array
         ptr_size_list = SMAIntArrayAccess(1)
@@ -1713,10 +1732,6 @@ C     &             tw_el_wid, nxt_w_elmt)
             end if
           end do
         end do
-
-        if (mod(kInc,1000).eq.0) then
-          call write_vuel_results(kInc)
-        end if
       end subroutine
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -1805,6 +1820,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         pointer (ptr_elmt_stat, elmt_stat)
         real*8 elmt_stress(12, *)
         pointer (ptr_elmt_stress, elmt_stress)
+        real*8 nuc_prob(*)
+        pointer (ptr_nuc_prob, nuc_prob)
         character (len = 1) :: pathseperator = '/'
         character (len = 256) :: outdir, elstfilepath
         integer :: lenoutdir
@@ -1813,6 +1830,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         ptr_size_list = SMAIntArrayAccess(1)
         ptr_elmt_stat = SMAIntArrayAccess(6)
         ptr_elmt_stress = SMAFloatArrayAccess(13)
+        ptr_nuc_prob = SMAFloatArrayAccess(14)
         num_elems = size_list(2)
         num_nodes = size_list(3)
 
@@ -1834,6 +1852,16 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         open(newunit = io, file = elstfilepath, status = 'new')
         do iel=1,num_elems
           write(io,*) elmt_stress(:, iel)
+        end do
+
+        close(io)
+
+        elstfilepath = trim(outdir)//pathseperator//'kinc_nuc_prob_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+
+        open(newunit = io, file = elstfilepath, status = 'new')
+        do iel=1,num_elems
+          write(io,*) nuc_prob(iel)
         end do
 
         close(io)

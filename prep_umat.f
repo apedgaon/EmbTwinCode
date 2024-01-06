@@ -491,7 +491,8 @@ C         for umat stress to vuel stress
         stress(6) = rSig(2, 3)
       end subroutine
 
-      subroutine check_twin_nucleation(stress, Smat, dfgrd, iTwinFlag)
+      subroutine check_twin_nucleation(stress, Smat, dfgrd, iTwinFlag,
+     &                                 PtauMax)
         implicit none
 
         integer :: iTwinFlag, i ! Twinning nucleation flag
@@ -507,6 +508,7 @@ C         for umat stress to vuel stress
         real*8 P_0            ! Threshold Probability of twin nucleation
         real*8 dfgrd(3, 3)    ! Deformation Gradient
         real*8 dfgrdinv(3, 3) ! Deformation Gradient Inverse
+        real*8 PtauMax        ! Max probability in an element
 
         ! Set material parameters
         tau_c = 200.d0      ! TODO: Different critical stress for different types of twin
@@ -536,6 +538,7 @@ C         for umat stress to vuel stress
 
           Lambda_tau = (tau / tau_c)**beta
           P_tau = 1.d0 - exp(-Lambda_tau)
+          PtauMax = max(PtauMax, P_tau)
           if (P_tau.gt.P_0) then
             iTwinFlag = i
             exit

@@ -1415,13 +1415,13 @@ C       Contents of r_Array
             call read_gb_elements()
           end if
         else if (lop.eq.j_int_EndIncrement) then
-          if (mod(kInc,400).eq.0) then
+          !if (mod(kInc,400).eq.0) then
             call Mutexlock(1)
             if (myThreadID.eq.0) then
               call solve_twin_propagation(kInc)
             end if
             call MutexUnlock(1)
-          end if
+          !end if
         else if (lop.eq.j_int_EndAnalysis) then
           if (myThreadID.eq.0) then
             call SMAIntArrayDelete(1)
@@ -1823,7 +1823,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         real*8 nuc_prob(*)
         pointer (ptr_nuc_prob, nuc_prob)
         character (len = 1) :: pathseperator = '/'
-        character (len = 256) :: outdir, elstfilepath
+        character (len = 256) :: outdir, filepath
         integer :: lenoutdir
         character*20 str_kinc
 
@@ -1836,30 +1836,30 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         write(str_kinc, '(I0)') kInc
         call vgetoutdir(outdir, lenoutdir)
-        elstfilepath = trim(outdir)//pathseperator//'elmt_stat_'
+        filepath = trim(outdir)//pathseperator//'elmt_stat_'
      &                  //trim(adjustl(str_kinc))//'.dat'
 
-        open(newunit = io, file = elstfilepath, status = 'new')
+        open(newunit = io, file = filepath, status = 'new')
         do iel=1,num_elems
           write(io,*) elmt_stat(1, iel)
         end do
 
         close(io)
 
-        elstfilepath = trim(outdir)//pathseperator//'elmt_stress_'
+        filepath = trim(outdir)//pathseperator//'elmt_stress_'
      &                  //trim(adjustl(str_kinc))//'.dat'
 
-        open(newunit = io, file = elstfilepath, status = 'new')
+        open(newunit = io, file = filepath, status = 'new')
         do iel=1,num_elems
           write(io,*) elmt_stress(:, iel)
         end do
 
         close(io)
 
-        elstfilepath = trim(outdir)//pathseperator//'kinc_nuc_prob_'
+        filepath = trim(outdir)//pathseperator//'kinc_nuc_prob_'
      &                  //trim(adjustl(str_kinc))//'.dat'
 
-        open(newunit = io, file = elstfilepath, status = 'new')
+        open(newunit = io, file = filepath, status = 'new')
         do iel=1,num_elems
           write(io,*) nuc_prob(iel)
         end do

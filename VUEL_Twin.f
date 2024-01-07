@@ -1836,7 +1836,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         write(str_kinc, '(I0)') kInc
         call vgetoutdir(outdir, lenoutdir)
-        filepath = trim(outdir)//pathseperator//'elmt_stat_'
+        filepath = trim(outdir)//pathseperator//'kinc_elmt_stat_'
      &                  //trim(adjustl(str_kinc))//'.dat'
 
         open(newunit = io, file = filepath, status = 'new')
@@ -1846,7 +1846,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         close(io)
 
-        filepath = trim(outdir)//pathseperator//'elmt_stress_'
+        filepath = trim(outdir)//pathseperator//'kinc_elmt_stress_'
      &                  //trim(adjustl(str_kinc))//'.dat'
 
         open(newunit = io, file = filepath, status = 'new')

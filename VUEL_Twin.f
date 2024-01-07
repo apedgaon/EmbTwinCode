@@ -824,7 +824,7 @@ C               Compute the internal force vector
                 elmt_stat(2, elmt_number) = iTwEmbStp
               end if
 
-              if (isGbElem) then
+              if ((kstep.gt.0).and.isGbElem) then
                 nuc_prob(elmt_number) = PtauMax
               end if
 

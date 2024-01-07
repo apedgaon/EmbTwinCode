@@ -1416,11 +1416,14 @@ C       Contents of r_Array
           end if
         else if (lop.eq.j_int_EndIncrement) then
           !if (mod(kInc,400).eq.0) then
-            call Mutexlock(1)
-            if (myThreadID.eq.0) then
-              call solve_twin_propagation(kInc)
+          call Mutexlock(1)
+          if (myThreadID.eq.0) then
+            call solve_twin_propagation(kInc)
+            if (mod(kInc,1000).eq.0) then
+              call write_vuel_results(kInc)
             end if
-            call MutexUnlock(1)
+          end if
+          call MutexUnlock(1)
           !end if
         else if (lop.eq.j_int_EndAnalysis) then
           if (myThreadID.eq.0) then
@@ -1618,10 +1621,6 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         integer :: lenoutdir
         integer kInc
         character*20 str_kinc
-
-        if (mod(kInc,1000).eq.0) then
-          call write_vuel_results(kInc)
-        end if
 
         ! Access number of twins from Abaqus SMA array
         ptr_size_list = SMAIntArrayAccess(1)

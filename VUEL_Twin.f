@@ -373,6 +373,8 @@ C       Twin Code Implementation Started
         pointer (ptr_elmt_stress, elmt_stress)
         real*8 nuc_prob(*)
         pointer (ptr_nuc_prob, nuc_prob)
+        real*8 disp(3, *)
+        pointer (ptr_disp, disp)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac
@@ -453,6 +455,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_tw_dec = SMAIntArrayAccess(12)
           ptr_elmt_stress = SMAFloatArrayAccess(13)
           ptr_nuc_prob = SMAFloatArrayAccess(14)
+          ptr_disp = SMAFloatArrayAccess(15)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -556,6 +559,15 @@ C>>>        Get nodal coordinates, finite deformation
             if (kstep.gt.0) then
               do n = 1, nnode
                 nodal_coords(:, elmt_conn(n, elmt_number))=rCoords(:, n)
+              end do
+
+              do n = 1, nnode
+                disp(1, elmt_conn(n, elmt_number)) =
+     &                                         u(kblock, (n-1)*mcrd + 1)
+                disp(2, elmt_conn(n, elmt_number)) =
+     &                                         u(kblock, (n-1)*mcrd + 2)
+                disp(3, elmt_conn(n, elmt_number)) =
+     &                                         u(kblock, (n-1)*mcrd + 3)
               end do
             end if
 
@@ -1441,6 +1453,7 @@ C       Contents of r_Array
             call SMAIntArrayDelete(12)
             call SMAFloatArrayDelete(13)
             call SMAFloatArrayDelete(14)
+            call SMAFloatArrayDelete(15)
           end if
         end if
 
@@ -1485,6 +1498,8 @@ C       Contents of r_Array
         pointer (ptr_elmt_stress, elmt_stress)
         real*8 nuc_prob(*)
         pointer (ptr_nuc_prob, nuc_prob)
+        real*8 disp(3, *)
+        pointer (ptr_disp, disp)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1000.txt'
@@ -1577,6 +1592,9 @@ C       Contents of r_Array
 
         ! Nucleation probability
         ptr_nuc_prob = SMAFloatArrayCreate(14, num_elems, 0.d0)
+
+        ! Nodal displacement
+        ptr_disp = SMAFloatArrayCreate(15, 3*num_nodes, 0.d0)
 
       end subroutine
 
@@ -1813,7 +1831,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         implicit none
 #include <SMAAspUserSubroutines.hdr>
         integer kInc
-        integer num_nodes, num_elems, iel, io
+        integer num_nodes, num_elems, iel, io, ind
         integer size_list(*), elmt_stat(2, *)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
@@ -1821,6 +1839,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         pointer (ptr_elmt_stress, elmt_stress)
         real*8 nuc_prob(*)
         pointer (ptr_nuc_prob, nuc_prob)
+        real*8 disp(3, *)
+        pointer (ptr_disp, disp)
         character (len = 1) :: pathseperator = '/'
         character (len = 256) :: outdir, filepath
         integer :: lenoutdir
@@ -1830,6 +1850,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         ptr_elmt_stat = SMAIntArrayAccess(6)
         ptr_elmt_stress = SMAFloatArrayAccess(13)
         ptr_nuc_prob = SMAFloatArrayAccess(14)
+        ptr_disp = SMAFloatArrayAccess(15)
         num_elems = size_list(2)
         num_nodes = size_list(3)
 
@@ -1861,6 +1882,16 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         open(newunit = io, file = filepath, status = 'new')
         do iel=1,num_elems
           write(io,*) nuc_prob(iel)
+        end do
+
+        close(io)
+
+        filepath = trim(outdir)//pathseperator//'kinc_disp_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+
+        open(newunit = io, file = filepath, status = 'new')
+        do ind=1,num_nodes
+          write(io,*) disp(:, ind)
         end do
 
         close(io)

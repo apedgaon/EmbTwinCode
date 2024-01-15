@@ -394,7 +394,7 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nstatv,  props,   nprops,
      &               coords,  drot,    pnewdt,  celent,  dfgrd0,
      &               dfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc)
+     &               kstep,   kinc, rW, iterErr, Fe)
       
       implicit real*8(a-h,o-z)
       dimension
@@ -412,15 +412,19 @@ C         for umat stress to vuel stress
      &  statev(nstatv),      ! State variables array
      &  stran(ntens),        ! Strain vector at beginning of increment
      &  stress(ntens),       ! Cauchy stress vector
-     &  time(2)              ! Step time (1) and total time (2)
+     &  time(2),             ! Step time (1) and total time (2)
+     &  rW(3, 3, 3, 3),
+     &  Fe(3, 3)
         character*80 cmname
+        integer iterErr
 
         ! Local subroutine variables
         real*8 c11, c12, c44, c33, c55, c13, theta, pi
         real*8 th, phi, om, detF
         real*8 rCe(3, 3), rEe(3, 3), del(3, 3), rS(3, 3)
         real*8 C_c(3, 3, 3, 3), C(3, 3, 3, 3), rSig(3, 3)
-        real*8 q_0(3, 3)
+        real*8 q_0(3, 3), temp, Finv(3, 3)
+        integer i, j, k, l, m, n, p
 
         pi = 4.d0 * atan(1.d0) ! PI
 
@@ -471,7 +475,7 @@ C         for umat stress to vuel stress
         call ROTMAT(TH,PHI,OM,q_0)
         call rotate_4th(q_0,C_c,C)
 
-        ! Find Green Lagrange strain and then 2nd PK stress (linear elastic)
+        ! Find Green Lagrange strain and then 2nd PK stress (St. Venant Kirchoff Model)
         rCe = matmul(transpose(dfgrd1), dfgrd1)
         rEe = 0.5d0 * (rCe - del)
         rS = reshape( (/((sum(c(i,j,:,:)*rEe),
@@ -481,6 +485,39 @@ C         for umat stress to vuel stress
         detF = determinant(dfgrd1)
         rSig = 1.d0 / detF *
      &    matmul(dfgrd1, matmul(rS, transpose(dfgrd1)))
+
+        ! There is no implicit algorithm so set iterErr = 0
+        ! Also there is just 1 def grd
+        iterErr = 0
+        Fe = dfgrd1
+
+        ! Form Jacobian for St. Venant Kirchoff Model
+        call inverse_3x3(dfgrd1, Finv)
+        rW = 0.d0
+        do l = 1, 3
+          do k = 1, 3
+            do j = 1, 3
+              do i = 1, 3
+                temp = 0.d0
+                do m = 1, 3
+                  temp = temp + del(i, k) * rS(l, m) * dfgrd1(j, m) +
+     &                   dfgrd1(i, m) * rS(m, l) * del(j, k)
+
+                  do n = 1, 3
+                    temp = temp -
+     &               Finv(l, k) * dfgrd1(i, m) * rS(m, n) * dfgrd1(j, n)
+                    do p = 1, 3
+                      temp = temp +
+     &                    dfgrd1(i,m)*C(m,n,p,l)*dfgrd1(k,p)*dfgrd1(j,n)
+                    end do
+                  end do
+                end do
+
+                rW(i, j, k, l) = 1.d0 / detF * temp
+              end do
+            end do
+          end do
+        end do
 
         ! Vector output of Cauchy stress
         stress(1) = rSig(1, 1)

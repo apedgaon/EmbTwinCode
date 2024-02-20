@@ -62,18 +62,18 @@
 -36.7, 191340.00, -19.7, 52230.0, 0.5, 68600.0, 9.5e-06, 2.76e-19
 3190000.0, 10000.0, 250.0, 0.6, 1.4, <SG_kine>,<SG_form>,<MatModel>
 <GaussPts>
-*Element, elset=ghost_elem, type=C3D8
-2001, 10, 11, 14, 13,  1,  2,  5,  4
-2002, 11, 12, 15, 14,  2,  3,  6,  5
-2003, 13, 14, 17, 16,  4,  5,  8,  7
-2004, 14, 15, 18, 17,  5,  6,  9,  8
-2005, 19, 20, 23, 22, 10, 11, 14, 13
-2006, 20, 21, 24, 23, 11, 12, 15, 14
-2007, 22, 23, 26, 25, 13, 14, 17, 16
-2008, 23, 24, 27, 26, 14, 15, 18, 17
+***Element, elset=ghost_elem, type=C3D8
+**2001, 10, 11, 14, 13,  1,  2,  5,  4
+**2002, 11, 12, 15, 14,  2,  3,  6,  5
+**2003, 13, 14, 17, 16,  4,  5,  8,  7
+**2004, 14, 15, 18, 17,  5,  6,  9,  8
+**2005, 19, 20, 23, 22, 10, 11, 14, 13
+**2006, 20, 21, 24, 23, 11, 12, 15, 14
+**2007, 22, 23, 26, 25, 13, 14, 17, 16
+**2008, 23, 24, 27, 26, 14, 15, 18, 17
 ** Section: Whole
-*Solid Section, elset=ghost_elem, material=ghost_mat
-,
+***Solid Section, elset=ghost_elem, material=ghost_mat
+**,
 **
 *Nset, nset=TopNodes
  3,  6,  9, 12, 15, 18, 21, 24
@@ -97,11 +97,11 @@ TopCentreNode, 2, -1.
 ** 
 ** MATERIALS
 ** 
-*Material, name=ghost_mat
-*Density
- 1.0e-15
-*ELASTIC,TYPE=ISOTROPIC
- 1.0e-10,0.0
+***Material, name=ghost_mat
+***Density
+** 1.0e-15
+***ELASTIC,TYPE=ISOTROPIC
+** 1.0e-10,0.0
 ** 
 ** BOUNDARY CONDITIONS
 ** 

@@ -625,8 +625,6 @@ C           b) shape functions and their derivatives wrt mid-step global coords
                 iTwFlg = tw_flg(twinID)
               end if
             end if
-            num_twins = 0
-            if (kstep.gt.0) num_twins = size_list(4)
 
             PtauMax = 0.d0
 
@@ -728,11 +726,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                                svars(kblock, iumatsvst:iumatsven)
 
                 ! Check for twin nucleation
-                if (num_twins.lt.max_twins) then
-                  if (isGbElem) then
-                    call check_twin_nucleation(rStress, Smat, Fe(:,:,l),
-     &                                         iTwFlg, PtauMax)
-                  end if
+                if (isGbElem) then
+                  call check_twin_nucleation(rStress, Smat, Fe(:,:,l),
+     &                                       iTwFlg, PtauMax)
                 end if
 
 C               Compute linear + quadratic bulk viscosity terms
@@ -772,32 +768,37 @@ C               Compute the internal force vector
               ! If twin nucleated
               if ((iTwFlg.ne.0).and.(iTwEmbStp.eq.0)) then
                 ! Update twin ID counter and store to elmt_status
-                size_list(4) = size_list(4) + 1
-                twinID = size_list(4)
-                elmt_stat(1, elmt_number) = twinID
+                call MutexLock(2)
+                num_twins = size_list(4)
+                if (num_twins.lt.max_twins) then
+                  size_list(4) = size_list(4) + 1
+                  twinID = size_list(4)
+                  elmt_stat(1, elmt_number) = twinID
 
-                ! Store twin type
-                tw_flg(twinID) = iTwFlg
+                  ! Store twin type
+                  tw_flg(twinID) = iTwFlg
 
-                ! Compute element centroid coordinates and store
-                rElmtCt = 0.d0
-                do n = 1, iTIntPt
-                  rElmtCt = rElmtCt + rCoords(1:3, n)
-                end do
-                rElmtCt = 1.d0 / iTIntPt * rElmtCt
-                tw_nuc(1:3, twinID) = rElmtCt
+                  ! Compute element centroid coordinates and store
+                  rElmtCt = 0.d0
+                  do n = 1, iTIntPt
+                    rElmtCt = rElmtCt + rCoords(1:3, n)
+                  end do
+                  rElmtCt = 1.d0 / iTIntPt * rElmtCt
+                  tw_nuc(1:3, twinID) = rElmtCt
 
-                ! Store global twin normal and direction (reference config.)
-                tw_nor(1:3, twinID) = rntw(:, iTwFlg)
-                tw_dir(1:3, twinID) = rmtw(:, iTwFlg)
+                  ! Store global twin normal and direction (reference config.)
+                  tw_nor(1:3, twinID) = rntw(:, iTwFlg)
+                  tw_dir(1:3, twinID) = rmtw(:, iTwFlg)
 
-                ! Initialize global twin geometry parameters (length, width, thickness)
-                tw_geom(1, twinID) = 0.d0
-                tw_geom(2, twinID) = 0.d0
-                tw_geom(3, twinID) = 1.d-4
+                  ! Initialize global twin geometry parameters (length, width, thickness)
+                  tw_geom(1, twinID) = 0.d0
+                  tw_geom(2, twinID) = 0.d0
+                  tw_geom(3, twinID) = 1.d-4
 
-                ! Store this element number as twin decider for all geometry paramters
-                tw_dec(:, twinID) = elmt_number
+                  ! Store this element number as twin decider for all geometry paramters
+                  tw_dec(:, twinID) = elmt_number
+                end if
+                call MutexUnlock(2)
               end if
 
               ! If twin nucleated or propagated
@@ -1421,6 +1422,7 @@ C       Contents of r_Array
 
         if (lop.eq.j_int_StartAnalysis) then
           call MutexInit(1)      ! initialize Mutex #1
+          call MutexInit(2)      ! initialize Mutex #2
           if (myThreadID.eq.0) then
             print *, 'Total number of threads = ', GETNUMTHREADS()
             print *, 'Start of the analysis'

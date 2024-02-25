@@ -470,7 +470,6 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
         rRho = props(1)
         c11 = props(2)
         rCd = sqrt(c11 / rRho)
-        theta = props(stmprop)
 
         ! Linear bulk viscosity coefficient
         if (props(3).le.0.d0) then
@@ -1212,27 +1211,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 svars(kblock, iumatsvst : iumatsven) =
      &                                  reshape(rFz1, (/9/))
 
-                ! Compute twin length, width and thickness evolution
-                Smatc =
-     &             matmul(Fe(:,:,l), matmul(Smat(:, :, iTwFlg), Fe_inv))
-                tau_tw = sum(sigmaU * Smatc)
-                call compute_twin_velocities(props, nprops, tau_tw,
-     &                                       theta, l_dot, w_dot, b_dot)
-
-                ! Update length, width and thickness only if this element is a decider
-                if (tw_dec(1, twinID).eq.elmt_number) then
-                  tw_geom(1, twinID) = tw_geom(1, twinID) +
-     &                                 1.d0 / iTIntPt * l_dot * dtimeCur
-                end if
-                if (tw_dec(2, twinID).eq.elmt_number) then
-                  tw_geom(2, twinID) = tw_geom(2, twinID) +
-     &                                 1.d0 / iTIntPt * w_dot * dtimeCur
-                end if
-                if (tw_dec(3, twinID).eq.elmt_number) then
-                  tw_geom(3, twinID) = tw_geom(3, twinID) +
-     &                                 1.d0 / iTIntPt * b_dot * dtimeCur
-                end if
-
                 ! Compute combined discontinuity magnitude and direction
                 alpha_h = norm2(rmh)
                 rmhu = rmh / alpha_h
@@ -1272,6 +1250,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             alpha_Z * rTdis(:) * rTBmat
                 end do
 
+                theta = 0.d0
+
                 ! Compute Final Stress (untwinned region) from existing UMAT
                 iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
                 iumatsven = offstatev(1) + l * nstatev(1)
@@ -1282,6 +1262,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           nstatev(1), nnode, elmt_number, l,
      &                           mcrd, time, dtimeCur, kstep, kinc,
      &                          .true., rWu, iterErr, Fe(:, :, l))
+
+                theta = theta + svars(kblock, iumatsvst)*(1.d0-bhratio) ! Untwinned Temperature
 
 
                 ! Compute Final Stress (twinned region) from existing UMAT
@@ -1296,11 +1278,13 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           FeZ)
 
 
+                ! Save both regions stress
                 elmt_stress(1:6, elmt_number) = rStress_U / iTIntPt +
      &                                     elmt_stress(1:6, elmt_number)
                 elmt_stress(7:12, elmt_number) = rStress_Z / iTIntPt +
      &                                    elmt_stress(7:12, elmt_number)
 
+                theta = theta + svars(kblock, iumatsvst)*bhratio    ! Twinned Temperature
 
 C               Compute linear + quadratic bulk viscosity terms
 C               Needed for damping the “ringing” in the highest element frequency
@@ -1337,6 +1321,27 @@ C               Compute the internal force vector
                     end do
                   end do
                 end do
+
+                ! Compute twin length, width and thickness evolution
+                Smatc =
+     &             matmul(Fe(:,:,l), matmul(Smat(:, :, iTwFlg), Fe_inv))
+                tau_tw = sum(sigmaU * Smatc)
+                call compute_twin_velocities(props, nprops, tau_tw,
+     &                                       theta, l_dot, w_dot, b_dot)
+
+                ! Update length, width and thickness only if this element is a decider
+                if (tw_dec(1, twinID).eq.elmt_number) then
+                  tw_geom(1, twinID) = tw_geom(1, twinID) +
+     &                                 1.d0 / iTIntPt * l_dot * dtimeCur
+                end if
+                if (tw_dec(2, twinID).eq.elmt_number) then
+                  tw_geom(2, twinID) = tw_geom(2, twinID) +
+     &                                 1.d0 / iTIntPt * w_dot * dtimeCur
+                end if
+                if (tw_dec(3, twinID).eq.elmt_number) then
+                  tw_geom(3, twinID) = tw_geom(3, twinID) +
+     &                                 1.d0 / iTIntPt * b_dot * dtimeCur
+                end if
 
               end do
 

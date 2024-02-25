@@ -278,8 +278,6 @@ C       Twin Code Implementation Started
         real*8 rBskw(3,mcrd*nnode) ! current skew-symmetric matrix operator
         real*8 Smat(3, 3, 18)      ! Twinning Schmid Tensor
         real*8 F_tw(3, 3, 18)      ! Twinning Deformation gradient
-        real*8 rm11                ! C11 vs temperature slope
-        real*8 c11_0               ! C11 at 0 K
         real*8 c11                 ! C11 at temperature theta
         real*8 theta               ! Temperature
         real*8 rCd                 ! Dilitational wave speed
@@ -381,6 +379,7 @@ C       Twin Code Implementation Started
         integer nAltInit, max_twins, num_twins
         real*8 rmhMag, bhratio, hbratio
         real*8 PtauMax
+        integer stmprop, nmprops, endmprop
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -390,17 +389,15 @@ C       Twin Code Implementation Started
                                !                   2 --> B-bar incompressible
                                !                   3 --> B-bar incompressible with localization behavior
 
-        rEpsilon  = props(10)  ! Pressure mode stabilization parameter; see Ortiz et al (1987), Eq. (21).
+        rEpsilon  = props(5)  ! Pressure mode stabilization parameter; see Ortiz et al (1987), Eq. (21).
 
         iVforType = 0
         !call sleep(20)
-        rRho = props(78)
-        call GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
 
-C       Natural coordinates of element centroid
-        rXiEtaCt(1) = 0.d0
-        rXiEtaCt(2) = 0.d0
-        rXiEtaCt(3) = 0.d0
+        ! Set offset and nprops for umat properties
+        stmprop = 14
+        nmprops = 51
+        endmprop = stmprop + nmprops - 1
 
         ! Number of state variables array and offsets array
         nstatev(1) = 148  ! svars for umat
@@ -431,9 +428,16 @@ C       Initialize Identity Matrix(3x3)
           end do
         end do
 
+        call GSPT_3D_8N(iTIntPt, rXiEtaPt, rWeightPt)
+
+C       Natural coordinates of element centroid
+        rXiEtaCt(1) = 0.d0
+        rXiEtaCt(2) = 0.d0
+        rXiEtaCt(3) = 0.d0
+
 C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
-        call comp_twin_dfgrd(del, props(77:127), 51, pi, Smat, F_tw,
-     &                       rntw, rmtw)
+        call comp_twin_dfgrd(del, props(stmprop:endmprop), nmprops, pi,
+     &                       Smat, F_tw, rntw, rmtw)
 
         ! Twin details
         max_twins = 1
@@ -463,24 +467,23 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
         end if
 
         ! Compute dilitational wave speed
-        rm11  = props(82)
-        c11_0 = props(83)
-        theta = props(77)
-        c11 = c11_0 + rm11 * theta ! based on varying temperature?
+        rRho = props(1)
+        c11 = props(2)
         rCd = sqrt(c11 / rRho)
+        theta = props(stmprop)
 
         ! Linear bulk viscosity coefficient
-        if (props(8).le.0.d0) then
+        if (props(3).le.0.d0) then
           rbv1    = 0.06d0
         else
-          rbv1    = props(8)
+          rbv1    = props(3)
         end if
 
         ! Quadratic bulk viscosity coefficient
-        if (props(9).le.0.d0) then
+        if (props(4).le.0.d0) then
           rbv2    = 1.2d0
         else
-          rbv2    = props(9)
+          rbv2    = props(4)
         end if
 
         ! Newton Raphson Correction Factor for Traction Continuity
@@ -702,10 +705,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call umat_stress(rStress,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rDfgrd0, rDfgrd1,
-     &                           props(77:127), 51, nstatev(1), nnode,
-     &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWu, iterErr,
-     &                           Fe(:, :, l))
+     &                           props(stmprop:endmprop), nmprops, 
+     &                           nstatev(1), nnode, elmt_number, l,
+     &                           mcrd, time, dtimeCur, kstep, kinc,
+     &                           .true., rWu, iterErr, Fe(:, :, l))
 
                 if (iterErr.eq.1) then
                   CALL XPLB_ABQERR(-3,'UMAT Failed to Converge in '//
@@ -847,8 +850,9 @@ C               Compute the internal force vector
               call inverse_3x3(F_tw(:, :, iTwFlg), F_tw_inv)
 
               ! compute properties for twinned region due to rotation of crystal basis
-              call compute_twin_props(rntw(:, iTwFlg), props(77:127),
-     &                                props_tw, 51, del, pi)
+              call compute_twin_props(rntw(:, iTwFlg),
+     &                                props(stmprop:endmprop), props_tw,
+     &                                nmprops, del, pi)
 
               ! Retrieve twin geometry
               rBLength = tw_geom(1, twinID)
@@ -1030,10 +1034,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   call umat_stress(rStress_U,
      &                             svars(kblock, iumatsvst:iumatsven),
      &                             rGsCoords, rFu0, rFu1,
-     &                             props(77:127), 51, nstatev(1), nnode,
-     &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false., rWu, iterErr,
-     &                             Fe(:, :, l))
+     &                             props(stmprop:endmprop), nmprops,
+     &                             nstatev(1), nnode, elmt_number, l,
+     &                             mcrd, time, dtimeCur, kstep, kinc,
+     &                             .false., rWu, iterErr, Fe(:, :, l))
 
                   ! Large change suggested by NR, reduce step by correction factor
                   if (iterErr.eq.1) then
@@ -1062,7 +1066,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   call umat_stress(rStress_Z,
      &                             svars(kblock, iumatsvst:iumatsven),
      &                             rGsCoords, rFz0h, rFz1h,
-     &                             props_tw, 51, nstatev(1), nnode,
+     &                             props_tw, nmprops, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .false., rWz, iterErr,
      &                             FeZ)
@@ -1212,7 +1216,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 Smatc =
      &             matmul(Fe(:,:,l), matmul(Smat(:, :, iTwFlg), Fe_inv))
                 tau_tw = sum(sigmaU * Smatc)
-                call compute_twin_velocities(props(77:133), 57, tau_tw,
+                call compute_twin_velocities(props, nprops, tau_tw,
      &                                       theta, l_dot, w_dot, b_dot)
 
                 ! Update length, width and thickness only if this element is a decider
@@ -1274,10 +1278,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call umat_stress(rStress_U,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rFu0, rFu1,
-     &                           props(77:127), 51, nstatev(1), nnode,
-     &                           elmt_number, l, mcrd, time, dtimeCur,
-     &                           kstep, kinc, .true., rWu, iterErr,
-     &                           Fe(:, :, l))
+     &                           props(stmprop:endmprop), nmprops,
+     &                           nstatev(1), nnode, elmt_number, l,
+     &                           mcrd, time, dtimeCur, kstep, kinc,
+     &                          .true., rWu, iterErr, Fe(:, :, l))
 
 
                 ! Compute Final Stress (twinned region) from existing UMAT
@@ -1286,7 +1290,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 call umat_stress(rStress_Z,
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rFz0h, rFz1h,
-     &                           props_tw, 51, nstatev(1), nnode,
+     &                           props_tw, nmprops, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWz, iterErr,
      &                           FeZ)

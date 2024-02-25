@@ -692,22 +692,23 @@ C         for umat stress to vuel stress
         implicit none
         integer nprops
         real*8 props(nprops), tau_tw, theta, l_dot, w_dot, b_dot
-        real*8 Gtw, bk, vl, vb, sl, p, q, fac
+        real*8 Gtw, bk, vl, vw, vb, sl, p, q, fac
         real*8, external :: ramp
 
         ! Retrieve relevant properties
-        Gtw = props(52)
-        vl = props(53)
-        vb = props(54)
-        sl = props(55)
-        p = props(56)
-        q = props(57)
-        bk = props(27)
+        bk = props(6)
+        Gtw = props(7)
+        vl = props(8)
+        vw = props(9)
+        vb = props(10)
+        sl = props(11)
+        p = props(12)
+        q = props(13)
 
         ! Compute speed of length and width propagation
         fac = exp(-Gtw/(bk*theta)*ramp(1.d0 - ramp(tau_tw / sl)**p)**q)
         l_dot = vl * fac
-        w_dot = l_dot * 0.85d0 ! TODO: New expression for w_dot needed
+        w_dot = vw * fac
         b_dot = vb * fac
       end subroutine
       subroutine find_next_twin_elem(elmt_number, elmt_conn, num_elems,

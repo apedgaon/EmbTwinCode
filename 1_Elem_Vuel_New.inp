@@ -13,29 +13,20 @@
       6,          1.5,         -1.5,           1.5
       7,          1.5,          1.5,           1.5
       8,         -1.5,          1.5,           1.5
-*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=133, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=64, Coordinates=3, Variables=2585
 1, 2, 3
 *Element, elset=VU1_ELMT, type=VU1
 1, 1, 2, 3, 4, 5, 6, 7, 8
 *UEL PROPERTY,ELSET=VU1_ELMT
-<density>,<Young>,<Poisson>,<bandwidth>,0.,0.,0.,<bulkVisc1>
-<bulkVisc2>,<StbEpsilon>,<BKA_PLSLMT>,<BKA_PHI>,<BKA_OMEGA>,<BKA_S0>,<BKA_T0>,<BKA_ALPHA>
-<BKA_C>,<BKA_A>,<BKA_QoR>,<BKA_XP>,<BKA_PALPHA>,<BKA_H0>,<BKA_SB>,<BKA_AN>
-<BKA_B>,<BKA_SA>,<BKA_P>,0.,0.,0.,0.,0.
-0.,<Y0>,<H0>,<Y1>,<H1>,<Y2>,0.,0.
-<MTS_Mu0>,<MTS_D0>,<MTS_T0>,<MTS_k>,<MTS_b>,<MTS_Edot0i>,<MTS_qi>,<MTS_pi>
-<MTS_g0i>,<MTS_Edot0e>,<MTS_qe>,<MTS_pe>,<MTS_g0e>,<MTS_sigmaa>,<MTS_sigmai>,<MTS_sigmae>
-<MTS_Edot0es>,<MTS_g0es>,<MTS_siges0>,<MTS_A0>,<MTS_A1>,<MTS_A2>,<MTS_A3>,<MTS_A4>
-<MTS_A5>,<MTS_Kappa>,<MTS_Cp0>,<MTS_Cp1>,<MTS_Cp2>,<MTS_Psi>,<MTS_Tmelt>,<DRX_T>
-<DRX_D0>,<DRX_QoR>,<DRX_d>,<iso_theta>, 298.00, 4.54e-09, 5.23e+08, 5.60e-06
-0.30, -52.0, 177590.00, 13.3, 87570.00, -32.70, 45010.00, 6.7
-5.5e-07, 2.00e+06, 0.182, 0.25, 0.122, 0.122, 0.070, 0.625
-0.137, 0.122, 1.000, 0.000, 1.00e-12, 40800.00, 1.38e-23, 0.00
-5.00, 0.000, 90.0, 0.0, 0.0, 18, 1615.38, 2.50e-02
-20.00, 12.0, 180.0, 2.00, 0.0, 0.0, 2.9e-07, 2.9e-07
--36.7, 191340.00, -19.7, 52230.0, 0.5, 68600.0, 9.5e-06, 2.76e-19
-3190000.0, 10000.0, 250.0, 0.6, 1.4, <SG_kine>,<SG_form>,<MatModel>
-<GaussPts>
+<density>, <Young>, <bulkVisc1>, <bulkVisc2>, <StbEpsilon>, 1.38e-23, 2.76e-19, 3190000.0
+2712000.0, 10000.0, 250.0, 0.6, 1.4, 298.00, 4.54e-09, 5.23e+08
+5.60e-06, 0.30, -52.0, 177590.00, 13.3, 87570.00, -32.70, 45010.00
+6.7, 5.5e-07, 2.00e+06, 0.182, 0.25, 0.122, 0.122, 0.070
+0.625, 0.137, 0.122, 1.000, 0.000, 1.00e-12, 40800.00, 1.38e-23
+0.00, 5.00, 0.000, 90.0, 0.0, 0.0, 18, 1615.38
+2.50e-02, 20.00, 12.0, 180.0, 2.00, 0.0, 0.0, 2.9e-07
+2.9e-07, -36.7, 191340.00, -19.7, 52230.0, 0.5, 68600.0, 9.5e-06
+<SG_kine>, <SG_form>, <MatModel>, <GaussPts>
 ***Element, elset=ghost_elem, type=C3D8
 **2, 1, 2, 3, 4, 5, 6, 7, 8
 ** Section: Whole

@@ -396,11 +396,11 @@ C       Twin Code Implementation Started
 
         ! Set offset and nprops for umat properties
         stmprop = 14
-        nmprops = 51
-        endmprop = stmprop + nmprops - 1
+        nmprops = nprops - stmprop + 1
+        endmprop = nprops
 
         ! Number of state variables array and offsets array
-        nstatev(1) = 148  ! svars for umat
+        nstatev(1) = (nsvars - 9*8 - 9*8 - 9*8 - 1) / 16  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
         nstatev(3) = 9    ! svars for storing discontinuity vectors
         nstatev(4) = 1    ! svars for storing band width offset
@@ -412,7 +412,7 @@ C       Twin Code Implementation Started
         offstatev(6) = offstatev(5) + 8 * nstatev(3)  ! discontinuity vector for 8 gs pts
         offstatev(7) = offstatev(6) + nstatev(4)
         ! 148*8 + 148*8 + 9*8 + 9*8 + 9*8 + 1 = 2585
-        ! Set "variables=2584" for user elements in the input file
+        ! Set "variables=2585" for user elements in the input file
 
         ! Define PI
         pi = 4.d0 * atan(1.d0)

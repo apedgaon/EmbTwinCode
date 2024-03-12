@@ -349,9 +349,7 @@ C         for umat stress to vuel stress
           ntens = ndi + nshr
           rUmatStress = 0.d0
           rW = 0.d0
-          if (((kstep.eq.0).or.(kstep.eq.1)).and.(kinc.eq.0)) then
-              dtime = 1.d-9
-          end if
+          if (kinc.eq.0)  dtime = 1.d-9   ! handle 0 dtimeCur in the begining of explicit
 
           if (lEditSvars) then    ! During regular update
             call umat_crys(rUmatStress,  hvars,  ddsdde,  sse,  spd,
@@ -374,9 +372,7 @@ C         for umat stress to vuel stress
      &               kstep,   kinc, rW, iterErr, Fe)
           end if
 
-          ! if (itererr.eq.1) then
-          !   CALL XPLB_ABQERR(-3,'UMAT convergence failed!',0,0.d0,' ')
-          ! end if
+          if (kinc.eq.0)  dtime = 0.d0 ! Set the vuel dtime back to 0 for initial increment
 
           rStress(1) = rUmatStress(1)
           rStress(2) = rUmatStress(2)

@@ -559,9 +559,9 @@ C>>>        Get nodal coordinates, finite deformation
 
             ! Update global nodal coordinates
             if (kstep.gt.0) then
-              do n = 1, nnode
-                nodal_coords(:, elmt_conn(n, elmt_number))=rCoords(:, n)
-              end do
+              ! do n = 1, nnode
+              !   nodal_coords(:, elmt_conn(n, elmt_number))=rCoords(:, n)
+              ! end do
 
               do n = 1, nnode
                 disp(1, elmt_conn(n, elmt_number)) =
@@ -631,7 +631,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             PtauMax = 0.d0
 
             if((twinID.eq.0).or.(iTwEmbStp.ge.2)) then   ! No twinning detected in previous increment
-              Fe_m = 0.d0                                ! or twinning detected by tracking
+              !Fe_m = 0.d0                                ! or twinning detected by tracking
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -679,7 +679,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Step 1, Inc 1, set def gradient to identity
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
                 iumatsven = offstatev(3) + l * nstatev(2)
-                if (kinc.le.1) then
+                if (kinc.lt.1) then
                   svars(kblock, iumatsvst : iumatsven) =
      &                                    reshape(del, (/9/))
                 end if
@@ -714,8 +714,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             'unlocalized region!', 0,0.d0,' ')
                 end if
 
-                ! Add to mean deformation gradient
-                Fe_m = Fe_m + 1.d0 / iTIntPt * Fe(:, :, l)
+                ! Write to global element stress
+                !Fe_m = Fe_m + 1.d0 / iTIntPt * Fe(:, :, l)
                 if (kstep.gt.0) then
                   elmt_stress(1:6, elmt_number) = rStress / iTIntPt +
      &                                     elmt_stress(1:6, elmt_number)

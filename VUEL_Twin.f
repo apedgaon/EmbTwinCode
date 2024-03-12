@@ -767,6 +767,11 @@ C               Compute the internal force vector
 
               end do
 
+              ! Save max nucleation probability
+              if ((kstep.gt.0).and.isGbElem) then
+                nuc_prob(elmt_number) = PtauMax
+              end if
+
               ! If twin nucleated
               if ((iTwFlg.ne.0).and.(iTwEmbStp.eq.0)) then
                 ! Update twin ID counter and store to elmt_status
@@ -837,10 +842,6 @@ C               Compute the internal force vector
                 ! Set twin embedding flag to 1
                 iTwEmbStp = 1
                 elmt_stat(2, elmt_number) = iTwEmbStp
-              end if
-
-              if ((kstep.gt.0).and.isGbElem) then
-                nuc_prob(elmt_number) = PtauMax
               end if
 
             else  ! Twinning detected in the previous increment

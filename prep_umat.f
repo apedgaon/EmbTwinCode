@@ -976,3 +976,71 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
           ramp = x
         end if
       end function
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C        Computes initial guesses for NR iterations required for       C
+C     enforcing traction continuity between twinned and untwinned      C
+C                             region                                   C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+      subroutine init_guess(nAltInit, rmh, svars, nblock, nsvars,
+     &                      kblock, l, offstatev, nstatev, dt, rdL,
+     &                      rntwc, hbratio, iTwFlg, iTwEmbStp)
+        implicit none
+        ! Define input variables
+        real*8 rmh(3), svars(nblock, nsvars), dt, rdL(3, 3), rntwc(3)
+        real*8 hbratio
+        integer nAltInit, nblock, kblock, l, nsvars
+        integer offstatev(7), nstatev(4), iTwFlg, iTwEmbStp
+
+        ! Define internal variables
+        real*8 rmhdot(3), rmhu(3), rTdL, rmhMag
+        integer ist, i, j
+
+        if (nAltInit.eq.0) then ! First initial guess
+          ! Retrieve previously stored values
+          ist = offstatev(5) + (l - 1) * nstatev(3)
+          rmh(1) = svars(kblock, ist + 4)
+          rmh(2) = svars(kblock, ist + 5)
+          rmh(3) = svars(kblock, ist + 6)
+
+          ! If twin embedding step, guess based on twin shear magnitude
+          if (iTwEmbStp.ne.0) then
+            if (iTwFlg.le.6) then
+              rmhMag = 0.175d0 / (hbratio - 1.d0)
+            else if ((iTwFlg.ge.7).and.(iTwFlg.le.12)) then
+              rmhMag = 0.218d0 / (hbratio - 1.d0)
+            else
+              rmhMag = 0.098d0 / (hbratio - 1.d0)
+            end if
+            rmh = rmhMag * rmh
+          end if
+        else if (nAltInit.eq.1) then ! Second guess, try 0
+          rmh = 0.d0
+        else if (nAltInit.eq.2) then ! Third guess based on rate of rmh
+          ist = offstatev(5) + (l - 1) * nstatev(3)
+          rmh(1) = svars(kblock, ist + 4)
+          rmh(2) = svars(kblock, ist + 5)
+          rmh(3) = svars(kblock, ist + 6)
+          rmhdot(1) = svars(kblock, ist + 7)
+          rmhdot(2) = svars(kblock, ist + 8)
+          rmhdot(3) = svars(kblock, ist + 9)
+          rmh = rmh + rmhdot * dt
+        else if (nAltInit.eq.3) then  ! Fourth guess based on delta L projected on discontinuous mode
+          ist = offstatev(5) + (l - 1) * nstatev(3)
+          rmh(1) = svars(kblock, ist + 4)
+          rmh(2) = svars(kblock, ist + 5)
+          rmh(3) = svars(kblock, ist + 6)
+          rmhu = rmh / norm2(rmh)
+          rTdL = 0.d0
+          do j = 1, 3
+            do i = 1, 3
+              rTdL = rTdL + rmhu(i)*rntwc(j)*rdL(i, j)
+            end do
+          end do
+          rmh = -rTdL/(hbratio - 1.d0) * rmhu
+        else    ! If above didn't work, try random numbers
+          call random_number(rmh)
+          rmh = 1.d-4 * rmh
+        end if
+      end subroutine

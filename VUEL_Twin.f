@@ -929,15 +929,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
-                ! Retrieve discontinuous mode normal
-                iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
-                rntwc(1) = svars(kblock, iumatsvst + 1)
-                rntwc(2) = svars(kblock, iumatsvst + 2)
-                rntwc(3) = svars(kblock, iumatsvst + 3)
-                rmh(1) = svars(kblock, iumatsvst + 4)
-                rmh(2) = svars(kblock, iumatsvst + 5)
-                rmh(3) = svars(kblock, iumatsvst + 6)
-
                 ! b/h ratio and handle b >= h
                 bhratio = rBWidth / rElmtSize
                 if (bhratio.ge.0.9999d0) bhratio = 0.9999d0
@@ -946,63 +937,42 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 if (iTwEmbStp.ne.0) then
                   ! No twinning part in previous step
                   rFz0h = rFz0
-
-                  ! Guess for initial rmh is some factor times shear direction
-                  rmhMag = 7.d-5
-                  if (iTwFlg.le.6) then
-                    rmhMag = 0.175d0 / (hbratio - 1.d0)
-                  else if ((iTwFlg.ge.7).and.(iTwFlg.le.12)) then
-                    rmhMag = 0.218d0 / (hbratio - 1.d0)
-                  else
-                    rmhMag = 0.098d0 / (hbratio - 1.d0)
-                  end if
-                  rmh = rmhMag * rmh
                 else
                   ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)
                 end if
 
+                ! Retrieve discontinuous mode normal
+                iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
+                rntwc(1) = svars(kblock, iumatsvst + 1)
+                rntwc(2) = svars(kblock, iumatsvst + 2)
+                rntwc(3) = svars(kblock, iumatsvst + 3)
+
+                ! Initial guess for rmh (discontinuous direction vector)
+                nAltInit = 0
+                call init_guess(nAltInit, rmh, svars, nblock, nsvars,
+     &                          kblock, l, offstatev, nstatev, dtimeCur,
+     &                          rdVelGrd, rntwc, hbratio, iTwFlg,
+     &                          iTwEmbStp)
+
                 ! DEBUGGING
                 print*, "l = ", l
                 print*, "rmh = ", rmh
 
-                nAltInit = 0
                 iter = 0
                 rmh0 = 0.d0
                 rdmh = 0.d0
                 g_tr_err = 1.d3
+
+                ! Traction Continuity Newton Iterations Loop
                 do while(nAltInit.le.6)
+                  ! If iterations max out, try alternate initial guess
                   if (iter.eq.100) then
                     nAltInit = nAltInit + 1
-                    if (nAltInit.eq.1) then
-                      rmh = 0.d0
-                    else if (nAltInit.eq.2) then
-                      iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
-                      rmh(1) = svars(kblock, iumatsvst + 4)
-                      rmh(2) = svars(kblock, iumatsvst + 5)
-                      rmh(3) = svars(kblock, iumatsvst + 6)
-                      rmhdot(1) = svars(kblock, iumatsvst + 7)
-                      rmhdot(2) = svars(kblock, iumatsvst + 8)
-                      rmhdot(3) = svars(kblock, iumatsvst + 9)
-                      rmh = rmh + rmhdot * dtimeCur
-                    else if (nAltInit.eq.3) then
-                      iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
-                      rmh(1) = svars(kblock, iumatsvst + 4)
-                      rmh(2) = svars(kblock, iumatsvst + 5)
-                      rmh(3) = svars(kblock, iumatsvst + 6)
-                      rmhu = rmh / norm2(rmh)
-                      rTdL = 0.d0
-                      do j = 1, 3
-                        do i = 1, 3
-                          rTdL = rTdL + rmhu(i)*rntwc(j)*rdVelGrd(i, j)
-                        end do
-                      end do
-                      rmh = -rTdL/(hbratio - 1.d0) * rmhu
-                    else
-                      call random_number(rmh)
-                      rmh = 1.d-4 * rmh
-                    end if
-
+                    call init_guess(nAltInit, rmh, svars, nblock,
+     &                              nsvars, kblock, l, offstatev,
+     &                              nstatev, dtimeCur, rdVelGrd, rntwc,
+     &                              hbratio, iTwFlg, iTwEmbStp)
                     iter = 0
                     g_tr_err = 1.d3
                     print*, "nAltInit = ", nAltInit

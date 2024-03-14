@@ -3008,7 +3008,7 @@ C**************************************************************
         ! Restack rQ2 to fourth order rQ
         do j = 1, 9
           do i = 1, 9
-            rQ(map(i,1), map(i,2), map(j,1), map(j,2)) = rh2(i,j)
+            rQ(map(i,1), map(i,2), map(j,1), map(j,2)) = rhs2(i,j)
           end do
         end do
       end subroutine

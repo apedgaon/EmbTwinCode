@@ -1517,7 +1517,7 @@ C       Contents of r_Array
         end do
         close(120)
 
-        ptr_elmt_conn = SMAIntArrayCreate(3, 8*num_elems, -1) ! TODO: Later check if we need storing this
+        ptr_elmt_conn = SMAIntArrayCreate(3, 8*num_elems, -1)
         open(121, file = ecfilepath, status = 'old',action = 'read')
         do i = 1, num_elems
           read(121, *) dummy, elmt_conn(1:8, i)
@@ -1543,7 +1543,7 @@ C       Contents of r_Array
         end do
         close(120)
 
-        ptr_nodal_coords = SMAFloatArrayCreate(5, 3*num_nodes, 0.d0) ! TODO: Later check if we need storing this
+        ptr_nodal_coords = SMAFloatArrayCreate(5, 3*num_nodes, 0.d0)
         open(121, file = ncfilepath, status = 'old',action = 'read')
         do i = 1, num_nodes
           read(121, *) dummy, nodal_coords(1:3, i)
@@ -1557,7 +1557,7 @@ C       Contents of r_Array
         size_list(3) = num_nodes
         size_list(4) = 0
 
-        ! Create element status for twinning ID
+        ! Create element status for twinning ID and embedding step flag
         ptr_elmt_stat = SMAIntArrayCreate(6, 2*num_elems, 0)
 
         ! Create arrays for twin type, nucleation coords, normal and direction

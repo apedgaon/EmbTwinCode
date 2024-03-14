@@ -1128,8 +1128,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   print*, "rFz1 = ", rFz1
                   print*, "rFz1h = ", rFz1h
                   print*, "kinc = ", kinc
-                  call write_vuel_results(kinc)
 
+                  ! TODO: put mutexlock?
+                  call write_vuel_results(kinc)
                   CALL XPLB_ABQERR(-3,'Traction Continuity failed! '//
      &                             'iTwEmbStp = %I, err = %R'  ,
      &                              iTwEmbStp, g_tr_err,' ')
@@ -1141,7 +1142,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rntwc = rntwc / norm2(rntwc)
 
                 rmtwc = matmul(Fe(:, :, l), rmtw(:, iTwFlg))
-                rmtwc = rmtwc / norm2(rmtwc)
+                rmtwc = rmtwc / norm2(rmtwc)    ! TODO: Remove, not used anymore
 
                 iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
                 svars(kblock, iumatsvst + 1) = rntwc(1)

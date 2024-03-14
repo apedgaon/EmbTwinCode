@@ -2965,7 +2965,7 @@ C**************************************************************
         integer :: nslip, map(9,2), i, j, k, l, indx(9)
         real*8 :: rK(3,3,3,3), rD(3,3,3,3), dgamma(nslip)
         real*8 :: rJ(3,3,3,3,nslip), rQ(3,3,3,3), rhs(3,3,3,3)
-        real*8 :: rhs2(9,9), rK2(9,9), rQ2(9,9), rk2Inv(9,9)
+        real*8 :: rhs2(9,9), rK2(9,9), rk2Inv(9,9), rdval
 
         ! Compute rhs = D - Summation dgamma(slp) * J(slp)
         rhs = rD
@@ -3000,13 +3000,15 @@ C**************************************************************
         end do
 
         ! Compute Q = K^-1 rhs
-        call matinv(rK2, 9, 9, indx, rK2Inv)
-        rQ2 = matmul(rK2Inv, rhs2)
+        call ludcmp(rK2, 9, 9, indx, rdval)
+        do j = 1, 9
+          call lubksb(rK2, 9, 9, indx, rhs2(:, j))
+        end do
 
         ! Restack rQ2 to fourth order rQ
         do j = 1, 9
           do i = 1, 9
-            rQ(map(i,1), map(i,2), map(j,1), map(j,2)) = rQ2(i,j)
+            rQ(map(i,1), map(i,2), map(j,1), map(j,2)) = rh2(i,j)
           end do
         end do
       end subroutine

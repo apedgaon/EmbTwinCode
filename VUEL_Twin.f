@@ -1800,3 +1800,4 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       include 'gdefgrad_3D.f'
       include 'fcc_umat_lbl34_Ti.f'
       include 'Gstrain_3D.f'
+      include 'calc_new_jac.f'

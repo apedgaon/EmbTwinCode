@@ -1130,7 +1130,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   print*, "kinc = ", kinc
 
                   ! TODO: put mutexlock?
-                  call write_vuel_results(kinc)
+                  call write_vuel_results(kinc, time(2))
                   CALL XPLB_ABQERR(-3,'Traction Continuity failed! '//
      &                             'iTwEmbStp = %I, err = %R'  ,
      &                              iTwEmbStp, g_tr_err,' ')
@@ -1396,10 +1396,12 @@ C       Contents of r_Array
         integer kStep
         integer kInc
         integer myThreadID
+        real*8 time
 
         kStep = i_Array(i_int_kStep)
         kInc  = i_Array(i_int_kInc)
         myThreadID = get_thread_id()
+        time = r_Array(i_flt_TotalTime)
 
         if (lop.eq.j_int_StartAnalysis) then
           call MutexInit(1)      ! initialize Mutex #1
@@ -1415,7 +1417,7 @@ C       Contents of r_Array
           if (myThreadID.eq.0) then
             call solve_twin_propagation(kInc)
             if (mod(kInc,1000).eq.0) then
-              call write_vuel_results(kInc)
+              call write_vuel_results(kInc, time)
             end if
           end if
           call MutexUnlock(1)
@@ -1810,7 +1812,7 @@ C     Locate elmts that share Face 1 to 6 with elmt_n
       END
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-      subroutine write_vuel_results(kInc)
+      subroutine write_vuel_results(kInc, time)
         implicit none
 #include <SMAAspUserSubroutines.hdr>
         integer kInc
@@ -1828,7 +1830,10 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         character (len = 256) :: outdir, filepath
         integer :: lenoutdir
         character*20 str_kinc
+        real*8 time
+        logical exists
 
+        ! Retrieve data from global shared arrays
         ptr_size_list = SMAIntArrayAccess(1)
         ptr_elmt_stat = SMAIntArrayAccess(6)
         ptr_elmt_stress = SMAFloatArrayAccess(13)
@@ -1837,6 +1842,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         num_elems = size_list(2)
         num_nodes = size_list(3)
 
+        ! Write element status with twin id
         write(str_kinc, '(I0)') kInc
         call vgetoutdir(outdir, lenoutdir)
         filepath = trim(outdir)//pathseperator//'kinc_elmt_stat_'
@@ -1849,6 +1855,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         close(io)
 
+        ! Write element stress for both regions
         filepath = trim(outdir)//pathseperator//'kinc_elmt_stress_'
      &                  //trim(adjustl(str_kinc))//'.dat'
 
@@ -1859,6 +1866,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         close(io)
 
+        ! Write nucleation probability
         filepath = trim(outdir)//pathseperator//'kinc_nuc_prob_'
      &                  //trim(adjustl(str_kinc))//'.dat'
 
@@ -1869,6 +1877,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         close(io)
 
+        ! Write nodal displacements
         filepath = trim(outdir)//pathseperator//'kinc_disp_'
      &                  //trim(adjustl(str_kinc))//'.dat'
 
@@ -1877,6 +1886,19 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
           write(io,*) disp(:, ind)
         end do
 
+        close(io)
+
+        ! Write time for this increment
+        filepath = trim(outdir)//pathseperator//'kinc_time.dat'
+        inquire(file=filepath, exist=exists)
+        if (exists) then
+          open(newunit = io, file = filepath, status = "old",
+     &         position = "append")
+        else
+          open(newunit = io, file = filepath, status = "new")
+        end if
+
+        write(io, *) kInc, time
         close(io)
 
       end subroutine

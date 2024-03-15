@@ -16,36 +16,13 @@ c                     above variables need to be defined
      9                jdltyp, adlmag)
 
 C     Author: 
-C          Tao Jin, T-3
+C          Akhilesh Pedgaonkar, TCMMG, UW-Madison
 
-C     Date: 
-C          Created:        Sept 26th, 2017
+C     This code is adapted from the 3D shear band code developed by
+C     Jin et. al., 2019, FEAD 155, 11.
+C     This is an extension of 2D twin paper 
+C     Jin et. al., 2019, JMPS 133, 103723 to three dimensions.
 
-
-C     Update:
-C          1. fix the bug for writing state variables rAlphaN and rMvect;
-C             (Oct 30th, 2017) 
-
-C          2. Use the new modified quadrature rule proposed by Tao;
-C             (Nov 15th, 2017)
-
-
-C     Features:
-C          ABAQUS/EXPLICIT
-C          Finite deformation
-C          3D 8-node brick element
-C          Continuous shear band (CSB) propogation
-C          Global tracking (solve the heat-like equation globally)
-C          Displacement based or B-bar incompressible
-C          Isotropic elasticity or linear J2 plasticity or MTS J2 plasticity
-C          Localization flag is decided at the elmt centroid
-C          New modified quadrature rule
-
-
-
-C     Complie:
-C          Define all the real variables as real*8 (double precision),
-C          use "-double both" when compile
 
 C     Voigt notation:
 C          Different from FEAP or ABAQUS convection,
@@ -56,92 +33,6 @@ C          (3,3) -> 3
 C          (2,3) or (3,2) -> 4
 C          (1,3) or (3,1) -> 5
 C          (1,2) or (2,1) -> 6
-
-
-C    Contents of the PROPS array
-C
-C    index, i   |    PROPS(i)
-C-------------------------------------------------------------------------------------
-C    A)  Elastic & general properties (density, band width, numerical parameters, etc.)
-C
-C      1        |    Rho      Initial mass density (rho_0)
-C      2        |    E        Young's modulus
-C      3        |    Nu       Poisson's ratio
-C      4        |    b        Localization band width
-C      5        |    **UNUSED**
-C      6        |    **UNUSED**
-C      7        |    **UNUSED**
-C      8        |    b1       coefficient of linear bulk viscosity term (default=0.06)
-C      9        |    b2       coefficient of quadratic bulk viscosity term (default=1.2)
-C     10        |    Epsilon  Pressure mode stabilization parameter; see Ortiz et al (1987), Eq. (21).
-C
-C
-C    B)  Thermo-Elasto-Viscoplastic (Brown-Kim-Anand) Material Model
-C
-C     11        |    PLSLMT   limit on equiv. plastic tensil strain increment
-C     12        |    PHI      degree of implicitness [0,1]
-C     13        |    OMEGA    fraction of plastic work to heating
-C     14        |    S0       initial value for internal variable S
-C     15        |    T0       initial temperature (also used by MTS model)
-C     16        |    ALPHA    thermal expansion coefficient
-C     17        |    C        specific heat
-C     18        |    A        pre-exponential factor
-C     19        |    Q/R      activation energy divided by gas constant
-C     20        |    XP       exponent in equation for F (1/n)
-C     21        |    PALPHA   pressure sensitivity parameter
-C     22        |    H0       pre-multiplier in hardening rate equation
-C     23        |    SB       pre-multiplier for saturation value of S
-C     24        |    AN       exponent in equation for saturation value of S
-C     25        |    B        pre-multiplier for rate of static restoration
-C     26        |    SA       annealed value of S
-C     27        |    P        exponent in equation for RDOT
-C     28        |    **UNUSED**
-C     29        |    **UNUSED**
-C     30        |    **UNUSED**
-C     31        |    **UNUSED**
-C     32        |    **UNUSED**
-C     33        |    **UNUSED**
-C
-C    C) Isotropic Mises J2 Plasticity model
-C
-C     34        |    Y0       Initial yield stress
-C     35        |    H0       Initial linear isotropic hardening modulus
-C     36        |    Y1       Second yield stress
-C     37        |    H1       Second linear isotropic hardening modulus
-C     38        |    Y2       Yield stress at high strain values
-C     39        |    **UNUSED**
-C     40        |    **UNUSED**
-C
-C    D) Isotropic MTS model
-C     41        |    Mu_0     Shear modulus constants
-C     42        |    D_0      .
-C     43        |    T_0      .
-C     44        |    k        Boltzmann constant
-C     45        |    b        Magnitude of Burger's vector
-C     46        |    Edot_0i  Constants for the intrinsic-barriers term
-C     47        |    q_i      .
-C     48        |    p_i      .
-C     49        |    g_0i     .
-C     50        |    Edot_0e  Constants for the structure-evolution term
-C     51        |    q_e      .
-C     52        |    p_e      .
-C     53        |    g_0e     .
-C     54        |    sigma_a  Athermal MTS term
-C     55        |    sigma_i  Intrinsic resistance constant
-C     56        |    sigma_e  Initial structural resistance
-C     57        |    Edot_0es Saturation stress constants
-C     58        |    g_0es    .
-C     59        |    sig_es0  .
-C     60--65    |    A0--A5   Hardening premultiplier (Theta_0) constants
-C     66        |    Kappa    Hardening exponent
-C     67--69    |    Cp0--Cp2 Heat capacity constants
-C     70        |    Psi      Fraction of plastic work converted to heat
-C     71        |    T_m      Absolute melting temperature
-C     72        |    T_drx    DRX homologous temperature (no DRX if T_drx <= 0)
-C     73        |    D_0      DRX diffusion constant
-C     74        |    Q/R      DRX activation energy divided by gas constant
-C     75        |    d        DRX grain size
-C     76        | iso_theta   the theta value for the isosurface
 
 
         IMPLICIT NONE

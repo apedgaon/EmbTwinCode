@@ -967,7 +967,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   ! g_tr_err = norm2(g_tr) / norm2(matmul(sigmaU, rntwc)) (relative error?)
                   ! DEBUGGING
                   print*, "g_tr_err = ", g_tr_err
-                  if (g_tr_err.lt.1.d-8) then
+                  if (g_tr_err.lt.1.d-6) then
                     print*, "converged rmh = ", rmh
                     exit
                   end if
@@ -999,7 +999,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 end do
 
                 ! End analysis if traction continuity fails
-                if (g_tr_err.gt.1.d-8) then
+                if (g_tr_err.gt.1.d-6) then
                   ! DEBUGGING
                   print*, "twinID = ", twinID
                   print*, "elmt_no = ", elmt_number

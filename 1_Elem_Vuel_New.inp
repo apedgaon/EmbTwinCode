@@ -73,7 +73,6 @@ BottomNodeO, 3, 3
 ** Name: BC-3 Type: Displacement/Rotation
 *Boundary
 BottomNodeX, 3, 3
-BottomNodeZ, 1, 1
 ** ----------------------------------------------------------------
 ** 
 ** STEP: Compression

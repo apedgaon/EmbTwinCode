@@ -83,48 +83,39 @@ C         Compute Point Coordinates
 
       end subroutine
 
-      subroutine dfgrd_prep2(iTIntPt, rRefCoords, rCurrCoords,
-     &                       rXiEtaPt, mcrd, nnode, rDfgrd1, rGsCoords)
-C         This subroutine prepares deformation gradient and gauss point
-C         coordinates for UMAT type function.
-          implicit none
+C     This subroutine prepares deformation gradient and gauss point
+C     coordinates for umat using selectively reduced integration
+      subroutine dfgrd_prep2(rRefCoords, rCurrCoords, rXiEtaPt, mcrd,
+     &                       nnode, rDfgrd1, rGsCoords)
+        implicit none
 
-C         Integer inputs
-          integer iTIntPt, mcrd, nnode
+C       Subroutine arguments
+        integer mcrd, nnode
+        real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
+        real*8 rXiEtaPt(3)
+        real*8 rDfgrd1(3, 3)
+        real*8 rGsCoords(3)
 
-C         Reference, Current and Previous Coordinates
-          real*8 rRefCoords(mcrd, nnode), rCurrCoords(mcrd, nnode)
-          real*8 rXiEtaPt(3, iTIntPt)
+C       Additional variables for computations
+        real*8 rDetF1Bar
+        real*8 rDetF1, rXiEtaCt(3)
+        real*8, external :: determinant ! external determinant fcn
 
-C         Initalize Deformation Gradient at each Gauss Pt
-C         and Gauss Pt Coordinates
-          real*8 rDfgrd1(3, 3, iTIntPt)
-          real*8 rGsCoords(3, iTIntPt)
+        ! Compute det(F) at centroid
+        rXiEtaCt = 0.d0
+        call calc_dfgrd2(rXiEtaCt, rRefCoords, rCurrCoords, mcrd, nnode,
+     &                   rDfgrd1, rGsCoords)
+        rDetF1Bar = determinant(rDfgrd1)
 
-C         Additional variables for computations
-          integer l
-          real*8 rDetF1Bar, rSelRedIntConst
-          real*8 rDetF1(iTIntPt)
-          real*8, external :: determinant ! external determinant fcn
+        ! Compute F and det(F) at given gauss pt
+        call calc_dfgrd2(rXiEtaPt, rRefCoords, rCurrCoords, mcrd, nnode,
+     &                   rDfgrd1, rGsCoords)
+        rDetF1 = determinant(rDfgrd1)
 
-C         Compute Deformation Gradients and Gauss Pt Coordinates
-C         at each guass pt
-          rDetF1Bar = 0.d0
-          do l = 1, iTIntPt
-               call calc_dfgrd2(rXiEtaPt(:, l), rRefCoords, rCurrCoords,
-     &                          mcrd, nnode, rDfgrd1(:, :, l),
-     &                          rGsCoords(:, l))
-               rDetF1(l) = determinant(rDfgrd1(:,:,l))
-               rDetF1Bar = rDetF1Bar + rDetF1(l)
-          end do
-
-C         Scale Deformation Gradient for Selective Reduced Integration
-C         See UMAT Deformation Gradient Documentation for more details
-          rDetF1Bar = rDetF1Bar / iTIntPt
-          do l = 1, iTIntPt
-               rSelRedIntConst = (rDetF1Bar / rDetF1(l))**(1.0/3)
-               rDfgrd1(:, :, l) = rDfgrd1(:, :, l) * rSelRedIntConst
-          end do
+        ! Compute F bar from F (selectively reduced integration)
+        ! See definition of F in Abaqus standard umat
+        ! More theory in Neto et. al. (IJSS 1996, 33, 3277)
+        rDfgrd1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rDfgrd1
       end subroutine
 
       subroutine comp_vel_gr(rdVelGrd, rStrainInc, rSpinInc)

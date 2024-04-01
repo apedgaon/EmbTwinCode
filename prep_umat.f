@@ -143,12 +143,12 @@ C         See UMAT Deformation Gradient Documentation for more details
       end subroutine
 
       subroutine comp_twin_dfgrd(rImat, props, nprops, pi, Smat, F_tw,
-     &                           rnc, rmc)
+     &                           rnc, rmc, eulidx)
           implicit none
           real*8 rn(3, 18), rm(3, 18), rmc(3, 18), rnc(3, 18)
           real*8 gamma1, gamma2, gamma3
           real*8 Smat(3, 3, 18), F_tw(3, 3, 18), rImat(3, 3)
-          integer nprops
+          integer nprops, eulidx(3)
           real*8 props(nprops), th, phi, om, Q_0(3, 3), pi
           integer i, j
 
@@ -236,9 +236,9 @@ C         See UMAT Deformation Gradient Documentation for more details
           gamma3 = 0.09804551470109034d0     ! {1 0 -1 1} <1 0 -1 -2> (comp)
 
           ! Compute rotation matrix from euler angles and rotate twin basis
-          th = props(31) * pi / 180.d0
-          phi = props(32) * pi / 180.d0
-          om = props(33) * pi / 180.d0
+          th = props(eulidx(1)) * pi / 180.d0
+          phi = props(eulidx(2)) * pi / 180.d0
+          om = props(eulidx(3)) * pi / 180.d0
           call rotmat(th, phi, om, Q_0)
           rnc = matmul(Q_0, rn)
           rmc = matmul(Q_0, rm)
@@ -582,9 +582,9 @@ C         for umat stress to vuel stress
       end subroutine
 
       subroutine compute_twin_props(n_tw, props, props_tw, nprops,
-     &                              rImat, pi)
+     &                              rImat, pi, eulidx)
         implicit none
-        integer nprops
+        integer nprops, eulidx(3)
         real*8 n_tw(3)
         real*8 props(nprops)
         real*8 props_tw(nprops)
@@ -599,9 +599,9 @@ C         for umat stress to vuel stress
         real*8 pi
 
         ! Form rotation matrix corresponding to euler angles
-        th = props(31) * pi / 180.d0
-        phi = props(32) * pi / 180.d0
-        om = props(33) * pi / 180.d0
+        th = props(eulidx(1)) * pi / 180.d0
+        phi = props(eulidx(2)) * pi / 180.d0
+        om = props(eulidx(3)) * pi / 180.d0
         call rotmat(th, phi, om, Q_0)
 
         ! Form rotation matrix corresponding to twinning
@@ -617,9 +617,9 @@ C         for umat stress to vuel stress
 
         ! Form new properties for twinning with updated euler angles
         props_tw(:) = props(:)
-        props_tw(31) = th_tw * 180.d0 / pi
-        props_tw(32) = phi_tw * 180.d0 / pi
-        props_tw(33) = om_tw * 180.d0 / pi
+        props_tw(eulidx(1)) = th_tw * 180.d0 / pi
+        props_tw(eulidx(2)) = phi_tw * 180.d0 / pi
+        props_tw(eulidx(3)) = om_tw * 180.d0 / pi
       end subroutine
 
       ! Explicit sym mat -> vec

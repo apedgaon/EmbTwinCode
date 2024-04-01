@@ -270,7 +270,7 @@ C       Twin Code Implementation Started
         integer nAltInit, max_twins, num_twins
         real*8 rmhMag, bhratio, hbratio
         real*8 PtauMax
-        integer stmprop, nmprops, endmprop
+        integer stmprop, nmprops, endmprop, eulidx(3)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -287,6 +287,9 @@ C       Twin Code Implementation Started
 
         ! Set offset and nprops for umat properties
         stmprop = 14
+        eulidx(1) = 31
+        eulidx(2) = 32
+        eulidx(3) = 33
         nmprops = nprops - stmprop + 1
         endmprop = nprops
 
@@ -328,7 +331,7 @@ C       Natural coordinates of element centroid
 
 C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
         call comp_twin_dfgrd(del, props(stmprop:endmprop), nmprops, pi,
-     &                       Smat, F_tw, rntw, rmtw)
+     &                       Smat, F_tw, rntw, rmtw, eulidx)
 
         ! Twin details
         max_twins = 1
@@ -744,7 +747,7 @@ C               Compute the internal force vector
               ! compute properties for twinned region due to rotation of crystal basis
               call compute_twin_props(rntw(:, iTwFlg),
      &                                props(stmprop:endmprop), props_tw,
-     &                                nmprops, del, pi)
+     &                                nmprops, del, pi, eulidx)
 
               ! Retrieve twin geometry
               rBLength = tw_geom(1, twinID)

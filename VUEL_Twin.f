@@ -266,11 +266,11 @@ C       Twin Code Implementation Started
         pointer (ptr_disp, disp)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
-        real*8 rNRFac
+        real*8 rNRFac, rNRTol
         integer nAltInit, max_twins, num_twins
         real*8 rmhMag, bhratio, hbratio
         real*8 PtauMax
-        integer stmprop, nmprops, endmprop
+        integer stmprop, nmprops, endmprop, eulidx(3)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -287,6 +287,9 @@ C       Twin Code Implementation Started
 
         ! Set offset and nprops for umat properties
         stmprop = 14
+        eulidx(1) = 31
+        eulidx(2) = 32
+        eulidx(3) = 33
         nmprops = nprops - stmprop + 1
         endmprop = nprops
 
@@ -328,7 +331,7 @@ C       Natural coordinates of element centroid
 
 C       Compute equivalent Schmid Tensor and Deformation gradient for Deformation Twinning
         call comp_twin_dfgrd(del, props(stmprop:endmprop), nmprops, pi,
-     &                       Smat, F_tw, rntw, rmtw)
+     &                       Smat, F_tw, rntw, rmtw, eulidx)
 
         ! Twin details
         max_twins = 1
@@ -376,8 +379,9 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           rbv2    = props(4)
         end if
 
-        ! Newton Raphson Correction Factor for Traction Continuity
+        ! Newton raphson correction factor and tolerance for traction continuity
         rNRFac = 0.25d0
+        rNRTol = 1.d-6
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
@@ -743,7 +747,7 @@ C               Compute the internal force vector
               ! compute properties for twinned region due to rotation of crystal basis
               call compute_twin_props(rntw(:, iTwFlg),
      &                                props(stmprop:endmprop), props_tw,
-     &                                nmprops, del, pi)
+     &                                nmprops, del, pi, eulidx)
 
               ! Retrieve twin geometry
               rBLength = tw_geom(1, twinID)
@@ -752,6 +756,12 @@ C               Compute the internal force vector
               rBWidthOff = svars(kblock, iumatsvst)
               rBWidth = tw_geom(3, twinID) - rBWidthOff
               if (rBWidth.lt.1.d-4) rBWidth = 1.d-4
+
+              ! b/h ratio and handle b >= h
+              bhratio = rBWidth / rElmtSize
+              if (bhratio.ge.0.9999d0) bhratio = 0.9999d0
+              hbratio = 1.d0 / bhratio
+
               print*, "length = ", rBLength
               print*, "width = ", rBLatWidth
               print*, "thickness = ", rBWidth
@@ -807,6 +817,9 @@ C               Until now, rStrain and rSpin are quantities wrt to mid-step
 C               Compute volumetric strain increment (for bulk viscosity calculation)
                 rEpVolInc = rStrain(1) + rStrain(2) + rStrain(3)
 
+                ! Compute Velocity Gradient
+                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
+
                 ! Retrieve previous untwinned and twinned deformation gradient
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
                 iumatsven = offstatev(3) + l * nstatev(2)
@@ -817,13 +830,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rFz0 =
      &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
 
-                ! Compute Velocity Gradient
-                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
-
-                ! b/h ratio and handle b >= h
-                bhratio = rBWidth / rElmtSize
-                if (bhratio.ge.0.9999d0) bhratio = 0.9999d0
-                hbratio = 1.d0 / bhratio
 
                 if (iTwEmbStp.ne.0) then
                   ! No twinning part in previous step
@@ -832,6 +838,71 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   ! Elastoplastic part of previous deformation gradient in the twinned region
                   rFz0h = matmul(rFz0, F_tw_inv)
                 end if
+
+                ! The element has completely twinned
+!                 if (bhratio.gt.0.9999d0) then
+!                   ! Compute new deformation gradient and save
+!                   rFz1 = matmul(del + rdVelGrd, rFz0)
+!                   iumatsvst = offstatev(4) + 1 + (l - 1) * nstatev(2)
+!                   iumatsven = offstatev(4) + l * nstatev(2)
+!                   svars(kblock, iumatsvst : iumatsven) =
+!      &                                              reshape(rFz1, (/9/))
+
+!                   ! Compute elastoplastic part of twinned deformation gradient
+!                   rFz1h = matmul(rFz1, F_tw_inv)
+
+!                   ! Compute Stress (twinned region) from existing UMAT
+!                   iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
+!                   iumatsven = offstatev(2) + l * nstatev(1)
+!                   call umat_stress(rStress_Z,
+!      &                             svars(kblock, iumatsvst:iumatsven),
+!      &                             rGsCoords, rFz0h, rFz1h,
+!      &                             props_tw, nmprops, nstatev(1), nnode,
+!      &                             elmt_number, l, mcrd, time, dtimeCur,
+!      &                             kstep, kinc, .true., rWz, iterErr,
+!      &                             FeZ)
+
+!                   if (iterErr.eq.1) then
+!                     print*, "kinc = ", kinc
+!                     call xplb_abqerr(-3,'UMAT Failed to Converge in '//
+!      &                             'fully twinned region!', 0,0.d0,' ')
+!                   end if
+
+!                   ! Save element stress
+!                   elmt_stress(7:12, elmt_number) = rStress_Z / iTIntPt +
+!      &                                    elmt_stress(7:12, elmt_number)
+
+!                   theta = svars(kblock, iumatsvst)    ! Twinned Temperature
+
+!                   ! Compute bulk viscosity terms
+!                   if (dtimeCur.ne.0.d0) then
+!                     rBVpress = -rRho *
+!      $                        rbv1*rCd*rElmtSize*(rEpVolInc/dtimeCur)
+!                     if (rEpVolInc.lt.0.d0) then
+!                       rBVpress = rBVpress
+!      $                      -rRho*(rbv2*rElmtSize*rEpVolInc/dtimeCur)**2
+!                     end if
+!                   else
+!                     rBVpress = 0.d0
+!                   end if
+
+! C                 Compute the internal force vector
+!                   do n = 1, nnode
+!                     do i = 1, mcrd
+!                       do j = 1, 6
+!                         if (j.le.3) then    ! add bulk viscosity
+!                           rSigmaZ = rStress_Z(j) - rBVpress
+!                         else
+!                           rSigmaZ = rStress_Z(j)
+!                         end if
+!                         rhs( kblock , (n-1)*mcrd + i ) =
+!      &                      rhs( kblock , (n-1)*mcrd + i ) +
+!      &                            rBmat(j,(n-1)*mcrd+i)*rSigmaZ*rdOmega
+!                       end do
+!                     end do
+!                   end do
+!                   cycle   ! Loop, don't continue further
+!                 end if
 
                 ! Retrieve discontinuous mode normal
                 iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
@@ -967,7 +1038,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   ! g_tr_err = norm2(g_tr) / norm2(matmul(sigmaU, rntwc)) (relative error?)
                   ! DEBUGGING
                   print*, "g_tr_err = ", g_tr_err
-                  if (g_tr_err.lt.1.d-8) then
+                  if (g_tr_err.lt.rNRTol) then
                     print*, "converged rmh = ", rmh
                     exit
                   end if
@@ -999,7 +1070,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 end do
 
                 ! End analysis if traction continuity fails
-                if (g_tr_err.gt.1.d-8) then
+                if (g_tr_err.gt.rNRTol) then
                   ! DEBUGGING
                   print*, "twinID = ", twinID
                   print*, "elmt_no = ", elmt_number

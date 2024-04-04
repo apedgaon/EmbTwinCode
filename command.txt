@@ -1,1 +1,0 @@
-abaqus job=twnbnd input=1000_Elem_Vuel.inp user=VUEL_Twin.f double=both mp_mode=threads cpus=1 gpus=0 inter

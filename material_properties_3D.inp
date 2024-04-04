@@ -13,6 +13,15 @@ bandwidth    =  40.0E-3
 bulkVisc1    =  0.0
 bulkVisc2    =  0.0
 StbEpsilon   =  0.05
+bk           =  1.38e-23
+Gtw          =  2.76e-19
+vl           =  3190000.0
+vw           =  2712000.0
+vb           =  10000.0
+sl           =  250.0
+p_exp        =  0.6
+q_exp        =  1.4
+
 **
 ** Subgrid element properties
 **

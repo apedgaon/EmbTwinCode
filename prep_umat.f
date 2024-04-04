@@ -513,6 +513,9 @@ C         for umat stress to vuel stress
         stress(4) = rSig(1, 2)
         stress(5) = rSig(1, 3)
         stress(6) = rSig(2, 3)
+
+        ! Store temperature in state variable
+        statev(1) = theta
       end subroutine
 
       subroutine check_twin_nucleation(stress, Smat, dfgrd, iTwinFlag,

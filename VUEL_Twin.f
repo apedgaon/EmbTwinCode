@@ -699,6 +699,9 @@ C               Compute the internal force vector
 
                   ! Store this element number as twin decider for all geometry paramters
                   tw_dec(:, twinID) = elmt_number
+                else
+                  ! We have maxed out twins, shut of the flag
+                  iTwFlg = 0
                 end if
                 call MutexUnlock(2)
               end if

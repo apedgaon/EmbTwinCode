@@ -2078,7 +2078,7 @@ C --------------------------------------------------------------------
         ITERK    = 0
         ITERL    = 0
         ITERLNEW = 0
-        TOL      = 1.d-5
+        TOL      = 1.d-6
         DGMAXTOL = 0.50
         CORRBETA = 4.0
 C
@@ -2308,7 +2308,7 @@ C
          ERRRES = DMAX1(DABS(RESNEW(ISLIP)-RESOLD(ISLIP)),ERRRES)
         ENDDO
 C
-        TOLS = 1.D-5
+        TOLS = 1.D-6
         IF (ERRRES .LT. TOLS) THEN
 C
 C  ITERATIVE PROCEDURE HAS CONVERGED

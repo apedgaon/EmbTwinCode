@@ -1038,3 +1038,51 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
           rmh = 1.d-4 * rmh
         end if
       end subroutine
+
+      subroutine rotate_twin_svars(statev, nstatev, R_tw)
+        implicit none
+        ! Argument variables
+        integer nstatev
+        real*8 statev(nstatev), R_tw(3, 3)
+
+        ! Local variables
+        integer n, i, j
+        real*8 Fpinv_n(3, 3), Spk2_n(3, 3)
+
+        n = 4
+        do j = 1, 3
+          do i = 1, 3
+            n = n + 1
+            Fpinv_n(i, j) = statev(n)
+          end do
+        end do
+
+        Spk2_n(1, 1) = statev(14)
+        Spk2_n(2, 2) = statev(15)
+        Spk2_n(3, 3) = statev(16)
+        Spk2_n(1, 2) = statev(17)
+        Spk2_n(1, 3) = statev(18)
+        Spk2_n(2, 3) = statev(19)
+        Spk2_n(2, 1) = statev(17)
+        Spk2_n(3, 1) = statev(18)
+        Spk2_n(3, 2) = statev(19)
+
+        ! Fpinv_n = matmul(R_tw, matmul(Fpinv_n, R_tw))
+        Spk2_n = matmul(R_tw, matmul(Spk2_n, R_tw))
+
+        n = 4
+        do j = 1, 3
+          do i = 1, 3
+            n = n + 1
+            statev(n) = Fpinv_n(i, j)
+          end do
+        end do
+
+        statev(14) = Spk2_n(1, 1)
+        statev(15) = Spk2_n(2, 2)
+        statev(16) = Spk2_n(3, 3)
+        statev(17) = Spk2_n(1, 2)
+        statev(18) = Spk2_n(1, 3)
+        statev(19) = Spk2_n(2, 3)
+
+      end subroutine

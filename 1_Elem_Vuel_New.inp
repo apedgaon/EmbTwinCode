@@ -14,7 +14,7 @@
       7,          1.5,          1.5,           1.5
       8,         -1.5,          1.5,           1.5
 ** Variables = 217 + 16 * NSTATV per integration point, Properties = 13 + num of material props
-*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=64, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
 1, 2, 3
 *Element, elset=VU1_ELMT, type=VU1
 1, 1, 2, 3, 4, 5, 6, 7, 8
@@ -22,12 +22,13 @@
 <density>, <Young>, <bulkVisc1>, <bulkVisc2>, <StbEpsilon>, <bk>, <Gtw>, <vl>
 <vw>, <vb>, <sl>, <p_exp>, <q_exp>, 298.00, 4.54e-09, 5.23e+08
 5.60e-06, 0.30, -52.0, 177590.00, 13.3, 87570.00, -32.70, 45010.00
-6.7, 5.5e-07, 2.00e+06, 0.182, 0.25, 0.122, 0.122, 0.070
-0.625, 0.137, 0.122, 1.000, 0.000, 1.00e-12, 40800.00, 1.38e-23
-0.00, 5.00, 0.000, 90.0, 0.0, 0.0, 18, 1615.38
+5.9, 5.5e-07, 4.30e+05, 0.182, 0.25, 0.122, 0.122, 0.070
+0.625, 0.137, 0.122, 1.000, 0.000, 1.00e-12, 1.3e5, 1.38e-23
+0.00, 5.00, 0.000, 90.0, 90.0, 0.0, 18, 1615.38
 2.50e-02, 20.00, 12.0, 180.0, 2.00, 0.0, 0.0, 2.9e-07
 2.9e-07, -36.7, 191340.00, -19.7, 52230.0, 0.5, 68600.0, 9.5e-06
-<SG_kine>, <SG_form>, <MatModel>, <GaussPts>
+1.0e7, 3.0e-19, 250.0, 0.6, 1.4, 250.0, 250.0, <SG_kine>
+<SG_form>, <MatModel>, <GaussPts>
 ***Element, elset=ghost_elem, type=C3D8
 **2, 1, 2, 3, 4, 5, 6, 7, 8
 ** Section: Whole

@@ -793,9 +793,11 @@ C         for umat stress to vuel stress
           end if
         end do
 
+        nxt_elmt_num = 0
+        tw_length = 0.d0
         if (tw_prop_face.eq.-1) then
-          CALL XPLB_ABQERR(-3,'The Twin does not pass through '//
-     &                     'the Element No. %I!',elmt_number,0.d0,' ')
+C          CALL XPLB_ABQERR(-3,'The Twin does not pass through '//
+C     &                     'the Element No. %I!',elmt_number,0.d0,' ')
           return
         end if
 
@@ -811,7 +813,6 @@ C         for umat stress to vuel stress
      &                                    elmt_number)
         call quicksort(tw_prop_face_nodes, 1, 4)
 
-        nxt_elmt_num = 0
         do i = 1, 6
           neigh_elmt_no = elmt_neighbour(i, elmt_number)
           if (neigh_elmt_no.eq.0) then

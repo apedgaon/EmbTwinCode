@@ -656,8 +656,8 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
         s = s_n
         rhossd = rhossd_n
         dgmax = 0.d0
-        tol = 1.d-6
-        tols = 1.d-6
+        tol = 1.d-8
+        tols = 1.d-8
         maxit1 = 100
         maxit2 = 20
         dgmaxtol = 0.5d0
@@ -703,6 +703,8 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
               if (icorr.le.10) then
                 if (dgmax.gt.dgmaxold) then
                   corrbeta = 1.d0 / corrbeta
+                else if (dgmax.eq.dgmaxold) then
+                  corrbeta = 0.25d0
                 end if
                 beta = corrbeta * beta
                 Spk2v = Spk2v_old + beta

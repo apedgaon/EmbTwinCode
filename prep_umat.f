@@ -361,6 +361,14 @@ C         for umat stress to vuel stress
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
      &               kstep,   kinc, rW, iterErr, Fe)
+
+            ! Update init spk2 guess
+            hvars(14) = tmphvars(14)
+            hvars(15) = tmphvars(15)
+            hvars(16) = tmphvars(16)
+            hvars(17) = tmphvars(17)
+            hvars(18) = tmphvars(18)
+            hvars(19) = tmphvars(19)
           end if
 
           if (kinc.eq.0)  dtime = 0.d0 ! Set the vuel dtime back to 0 for initial increment

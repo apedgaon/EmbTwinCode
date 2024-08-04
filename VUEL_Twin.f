@@ -269,7 +269,7 @@ C       Twin Code Implementation Started
         real*8 rNRFac, rNRTol
         integer nAltInit, max_twins, num_twins
         real*8 rmhMag, bhratio, hbratio
-        real*8 PtauMax
+        real*8 PtauMax, rLmin
         integer stmprop, nmprops, endmprop, eulidx(3)
         real*8 R_tw(3, 3)      ! Rotation due to twinning
 
@@ -1327,7 +1327,11 @@ C               Compute the internal force vector
             end if
 
             ! Compute stable time step increment
-            dtimeStable(kblock) = 0.6d0 * rElmtSize / rCd
+            call Clength_3D_8N(rCoords, rLmin)
+            dtimeStable(kblock) = 0.7d0 * rLmin / rCd
+            if (iTwEmbStp) then
+              dtimeStable(kblock) = 0.07d0 * rLmin / rCd
+            end if
           end do
         ENDIF
       END  ! Subroutine VUEL
@@ -1924,3 +1928,4 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       include 'hcp_umat_TDT_pq_Ti.f'
       include 'Gstrain_3D.f'
       include 'calc_new_jac.f'
+      include 'Clength_3D_8N.f'

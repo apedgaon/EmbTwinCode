@@ -647,7 +647,7 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
         real*8 gdotalpha, dgdtau, dgmax, corrbeta, dgmaxold
         real*8 beta(6), dBetadSp(6, 6), temp, dval, tol, tols
         real*8 ds(nslip), err_s, s_old(nslip), Spk2v_old(6), dgmaxtol
-        real*8 drhossd(nslip), sl(nslip)
+        real*8 drhossd(nslip), sl(nslip), gdotmax
         logical kErr
 
         ! Initialize
@@ -660,7 +660,8 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
         tols = 1.d-8
         maxit1 = 100
         maxit2 = 20
-        dgmaxtol = 0.5d0
+        gdotmax = 1.d7
+        dgmaxtol = dtime * gdotmax / 4
         corrbeta = 4.d0
         iterErr = 0
 

@@ -246,7 +246,7 @@ C       Twin Code Implementation Started
         pointer (ptr_nodal_coords, nodal_coords)  ! Pointer to nodal coordinates for SMA Access
         integer size_list(*)    ! list storing num_elems, num_nodes, etc
         pointer (ptr_size_list, size_list)  ! pointer to size list for SMA Access
-        integer elmt_stat(2, *)
+        integer elmt_stat(3, *)
         pointer (ptr_elmt_stat, elmt_stat)
         integer tw_flg(*)
         pointer (ptr_tw_flg, tw_flg)
@@ -432,6 +432,11 @@ C       (dtimeStable), history variables (svars), and energy
           do kblock = 1,nblock
 
             elmt_number = jElem(kblock)
+
+            ! Set element type number in status to distinguish grains
+            if ((kstep.gt.0).and.(kinc.eq.0)) then
+              elmt_stat(3, elmt_number) = jtype
+            end if
 
 C>>>        Get nodal coordinates, finite deformation
             DO n = 1, nnode
@@ -1473,7 +1478,7 @@ C       Contents of r_Array
         real*8 nodal_coords(3, *)
         pointer (ptr_nodal_coords, nodal_coords)
         integer num_nodes
-        integer size_list(*), elmt_stat(2, *), tw_flg(*)
+        integer size_list(*), elmt_stat(3, *), tw_flg(*)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
         pointer (ptr_tw_flg, tw_flg)
@@ -1566,7 +1571,7 @@ C       Contents of r_Array
         size_list(4) = 0
 
         ! Create element status for twinning ID and embedding step flag
-        ptr_elmt_stat = SMAIntArrayCreate(6, 2*num_elems, 0)
+        ptr_elmt_stat = SMAIntArrayCreate(6, 3*num_elems, 0)
 
         ! Create arrays for twin type, nucleation coords, normal and direction
         ptr_tw_flg = SMAIntArrayCreate(7, 100, 0)
@@ -1603,7 +1608,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         real*8 nodal_coords(3, *)
         pointer (ptr_nodal_coords, nodal_coords)
         integer num_nodes, num_elems
-        integer size_list(*), elmt_stat(2, *), tw_flg(*)
+        integer size_list(*), elmt_stat(3, *), tw_flg(*)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
         pointer (ptr_tw_flg, tw_flg)
@@ -1701,6 +1706,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
                 inbel = elmt_neighbour(inb, iel)
                 if (inbel.eq.0) cycle ! Face is not attached to neighbouring element
                 if (elmt_stat(1, inbel).ne.0) cycle ! Already twinned element
+                if (elmt_stat(3, inbel).ne.elmt_stat(3, iel)) cycle ! Different grain element
 
                 ! Retrive element nodal coords
                 do ind = 1, 8
@@ -1835,7 +1841,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 #include <SMAAspUserSubroutines.hdr>
         integer kInc
         integer num_nodes, num_elems, iel, io, ind
-        integer size_list(*), elmt_stat(2, *)
+        integer size_list(*), elmt_stat(3, *)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
         real*8 elmt_stress(12, *)

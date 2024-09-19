@@ -527,7 +527,7 @@ C         for umat stress to vuel stress
       end subroutine
 
       subroutine check_twin_nucleation(stress, Smat, dfgrd, iTwinFlag,
-     &                                 PtauMax)
+     &                                 PtauMax, P_0)
         implicit none
 
         integer :: iTwinFlag, i ! Twinning nucleation flag

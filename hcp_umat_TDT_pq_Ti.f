@@ -3,7 +3,7 @@
      &                 dtime, temp, dtemp, predef, dpred, cmname, ndi,
      &                 nshr, ntens, nstatv, props, nprops, coords, drot,
      &                 pnewdt, celent, dfgrd0, dfgrd1, noel, npt, layer,
-     &                 kspt, jstep, kinc, rW, iterErr, Fe)
+     &                 kspt, jstep, kinc, rW, iterErr, Fe, lEditSvars)
 
         implicit none
 !------------------------------------------------------------------
@@ -46,7 +46,8 @@
         real*8 celent               ! Characteristic element length
         real*8 dfgrd0(3, 3)         ! Deformation gradient at the beginning of the increment
         real*8 dfgrd1(3, 3)         ! Deformation gradient at the end of the increment
-        real*8 rW(3, 3, 3, 3)
+        real*8 rW(3, 3, 3, 3)       ! Jacobian for traction continuity dsigma/dF
+        logical lEditSvars          ! logical to decide if Jacobian computation is necessary
 
         ! For a mechanical analysis, atleast stress and ddsdde needs to be defined
         ! For a coupled thermo-mechanical analysis, rpl, ddsddt, drplde, drpldt in addition maybe required
@@ -472,8 +473,10 @@
 C        call calc_jac(nslip, props, nprops, C, dfgrd0, dfgrd1, Fpinv_n,
 C     &                FpInv, Smat, Pmat, Cmat, dgamma, dgamdtau, del,
 C     &                rdLp, sigma, ddsdde)
-        call calc_new_jac(dfgrd1, FpInv_n, props, nprops, C, nslip,
-     &                    Smat, dGamdTau, Cmat, dgamma, Fe, spk2, rW)
+        if (.not.(lEditSvars)) then
+          call calc_new_jac(dfgrd1, FpInv_n, props, nprops, C, nslip,
+     &                      Smat, dGamdTau, Cmat, dgamma, Fe, spk2, rW)
+        end if
         return
       end
 

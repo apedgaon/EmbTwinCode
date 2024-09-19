@@ -264,6 +264,8 @@ C       Twin Code Implementation Started
         pointer (ptr_nuc_prob, nuc_prob)
         real*8 disp(3, *)
         pointer (ptr_disp, disp)
+        real*8 nuc_thr(*)
+        pointer (ptr_nuc_thr, nuc_thr)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac, rNRTol
@@ -272,6 +274,8 @@ C       Twin Code Implementation Started
         real*8 PtauMax, rLmin
         integer stmprop, nmprops, endmprop, eulidx(3)
         real*8 R_tw(3, 3)      ! Rotation due to twinning
+        integer num_twins_gr, max_twins_gr
+        real*8 P_0
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -335,8 +339,8 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
      &                       Smat, F_tw, rntw, rmtw, eulidx)
 
         ! Twin details
-        max_twins = 1
-        num_twins = 0
+        max_twins = 8
+        max_twins_gr = 1
 
         ! Access SMA arrays created in vexternaldb
         if (kstep.gt.0) then
@@ -355,6 +359,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_elmt_stress = SMAFloatArrayAccess(13)
           ptr_nuc_prob = SMAFloatArrayAccess(14)
           ptr_disp = SMAFloatArrayAccess(15)
+          ptr_nuc_thr = SMAFloatArrayAccess(16)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -507,12 +512,19 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             CALL SHP_FUNC_3D_8N(rXiEtaCt,rMSCoor,1,rNnCt,
      1                          rMSdNndXiCt,rMSJdetCt)
 
-            ! GB Element Check
+            ! GB Element detection and threshold probability
+            P_0 = 0.85d0
             if (kstep.gt.0) then
-              isGbElem = is_gb_elem(elmt_number, gb_elems, num_gb_elems)
-            end if
+              isGbElem = .false.
+              do i = 1, num_gb_elems
+                if (elmt_number.eq.gb_elems(i)) then
+                  isGbElem = .true.
+                  P_0 = nuc_thr(i)
+                  exit
+                end if
+              end do
 
-            if (kstep.gt.0) then
+              ! Initialize element average stress
               elmt_stress(:, elmt_number) = 0.d0
             end if
 
@@ -631,7 +643,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Check for twin nucleation
                 if (isGbElem.and.(iTwEmbStp.eq.0)) then
                   call check_twin_nucleation(rStress, Smat, Fe(:,:,l),
-     &                                       iTwFlg, PtauMax)
+     &                                       iTwFlg, PtauMax, P_0)
                 end if
 
 C               Compute linear + quadratic bulk viscosity terms
@@ -675,41 +687,50 @@ C               Compute the internal force vector
 
               ! If twin nucleated
               if ((iTwFlg.ne.0).and.(iTwEmbStp.eq.0)) then
-                ! Update twin ID counter and store to elmt_status
-                call MutexLock(2)
+                ! Check num_twins and num_twins per grain
                 num_twins = size_list(4)
                 if (num_twins.lt.max_twins) then
-                  size_list(4) = size_list(4) + 1
-                  twinID = size_list(4)
-                  elmt_stat(1, elmt_number) = twinID
-
-                  ! Store twin type
-                  tw_flg(twinID) = iTwFlg
-
-                  ! Compute element centroid coordinates and store
-                  rElmtCt = 0.d0
-                  do n = 1, iTIntPt
-                    rElmtCt = rElmtCt + rCoords(1:3, n)
+                  call MutexLock(2)
+                  num_twins = size_list(4)
+                  num_twins_gr = 0
+                  do n = 1, num_twins
+                    if (jtype.eq.elmt_stat(3, tw_dec(3, n))) then
+                      num_twins_gr = num_twins_gr + 1
+                    end if
                   end do
-                  rElmtCt = 1.d0 / iTIntPt * rElmtCt
-                  tw_nuc(1:3, twinID) = rElmtCt
+                  if (num_twins_gr.lt.max_twins_gr) then
+                    size_list(4) = size_list(4) + 1
+                    twinID = size_list(4)
+                    elmt_stat(1, elmt_number) = twinID
 
-                  ! Store global twin normal and direction (reference config.)
-                  tw_nor(1:3, twinID) = rntw(:, iTwFlg)
-                  tw_dir(1:3, twinID) = rmtw(:, iTwFlg)
+                    ! Store twin type
+                    tw_flg(twinID) = iTwFlg
 
-                  ! Initialize global twin geometry parameters (length, width, thickness)
-                  tw_geom(1, twinID) = 0.d0
-                  tw_geom(2, twinID) = 0.d0
-                  tw_geom(3, twinID) = 1.d-4
+                    ! Compute element centroid coordinates and store
+                    rElmtCt = 0.d0
+                    do n = 1, iTIntPt
+                      rElmtCt = rElmtCt + rCoords(1:3, n)
+                    end do
+                    rElmtCt = 1.d0 / iTIntPt * rElmtCt
+                    tw_nuc(1:3, twinID) = rElmtCt
 
-                  ! Store this element number as twin decider for all geometry paramters
-                  tw_dec(:, twinID) = elmt_number
-                else
-                  ! We have maxed out twins, shut of the flag
-                  iTwFlg = 0
+                    ! Store global twin normal and direction (reference config.)
+                    tw_nor(1:3, twinID) = rntw(:, iTwFlg)
+                    tw_dir(1:3, twinID) = rmtw(:, iTwFlg)
+
+                    ! Initialize global twin geometry parameters (length, width, thickness)
+                    tw_geom(1, twinID) = 0.d0
+                    tw_geom(2, twinID) = 0.d0
+                    tw_geom(3, twinID) = 1.d-4
+
+                    ! Store this element number as twin decider for all geometry paramters
+                    tw_dec(:, twinID) = elmt_number
+                  else
+                    ! We have maxed out twins, shut of the flag
+                    iTwFlg = 0
+                  end if
+                  call MutexUnlock(2)
                 end if
-                call MutexUnlock(2)
               end if
 
               ! If twin nucleated or propagated
@@ -1450,6 +1471,7 @@ C       Contents of r_Array
             call SMAFloatArrayDelete(13)
             call SMAFloatArrayDelete(14)
             call SMAFloatArrayDelete(15)
+            call SMAFloatArrayDelete(16)
           end if
         end if
 
@@ -1496,9 +1518,11 @@ C       Contents of r_Array
         pointer (ptr_nuc_prob, nuc_prob)
         real*8 disp(3, *)
         pointer (ptr_disp, disp)
+        real*8 nuc_thr(*)
+        pointer (ptr_nuc_thr, nuc_thr)
 
         ! Read and store grain boundary elements
-        gbfilename = 'gb_elems_1000.txt'
+        gbfilename = 'gb_elems_8gn.txt'
         call vgetoutdir(outdir, lenoutdir)
         gbfilepath = trim(outdir)//pathseperator//trim(gbfilename)
 
@@ -1519,7 +1543,7 @@ C       Contents of r_Array
         close(121)
 
         ! Read and store element connectivity
-        ecfilename = 'input_elmt_1000.inp'
+        ecfilename = 'input_elmt_8gn.inp'
         ecfilepath = trim(outdir)//pathseperator//trim(ecfilename)
         num_elems = 0
         open(120, file = ecfilepath, status = 'old', iostat = io)
@@ -1545,7 +1569,7 @@ C       Contents of r_Array
         end do
 
         ! Read and store nodal coordinates
-        ncfilename = 'input_node_1000.inp'
+        ncfilename = 'input_node_8gn.inp'
         ncfilepath = trim(outdir)//pathseperator//trim(ncfilename)
         num_nodes = 0
         open(120, file = ncfilepath, status = 'old', iostat = io)
@@ -1591,6 +1615,18 @@ C       Contents of r_Array
 
         ! Nodal displacement
         ptr_disp = SMAFloatArrayCreate(15, 3*num_nodes, 0.d0)
+
+        ! Read threshold probabilities for gb elems
+        gbfilename = 'gb_elems_8gn_thr.txt'
+        call vgetoutdir(outdir, lenoutdir)
+        gbfilepath = trim(outdir)//pathseperator//trim(gbfilename)
+        ptr_nuc_thr = SMAFloatArrayCreate(16, num_gb_elems, 0.d0)
+        open(121, file = gbfilepath, status = 'old',action = 'read')
+        do i = 1, num_gb_elems
+          read(121, *) nuc_thr(i)
+          ! nuc_thr(i) = 0.85d0
+        end do
+        close(121)
 
       end subroutine
 

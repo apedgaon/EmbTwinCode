@@ -350,7 +350,7 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc, rW, iterErr, Fe)
+     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars)
           else    ! Required during iterative updates when hvars should not be edited
             tmphvars = hvars
             call umat_crys(rUmatStress,  tmphvars,  ddsdde,  sse,  spd,
@@ -360,7 +360,7 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc, rW, iterErr, Fe)
+     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars)
 
             ! Update init spk2 guess
             hvars(14) = tmphvars(14)

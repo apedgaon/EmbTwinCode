@@ -19,9 +19,9 @@ C     Traction Continuity Newton iterations
 
         ! Local variables
         integer iter, maxiter, i, j, iterErr, aidx, k, p
-        real*8 mtpn(3, 3), rdLu(3, 3), rdLz(3, 3), rstress_U(3, 3)
+        real*8 mtpn(3, 3), rdLu(3, 3), rdLz(3, 3), rstress_U(6)
         real*8 rGsCoords(3), rNRFac, rNRTol, rmh0(3), rdmh(3)
-        real*8 rstress_Z(3, 3), FeZ(3, 3), sigmaU(3, 3), sigmaZ(3, 3)
+        real*8 rstress_Z(6), FeZ(3, 3), sigmaU(3, 3), sigmaZ(3, 3)
         real*8 g_tr(3), g_tr_err, z_tr(3, 3), z_tr_inv(3, 3)
         real*8 rWu(3, 3, 3, 3), rWz(3, 3, 3, 3)
 

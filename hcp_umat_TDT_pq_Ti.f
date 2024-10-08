@@ -679,6 +679,21 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
           end if
         end do
 
+        ! If plastic shear is negligible, set spk2 to trial value
+        dgmax = 0.d0
+        do ia = 1, nslip
+          tau(ia) = dot_product(Spk2v_tr, Pmatr(:, ia))
+          call calc_gammadot(props, nprops, theta, tau(ia),
+     &                       s(ia), gdotalpha, dgdtau, sl(ia))
+          dgamma(ia) = gdotalpha * dtime
+          dgamdtau(ia) = dgdtau * dtime
+          dgmax = max(dgmax, abs(dgamma(ia)))
+        end do
+        if (dgmax.lt.1.d-20) then
+          Spk2v = Spk2v_tr
+          return
+        end if
+
         ! Second level iterations for hardening update
         do l = 1, maxit2
           ! First level iterations for stress update
@@ -695,26 +710,27 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
               dgmax = max(dgmax, abs(dgamma(ia)))
             end do
 
-            ! Check if slip increments are relevant
-            if (dgmax.lt.1.d-20) then
-              Spk2v = Spk2v_tr
-              return
             ! if dgamma is too big, adjust newton's correction by a factor to minimize residual
-            else if ((dgmax.gt.dgmaxtol).and.(k.gt.1)) then
-              if (icorr.eq.0) then
-                dgmaxold = 0.d0
-              end if
-              if (icorr.le.10) then
-                if (dgmax.gt.dgmaxold) then
-                  corrbeta = 1.d0 / corrbeta
-                else if (dgmax.eq.dgmaxold) then
-                  corrbeta = 0.25d0
-                end if
-                beta = corrbeta * beta
-                Spk2v = Spk2v_old + beta
-                dgmaxold = dgmax
-                icorr = icorr + 1
+            if (dgmax.gt.dgmaxtol) then
+              if (k.eq.1) then
+                Spk2v = 0.d0
                 cycle
+              else
+                if (icorr.eq.0) then
+                  dgmaxold = 0.d0
+                end if
+                if (icorr.le.10) then
+                  if (dgmax.gt.dgmaxold) then
+                    corrbeta = 1.d0 / corrbeta
+                  else if (dgmax.eq.dgmaxold) then
+                    corrbeta = 0.25d0
+                  end if
+                  beta = corrbeta * beta
+                  Spk2v = Spk2v_old + beta
+                  dgmaxold = dgmax
+                  icorr = icorr + 1
+                  cycle
+                end if
               end if
             end if
             icorr = 0

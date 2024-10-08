@@ -276,6 +276,7 @@ C       Twin Code Implementation Started
         real*8 R_tw(3, 3)      ! Rotation due to twinning
         integer num_twins_gr, max_twins_gr
         real*8 P_0
+        logical lNRerr
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -339,7 +340,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
      &                       Smat, F_tw, rntw, rmtw, eulidx)
 
         ! Twin details
-        max_twins = 8
+        max_twins = 1
         max_twins_gr = 1
 
         ! Access SMA arrays created in vexternaldb
@@ -976,167 +977,48 @@ C                 Compute the internal force vector
                   cycle   ! Loop, don't continue further
                 end if
 
-                ! Initial guess for rmh (discontinuous direction vector)
-                nAltInit = 0
-                call init_guess(nAltInit, rmh, svars, nblock, nsvars,
-     &                          kblock, l, offstatev, nstatev, dtimeCur,
-     &                          rdVelGrd, rntwc, hbratio, iTwFlg,
-     &                          iTwEmbStp)
-
                 ! DEBUGGING
                 print*, "l = ", l
-                print*, "rmh = ", rmh
 
+                ! Initialization of variables and indices before traction continuity
+                nAltInit = 0
                 iter = 0
                 rmh0 = 0.d0
                 rdmh = 0.d0
                 g_tr_err = 1.d3
+                iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+                iumatsven = offstatev(1) + l * nstatev(1)
+                iumatsvst2 = offstatev(2) + 1 + (l - 1) * nstatev(1)
+                iumatsven2 = offstatev(2) + l * nstatev(1)
 
-                ! Traction Continuity Newton Iterations Loop
+                ! Initial guess loop for traction continuity
                 do while(nAltInit.le.6)
-                  ! If iterations max out, try alternate initial guess
-                  if (iter.eq.100) then
-                    nAltInit = nAltInit + 1
-                    call init_guess(nAltInit, rmh, svars, nblock,
-     &                              nsvars, kblock, l, offstatev,
-     &                              nstatev, dtimeCur, rdVelGrd, rntwc,
-     &                              hbratio, iTwFlg, iTwEmbStp)
-                    iter = 0
-                    g_tr_err = 1.d3
-                    print*, "nAltInit = ", nAltInit
-                    cycle
-                  end if
+                  call init_guess(nAltInit, rmh, svars, nblock,
+     &                            nsvars, kblock, l, offstatev,
+     &                            nstatev, dtimeCur, rdVelGrd, rntwc,
+     &                            hbratio, iTwFlg, iTwEmbStp)
 
-                  iter = iter + 1
-                  ! DEBUGGING
-                  print*, "iter = ", iter
+                  print*, "rmh = ", rmh
+                  ! Traction continuity Newton iterations
+                  call traction_continuityNR(rntwc, rdVelGrd, hbratio,
+     &                 rFu0, rFz0, rFz0h, del, nstatev(1),
+     &                 svars(kblock, iumatsvst:iumatsven),
+     &                 svars(kblock, iumatsvst2:iumatsven2), nmprops,
+     &                 props(stmprop:endmprop), props_tw, Fe(:, :, l),
+     &                 nnode, elmt_number, l, mcrd, time, dtimeCur,
+     &                 kstep, kinc, F_tw_inv, rmh, rFu1, rFz1, rFz1h,
+     &                 lNRerr)
 
-                  ! Compute m tensor product with n
-                  do j = 1, 3
-                    do i = 1, 3
-                      mtpn(i, j) = rmh(i) * rntwc(j)
-                    end do
-                  end do
-
-                  ! Compute jump velocity gradient increments
-                  rdLu = rdVelGrd - mtpn
-                  rdLz = rdVelGrd + (hbratio - 1.d0) * mtpn
-
-                  ! Compute new deformation gradient in the untwinned region
-                  rdFu = matmul(rdLu, rFu0)
-                  rFu1 = rFu0 + rdFu
-
-                  ! Compute Stress (untwinned region) from existing UMAT
-                  iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
-                  iumatsven = offstatev(1) + l * nstatev(1)
-                  call umat_stress(rStress_U,
-     &                             svars(kblock, iumatsvst:iumatsven),
-     &                             rGsCoords, rFu0, rFu1,
-     &                             props(stmprop:endmprop), nmprops,
-     &                             nstatev(1), nnode, elmt_number, l,
-     &                             mcrd, time, dtimeCur, kstep, kinc,
-     &                             .false., rWu, iterErr, Fe(:, :, l))
-
-                  ! Large change suggested by NR, reduce step by correction factor
-                  if (iterErr.eq.1) then
-                    ! DEBUGGING
-                    print*, "Convergence umat failed in the matrix"
-                    print*, "rmh = ", rmh
-                    if (iter.eq.1) then
-                      iter = 100
-                      cycle
-                    end if
-                    rdmh = rNRFac * rdmh
-                    rmh = rmh0 + rdmh
-                    cycle
-                  end if
-
-                  ! Compute new deformation gradient in the twinned region
-                  rdFz = matmul(rdLz, rFz0)
-                  rFz1 = rFz0 + rdFz
-
-                  ! Compute elastoplastic part of twinned deformation gradient
-                  rFz1h = matmul(rFz1, F_tw_inv)
-
-                  ! Compute Stress (twinned region) from existing UMAT
-                  iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
-                  iumatsven = offstatev(2) + l * nstatev(1)
-                  call umat_stress(rStress_Z,
-     &                             svars(kblock, iumatsvst:iumatsven),
-     &                             rGsCoords, rFz0h, rFz1h,
-     &                             props_tw, nmprops, nstatev(1), nnode,
-     &                             elmt_number, l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, .false., rWz, iterErr,
-     &                             FeZ)
-
-                  ! Large change suggested by NR, reduce step by correction factor
-                  if (iterErr.eq.1) then
-                    ! DEBUGGING
-                    print*, "Convergence umat failed in the band"
-                    print*, "rmh = ", rmh
-                    if (iter.eq.1) then
-                      iter = 100
-                      cycle
-                    end if
-                    ! print*, "rFu1 = ", rFu1
-                    ! print*, "rFz1 = ", rFz1
-                    ! print*, "rFz1h = ", rFz1h
-                    rdmh = rNRFac * rdmh
-                    rmh = rmh0 + rdmh
-                    cycle
-                  end if
-
-                  ! vector to matrix for stress in twinned and untwinned region
-                  call vec_to_sym_mat(rStress_U, sigmaU)
-                  call vec_to_sym_mat(rStress_Z, sigmaZ)
-
-                  ! Form residual
-                  do aidx = 1, 3
-                    g_tr(aidx) = 0.d0
-                    do i = 1, 3
-                      g_tr(aidx) = g_tr(aidx) - rntwc(i) *
-     &                            (sigmaZ(i,aidx) - sigmaU(i,aidx))
-                    end do
-                  end do
-
-                  ! check for residual convergence
-                  g_tr_err = norm2(g_tr)      ! (absolute error)
-                  ! g_tr_err = norm2(g_tr) / norm2(matmul(sigmaU, rntwc)) (relative error?)
-                  ! DEBUGGING
-                  print*, "g_tr_err = ", g_tr_err
-                  if (g_tr_err.lt.rNRTol) then
-                    print*, "converged rmh = ", rmh
+                  if (lNRerr.eq..false.) then
                     exit
                   end if
 
-                  ! Form residual tangent matrix
-                  do j = 1, 3
-                    do aidx = 1, 3
-                      z_tr(aidx, j) = 0.d0
-                      do i = 1, 3
-                        do k = 1, 3
-                          do p = 1, 3
-                            z_tr(aidx, j) = z_tr(aidx, j) +
-     &                      rntwc(i) * ((hbratio - 1.d0)*
-     &                      rWz(i,aidx,j,k)*rFz0h(p,k)+rWu(i,aidx,j,k)*
-     &                      rFu0(p,k)) * rntwc(p)
-                          end do
-                        end do
-                      end do
-                    end do
-                  end do
-
-                  ! Compute change in m hat
-                  call inverse_3x3(z_tr, z_tr_inv)
-                  rdmh = matmul(z_tr_inv, g_tr)
-
-                  ! Compute updated m hat
-                  rmh0 = rmh
-                  rmh = rmh0 + rdmh
+                  nAltInit = nAltInit + 1
+                  print*, "nAltInit = ", nAltInit
                 end do
 
                 ! End analysis if traction continuity fails
-                if (g_tr_err.gt.rNRTol) then
+                if (lNRerr) then
                   ! DEBUGGING
                   print*, "twinID = ", twinID
                   print*, "elmt_no = ", elmt_number
@@ -1321,6 +1203,10 @@ C               Compute the internal force vector
                     end do
                   end do
                 end do
+
+                ! vector to matrix for stress in twinned and untwinned region
+                call vec_to_sym_mat(rStress_U, sigmaU)
+                call vec_to_sym_mat(rStress_Z, sigmaZ)
 
                 ! Compute twin length, width and thickness evolution
                 Smatc =
@@ -1522,7 +1408,7 @@ C       Contents of r_Array
         pointer (ptr_nuc_thr, nuc_thr)
 
         ! Read and store grain boundary elements
-        gbfilename = 'gb_elems_8gn.txt'
+        gbfilename = 'gb_elems_1.txt'
         call vgetoutdir(outdir, lenoutdir)
         gbfilepath = trim(outdir)//pathseperator//trim(gbfilename)
 
@@ -1543,7 +1429,7 @@ C       Contents of r_Array
         close(121)
 
         ! Read and store element connectivity
-        ecfilename = 'input_elmt_8gn.inp'
+        ecfilename = 'input_elmt_1.inp'
         ecfilepath = trim(outdir)//pathseperator//trim(ecfilename)
         num_elems = 0
         open(120, file = ecfilepath, status = 'old', iostat = io)
@@ -1569,7 +1455,7 @@ C       Contents of r_Array
         end do
 
         ! Read and store nodal coordinates
-        ncfilename = 'input_node_8gn.inp'
+        ncfilename = 'input_node_1.inp'
         ncfilepath = trim(outdir)//pathseperator//trim(ncfilename)
         num_nodes = 0
         open(120, file = ncfilepath, status = 'old', iostat = io)
@@ -1617,16 +1503,16 @@ C       Contents of r_Array
         ptr_disp = SMAFloatArrayCreate(15, 3*num_nodes, 0.d0)
 
         ! Read threshold probabilities for gb elems
-        gbfilename = 'gb_elems_8gn_thr.txt'
-        call vgetoutdir(outdir, lenoutdir)
-        gbfilepath = trim(outdir)//pathseperator//trim(gbfilename)
+        ! gbfilename = 'gb_elems_8gn_thr.txt'
+        ! call vgetoutdir(outdir, lenoutdir)
+        ! gbfilepath = trim(outdir)//pathseperator//trim(gbfilename)
+        ! open(121, file = gbfilepath, status = 'old',action = 'read')
         ptr_nuc_thr = SMAFloatArrayCreate(16, num_gb_elems, 0.d0)
-        open(121, file = gbfilepath, status = 'old',action = 'read')
         do i = 1, num_gb_elems
-          read(121, *) nuc_thr(i)
-          ! nuc_thr(i) = 0.85d0
+          ! read(121, *) nuc_thr(i)
+          nuc_thr(i) = 0.85d0
         end do
-        close(121)
+        ! close(121)
 
       end subroutine
 
@@ -1971,3 +1857,4 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       include 'Gstrain_3D.f'
       include 'calc_new_jac.f'
       include 'Clength_3D_8N.f'
+      include 'trac_cont.f'

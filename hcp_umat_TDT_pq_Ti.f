@@ -371,18 +371,19 @@
         ! Calculate dislocation interaction tensor
         call calc_amat2(nslip, props, nprops, xsC, xmC, amat)
 
-        ! Initialize slip resistance for time 0
+        ! Get parameters for slip resistance and initialize for time 0
         mu = sqrt(c44 * c55)
+        alphaT = props(12)
+        call get_burg(props, nprops, nslip, burg)
         if (time(2).eq.0.0) then
-          alphaT = props(12)
-          call get_burg(props, nprops, nslip, burg)
           s_n = alphaT * mu * burg * sqrt(matmul(amat, rhossd_n))
         end if
 
         ! Implicit solve for stress, slip rate and hardening
         call solvcrys(nslip, props, nprops, theta, Spk2v_n, Spk2v_tr,
-     &                Cmatr, Pmatr, s_n, rhossd_n, chi_n, amat, dtime,
-     &                Spk2v, dgamma, dgamdtau, s, rhossd, tau, iterErr)
+     &                Cmatr, Pmatr, s_n, rhossd_n, chi_n, amat, mu, 
+     &                alphaT, burg, dtime, Spk2v, dgamma, dgamdtau, s,
+     &                rhossd, tau, iterErr)
 
         ! Solver did not converge - tell Abaqus to cut back and repeat time step
         if (iterErr == 1) then
@@ -634,8 +635,8 @@ C  THIS SUBROUTINE CONVERTS A SYMMETRIC MATRIX TO A VECTOR
 C     Implicit solve for crystal stress, slip rate and hardening (Balasubramanian 1998, Anand 2004)
       subroutine solvcrys(nslip, props, nprops, theta, Spk2v_n, 
      &                    Spk2v_tr, Cmatr, Pmatr, s_n, rhossd_n, chi_n,
-     &                    amat, dtime, Spk2v, dgamma, dgamdtau, s,
-     &                    rhossd, tau, iterErr)
+     &                    amat, mu, alphaT, burg, dtime, Spk2v, dgamma,
+     &                    dgamdtau, s, rhossd, tau, iterErr)
         implicit none
         ! Argument variables definition
         integer nslip, nprops, iterErr
@@ -643,7 +644,7 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
         real*8 Cmatr(6, nslip), Pmatr(6, nslip), dtime
         real*8 s_n(nslip), s(nslip), dgamma(nslip), dgamdtau(nslip)
         real*8 rhossd_n(nslip), rhossd(nslip), chi_n, amat(nslip, nslip)
-        real*8 tau(nslip)
+        real*8 tau(nslip), mu, alphaT, burg(nslip)
 
         ! Internal variables definition
         integer i, j, ia, indx(6), k, maxit1, l, maxit2, icorr
@@ -785,13 +786,13 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
 
           ! Stress update converged, calculate hardening increment
           call calc_hardening(props, nprops, nslip, theta, dgamma,
-     &                        dtime, s_n, rhossd_n, chi_n, tau, amat, 
-     &                        ds, drhossd)
+     &                        dtime, s, rhossd, chi_n, tau, amat, 
+     &                        drhossd)
 
           ! Update hardening and check for error tolerance
           rhossd = rhossd_n + drhossd
           s_old = s
-          s = s_n + ds
+          s = alphaT * mu * burg * sqrt(matmul(amat, rhossd))
           err_s = maxval(abs(s - s_old))
           if (err_s.lt.tols) then
             return
@@ -855,7 +856,7 @@ C     Computes slip rate on a given slip system
       end subroutine
 
       subroutine calc_hardening(props, nprops, nslip, theta, dgamma,
-     &                          dtime, s, rhossd, chi, tau, amat, ds,
+     &                          dtime, s, rhossd, chi, tau, amat,
      &                          drhossd)
         implicit none
         ! Argument variables definition
@@ -894,18 +895,6 @@ C     Computes slip rate on a given slip system
           drhossd(ia) = krho / (mu * a**2) * tau(ia) * dgamma(ia) *
      &                  (1.d0 - rhossd(ia) / rhossd_ss)
         end do
-
-        ! Compute ds^alpha / drho^alpha
-        rhossd_i = matmul(amat, rhossd)
-        do ja = 1, nslip
-          do ia = 1, nslip
-            dsdrhossd(ia, ja) = alphaT *  mu * burg(ia) * amat(ia, ja) /
-     &                          (2 * sqrt(rhossd_i(ia)))
-          end do
-        end do
-
-        ! Compute increment in slip resistance (taylor stress)
-        ds = matmul(dsdrhossd, drhossd) 
       end subroutine
 
 

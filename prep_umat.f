@@ -1096,3 +1096,46 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         statev(19) = Spk2_n(2, 3)
 
       end subroutine
+
+      ! Rotation matrix based on axis and angle
+      subroutine rotmat2(n, th, R)
+        implicit none
+        real*8 n(3), th, R(3, 3)
+
+        R(1, 1) = n(1)**2 * (1 - cos(th)) + cos(th)
+        R(2, 1) = n(1) * n(2) * (1 - cos(th)) + n(3) * sin(th)
+        R(3, 1) = n(1) * n(3) * (1 - cos(th)) - n(2) * sin(th)
+        R(1, 2) = n(1) * n(2) * (1 - cos(th)) - n(3) * sin(th)
+        R(2, 2) = n(2)**2 * (1 - cos(th)) + cos(th)
+        R(3, 2) = n(2) * n(3) * (1 - cos(th)) + n(1) * sin(th)
+        R(1, 3) = n(1) * n(3) * (1 - cos(th)) + n(2) * sin(th)
+        R(2, 3) = n(2) * n(3) * (1 - cos(th)) - n(1) * sin(th)
+        R(3, 3) = n(3)**2 * (1 - cos(th)) + cos(th)
+
+      end subroutine
+
+      subroutine update_twin_props(props, props_tw, nprops, eulidx, pi,
+     &                             R_tw)
+        implicit none
+        integer nprops, eulidx(3)
+        real*8 props(nprops), props_tw(nprops), pi, R_tw(3, 3)
+
+        integer ieulererr
+        real*8 th, phi, om, Q_0(3, 3), Q_1(3, 3)
+        real*8 th_tw, phi_tw, om_tw
+
+        th = props(eulidx(1)) * pi / 180
+        phi = props(eulidx(2)) * pi / 180
+        om = props(eulidx(3)) * pi / 180
+
+        call rotmat(th, phi, om, Q_0)
+
+        Q_1 = matmul(R_tw, Q_0)
+        call eulang(Q_1, th_tw, phi_tw, om_tw, ieulererr)
+
+        props_tw = props
+        props_tw(eulidx(1)) = th_tw * 180.d0 / pi
+        props_tw(eulidx(2)) = phi_tw * 180.d0 / pi
+        props_tw(eulidx(3)) = om_tw * 180.d0 / pi
+
+      end subroutine

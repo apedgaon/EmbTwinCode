@@ -55,7 +55,7 @@
 !------------------------------------------------------------------
 !       User variables definition
 !------------------------------------------------------------------
-        integer i, j, k, l, m, n, ia
+        integer i, j, k, l, m, n, ia, ieulererr
         integer nslip, iterErr
         real*8 pi
         real*8 del(3, 3)
@@ -124,6 +124,15 @@
         real*8 kappax
         real*8 e_D
         real*8 theta0
+        real*8 Qmat1(3, 3)
+        real*8 Re(3, 3)
+        real*8 Ue(3, 3)
+        real*8 th1
+        real*8 phi1
+        real*8 om1
+        real*8 eulangs(3)
+        real*8 arg
+        real*8 angMis
 
         real*8, external :: determinant
 
@@ -429,12 +438,39 @@
         theta = theta + betaT * dWp / (rho * cp)
         chi = chi_n + kappax * e_D * (1.d0 - betaT) * dWp / mu
 
+        ! Compute new euler angles
+        call polardecomp(Fe, Re, Ue)
+        Qmat1 = matmul(Re, Qmat)
+        call eulang(Qmat1, th1, phi1, om1, ieulererr)
+        if (ieulererr == 1) then
+          eulangs(1)  = 0.d0
+          eulangs(2) =  0.d0
+          eulangs(3)  = 0.d0
+        else
+          eulangs(1)  = th1*180.d0/pi
+          eulangs(2) =  phi1*180.d0/pi
+          eulangs(3)  = om1*180.d0/pi
+        endif
+
+        ! Calculate the misorientation magnitude
+        arg = (Re(1,1)+Re(2,2)+Re(3,3)-1.d0)/2.d0
+        if (abs(arg-1.d0) < 1e-10) then
+          angMis = 0.d0
+        else
+          angMis = dacos(arg)
+        endif
+        angMis = angMis*180.d0/pi
+
         ! Store state variables
         ! Store temperature
         n = 1
         statev(n) = theta
 
         ! Store euler angles
+        do i = 1, 3
+          n = n + 1
+          statev(n) = eulangs(i)
+        end do
 
         ! Store FpInv
         n = 4
@@ -469,6 +505,10 @@
         ! Store effective temperature
         n = n + 1
         statev(n) = chi
+
+        ! Store misorientation angle
+        n = n + 1
+        statev(n) = angMis
 
         ! Calculate Stress Jacobian ddsdde
 C        call calc_jac(nslip, props, nprops, C, dfgrd0, dfgrd1, Fpinv_n,

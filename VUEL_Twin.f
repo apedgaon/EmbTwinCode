@@ -267,6 +267,8 @@ C       Twin Code Implementation Started
         pointer (ptr_disp, disp)
         real*8 nuc_thr(*)
         pointer (ptr_nuc_thr, nuc_thr)
+        real*8 elmt_SDV(14, *)
+        pointer (ptr_elmt_SDV, elmt_SDV)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac, rNRTol
@@ -278,6 +280,9 @@ C       Twin Code Implementation Started
         integer num_twins_gr, max_twins_gr
         real*8 P_0
         logical lNRerr
+        real*8 outSDVM(7)
+        real*8 outSDVMZ(7)
+        real*8 temp
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -362,6 +367,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_nuc_prob = SMAFloatArrayAccess(14)
           ptr_disp = SMAFloatArrayAccess(15)
           ptr_nuc_thr = SMAFloatArrayAccess(16)
+          ptr_elmt_SDV = SMAFloatArrayAccess(17)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -525,9 +531,6 @@ C           b) shape functions and their derivatives wrt mid-step global coords
                   exit
                 end if
               end do
-
-              ! Initialize element average stress
-              elmt_stress(:, elmt_number) = 0.d0
             end if
 
             ! Evaluate twinID and twinning system flag
@@ -676,8 +679,12 @@ C               Compute the internal force vector
 
               end do
 
-              ! Write avg global element stress
               if (kstep.gt.0) then
+                ! Initialize element average stress and SDV
+                elmt_stress(:, elmt_number) = 0.d0
+                elmt_SDV(:, elmt_number) = 0.d0
+
+                ! Write avg global element stress
                 rStressCt = 0.d0
                 do l = 1, iTIntPt
                   rStressCt = rStressCt + rStress(:, l)
@@ -685,6 +692,38 @@ C               Compute the internal force vector
 
                 rStressCt = rStressCt / iTIntPt
                 elmt_stress(1:6, elmt_number) = rStressCt
+
+                ! Write avg state variables
+                outSDVM = 0.d0
+                do l = 1, iTIntPt
+                  iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+
+                  ! Temperature
+                  outSDVM(1) = outSDVM(1) + svars(kblock, iumatsvst)
+
+                  ! Euler angles
+                  outSDVM(2:4) = outSDVM(2:4) +
+     &                             svars(kblock, iumatsvst + 1:3)
+
+                  ! Cumulative dislocation density
+                  temp = 0.d0
+                  do i = 1, 18
+                    temp = temp + svars(kblock, iumatsvst + 36 + i)
+                  end do
+                  outSDVM(5) = outSDVM(5) + temp / 18
+
+                  ! Effective temperature
+                  outSDVM(6) = outSDVM(6) +
+     &                             svars(kblock, iumatsvst + 55)
+
+                  ! Angular Misorientation
+                  outSDVM(7) = outSDVM(7) +
+     &                             svars(kblock, iumatsvst + 56)
+
+                end do
+
+                outSDVM = outSDVM / iTIntPt
+                elmt_SDV(1:7, elmt_number) = outSDVM
               end if
 
               ! Save max nucleation probability
@@ -1231,8 +1270,12 @@ C               Compute the internal force vector
                 elmt_stat(2, elmt_number) = iTwEmbStp
               end if
 
-              ! Write to avg global element stress for both regions
               if (kstep.gt.0) then
+                ! Initialize element average stress and SDV
+                elmt_stress(:, elmt_number) = 0.d0
+                elmt_SDV(:, elmt_number) = 0.d0
+
+                ! Write to avg global element stress for both regions
                 rStressCt = 0.d0
                 rStressCtZ = 0.d0
                 do l = 1, iTIntPt
@@ -1244,6 +1287,66 @@ C               Compute the internal force vector
                 rStressCtZ = rStressCtZ / iTIntPt
                 elmt_stress(1:6, elmt_number) = rStressCt
                 elmt_stress(7:12, elmt_number) = rStressCtZ
+
+                ! Write avg state variables
+                outSDVM = 0.d0
+                outSDVMZ = 0.d0
+                do l = 1, iTIntPt
+                  iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+
+                  ! Temperature
+                  outSDVM(1) = outSDVM(1) + svars(kblock, iumatsvst)
+
+                  ! Euler angles
+                  outSDVM(2:4) = outSDVM(2:4) +
+     &                             svars(kblock, iumatsvst + 1:3)
+
+                  ! Cumulative dislocation density
+                  temp = 0.d0
+                  do i = 1, 18
+                    temp = temp + svars(kblock, iumatsvst + 36 + i)
+                  end do
+                  outSDVM(5) = outSDVM(5) + temp / 18
+
+                  ! Effective temperature
+                  outSDVM(6) = outSDVM(6) +
+     &                             svars(kblock, iumatsvst + 55)
+
+                  ! Angular Misorientation
+                  outSDVM(7) = outSDVM(7) +
+     &                             svars(kblock, iumatsvst + 56)
+
+                  ! Twinned Region
+                  iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
+
+                  ! Temperature
+                  outSDVMZ(1) = outSDVMZ(1) + svars(kblock, iumatsvst)
+
+                  ! Euler angles
+                  outSDVMZ(2:4) = outSDVMZ(2:4) +
+     &                             svars(kblock, iumatsvst + 1:3)
+
+                  ! Cumulative dislocation density
+                  temp = 0.d0
+                  do i = 1, 18
+                    temp = temp + svars(kblock, iumatsvst + 36 + i)
+                  end do
+                  outSDVMZ(5) = outSDVMZ(5) + temp / 18
+
+                  ! Effective temperature
+                  outSDVMZ(6) = outSDVMZ(6) +
+     &                             svars(kblock, iumatsvst + 55)
+
+                  ! Angular Misorientation
+                  outSDVMZ(7) = outSDVMZ(7) +
+     &                             svars(kblock, iumatsvst + 56)
+
+                end do
+
+                outSDVM = outSDVM / iTIntPt
+                outSDVMZ = outSDVMZ / iTIntPt
+                elmt_SDV(1:7, elmt_number) = outSDVM
+                elmt_SDV(8:14, elmt_number) = outSDVMZ
               end if
 
             end if
@@ -1368,6 +1471,7 @@ C       Contents of r_Array
             call SMAFloatArrayDelete(14)
             call SMAFloatArrayDelete(15)
             call SMAFloatArrayDelete(16)
+            call SMAFloatArrayDelete(17)
           end if
         end if
 
@@ -1416,6 +1520,8 @@ C       Contents of r_Array
         pointer (ptr_disp, disp)
         real*8 nuc_thr(*)
         pointer (ptr_nuc_thr, nuc_thr)
+        real*8 elmt_SDV(14, *)
+        pointer (ptr_elmt_SDV, elmt_SDV)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1.txt'
@@ -1523,6 +1629,9 @@ C       Contents of r_Array
           nuc_thr(i) = 0.85d0
         end do
         ! close(121)
+
+        ! Element state dependent variables
+        ptr_elmt_SDV = SMAFloatArrayCreate(17, 14*num_elems, 0.d0)
 
       end subroutine
 
@@ -1782,6 +1891,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         pointer (ptr_nuc_prob, nuc_prob)
         real*8 disp(3, *)
         pointer (ptr_disp, disp)
+        real*8 elmt_SDV(14, *)
+        pointer (ptr_elmt_SDV, elmt_SDV)
         character (len = 1) :: pathseperator = '/'
         character (len = 256) :: outdir, filepath
         integer :: lenoutdir
@@ -1795,6 +1906,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         ptr_elmt_stress = SMAFloatArrayAccess(13)
         ptr_nuc_prob = SMAFloatArrayAccess(14)
         ptr_disp = SMAFloatArrayAccess(15)
+        ptr_elmt_SDV = SMAFloatArrayAccess(17)
         num_elems = size_list(2)
         num_nodes = size_list(3)
 
@@ -1855,6 +1967,17 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         end if
 
         write(io, *) kInc, time
+        close(io)
+
+        ! Write element SDV for both regions
+        filepath = trim(outdir)//pathseperator//'kinc_elmt_SDV_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+
+        open(newunit = io, file = filepath, status = 'new')
+        do iel=1,num_elems
+          write(io,*) elmt_SDV(:, iel)
+        end do
+
         close(io)
 
       end subroutine

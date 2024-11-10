@@ -1993,7 +1993,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 1000  FORMAT (14(E26.16))
 
         ! Write simulation information about twins
-        filepath = trim(outdir)//pathseperator//'twin_info.dat'
+        filepath = trim(outdir)//pathseperator//'kinc_twin_info.dat'
         inquire(file=filepath, exist=exists)
         if (exists) then
           open(newunit = io, file = filepath, status = 'replace')

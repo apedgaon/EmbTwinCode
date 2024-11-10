@@ -1975,10 +1975,12 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         open(newunit = io, file = filepath, status = 'new')
         do iel=1,num_elems
-          write(io,*) elmt_SDV(:, iel)
+          write(io,1000) elmt_SDV(:, iel)
         end do
 
         close(io)
+
+1000  FORMAT (14(E26.16))
 
       end subroutine
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

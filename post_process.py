@@ -22,10 +22,13 @@ directory = os.getcwd()
 for file in glob.glob(directory + os.sep + "kinc_elmt_stat_*.dat"):
     file_name_components = file.split('_')
     sval = file_name_components[-1].split('.')[0]
-    print(sval)
 
     # Open vtk file with increment number and start writing
     output_file = os.path.join(directory, 'twin_' + sval + '.vtu')
+    if os.path.exists(output_file):
+        continue
+
+    print(sval)
     vtk_stream = open(output_file, "w", newline="\n")
 
     # Header

@@ -3,12 +3,19 @@ import glob
 import numpy as np
 
 # Load mesh
-elem_conn2 = np.loadtxt('input_elmt_8.inp', delimiter=',', dtype=int)
+elem_conn2 = np.loadtxt('input_elmt_1000.inp', delimiter=',', dtype=int)
 elem_conn = elem_conn2[:, 1:]
 elem_conn = elem_conn - 1
 
-nodal_coords = np.loadtxt('input_node_8.inp', delimiter=',')
+nodal_coords = np.loadtxt('input_node_1000.inp', delimiter=',')
 nodal_coords = nodal_coords[:, 1:]
+
+# Load time and create its dictionary
+time = np.loadtxt('kinc_time.dat')
+num_frames = len(time)
+time_dict = dict()
+for i in np.arange(num_frames):
+    time_dict[int(time[i, 0])] = time[i, 1]
 
 # Loop over vuel element status files and generate vtk for all results
 directory = os.getcwd()
@@ -25,6 +32,13 @@ for file in glob.glob(directory + os.sep + "kinc_elmt_stat_*.dat"):
     vtk_stream.write("<?xml version=\"1.0\"?>\n")
     vtk_stream.write("<VTKFile type=\"UnstructuredGrid\"  version=\"0.1\"  >\n")
     vtk_stream.write("<UnstructuredGrid>\n")
+
+    # Write time for this frame
+    vtk_stream.write("<FieldData>\n")
+    vtk_stream.write("<DataArray type=\"Float32\" Name=\"TIME\" NumberOfTuples=\"1\" format=\"ascii\">\n")
+    vtk_stream.write(str(time_dict[int(sval)]) + "\n")
+    vtk_stream.write("</DataArray>\n")
+    vtk_stream.write("</FieldData>\n")
 
     # Write mesh info
     num_elems = elem_conn.shape[0]

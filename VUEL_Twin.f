@@ -1881,7 +1881,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         implicit none
 #include <SMAAspUserSubroutines.hdr>
         integer kInc
-        integer num_nodes, num_elems, iel, io, ind
+        integer num_nodes, num_elems, iel, io, ind, num_twins, itw
         integer size_list(*), elmt_stat(3, *)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
@@ -1893,6 +1893,12 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         pointer (ptr_disp, disp)
         real*8 elmt_SDV(14, *)
         pointer (ptr_elmt_SDV, elmt_SDV)
+        real*8 tw_geom(3, *)
+        pointer (ptr_tw_geom, tw_geom)
+        integer tw_flg(*)
+        pointer (ptr_tw_flg, tw_flg)
+        integer tw_dec(3, *)
+        pointer (ptr_tw_dec, tw_dec)
         character (len = 1) :: pathseperator = '/'
         character (len = 256) :: outdir, filepath
         integer :: lenoutdir
@@ -1903,12 +1909,16 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         ! Retrieve data from global shared arrays
         ptr_size_list = SMAIntArrayAccess(1)
         ptr_elmt_stat = SMAIntArrayAccess(6)
+        ptr_tw_flg = SMAIntArrayAccess(7)
+        ptr_tw_geom = SMAFloatArrayAccess(11)
+        ptr_tw_dec = SMAIntArrayAccess(12)
         ptr_elmt_stress = SMAFloatArrayAccess(13)
         ptr_nuc_prob = SMAFloatArrayAccess(14)
         ptr_disp = SMAFloatArrayAccess(15)
         ptr_elmt_SDV = SMAFloatArrayAccess(17)
         num_elems = size_list(2)
         num_nodes = size_list(3)
+        num_twins = size_list(4)
 
         ! Write element status with twin id
         write(str_kinc, '(I0)') kInc
@@ -1981,6 +1991,30 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         close(io)
 
 1000  FORMAT (14(E26.16))
+
+        ! Write simulation information about twins
+        filepath = trim(outdir)//pathseperator//'twin_info.dat'
+        inquire(file=filepath, exist=exists)
+        if (exists) then
+          open(newunit = io, file = filepath, status = 'replace')
+        else
+          open(newunit = io, file = filepath, status = 'new')
+        end if
+
+        write(io, *) "Increment = ", kInc
+        write(io, *) "Time = ", time
+        write(io, *) "Number of twins = ", num_twins
+        do itw = 1, num_twins
+          write(io, *)
+          write(io, *) "Twin id = ", itw
+          write(io, *) "Twin system = ", tw_flg(itw)
+          write(io, *) "Twin length = ", tw_geom(1, itw)
+          write(io, *) "Twin width = ", tw_geom(2, itw)
+          write(io, *) "Twin thickness = ", tw_geom(3, itw)
+          ! write(io, *) "Twin decider = ", tw_dec(:, itw)
+        end do
+
+        close(io)
 
       end subroutine
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

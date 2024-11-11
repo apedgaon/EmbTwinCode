@@ -149,6 +149,7 @@ C       Twin Code Implementation Started
         real*8 rDfgrd0Ct(3, 3), rDfgrd1Ct(3, 3) ! Previous and Current Def grd at Elmt centroid
         real*8 rCtCoords(3)      ! Current Coordinates of element centroid
         real*8 rStressCt(6)      ! Cauchy Stress at Elmt Centroid
+        real*8 rStressCtZ(6)     ! Cauchy Stress at Elmt Centroid
         real*8 rEpsilon          ! Pressure mode stabilization parameter; see Ortiz et al (1987), Eq. (21).
         real*8 rMSBm(6,mcrd*nnode) ! B (or B-bar) operator at mid-step
         real*8 rMSBs(3,mcrd*nnode) ! skew-symmetric matrix operator at mid-step
@@ -164,7 +165,7 @@ C       Twin Code Implementation Started
         real*8 rDfgrd0(3, 3)      ! Previous Deformation Gradient
         real*8 rDfgrd1(3, 3)      ! Current Deformation Gradient
         real*8 rGsCoords(3)       ! Quadrature Point Current coordinates
-        real*8 rStress(6)         ! Cauchy Stress
+        real*8 rStress(6, 8)         ! Cauchy Stress
         real*8 rBmat(6,mcrd*nnode) ! current B (or B-bar) operator
         real*8 rBskw(3,mcrd*nnode) ! current skew-symmetric matrix operator
         real*8 Smat(3, 3, 18)      ! Twinning Schmid Tensor
@@ -185,8 +186,8 @@ C       Twin Code Implementation Started
         real*8 rBWidth             ! Band width of twin
         real*8 rBWidthOff          ! Band width offset
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
-        real*8 rStress_U(6)     ! Stress in untwinned region
-        real*8 rStress_Z(6)     ! Stress in twinned region
+        real*8 rStress_U(6, 8)     ! Stress in untwinned region
+        real*8 rStress_Z(6, 8)     ! Stress in twinned region
         real*8 rWu(3, 3, 3, 3)     ! dT/dF^U Material Jacobian for untwinned region
         real*8 rWz(3, 3, 3, 3)     ! dT/dF^Z Material Jacobian for twinned region
         real*8 rntw(3, 18)         ! Twin normal
@@ -266,6 +267,8 @@ C       Twin Code Implementation Started
         pointer (ptr_disp, disp)
         real*8 nuc_thr(*)
         pointer (ptr_nuc_thr, nuc_thr)
+        real*8 elmt_SDV(14, *)
+        pointer (ptr_elmt_SDV, elmt_SDV)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
         real*8 rNRFac, rNRTol
@@ -277,6 +280,9 @@ C       Twin Code Implementation Started
         integer num_twins_gr, max_twins_gr
         real*8 P_0
         logical lNRerr
+        real*8 outSDVM(7)
+        real*8 outSDVMZ(7)
+        real*8 temp
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -361,6 +367,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_nuc_prob = SMAFloatArrayAccess(14)
           ptr_disp = SMAFloatArrayAccess(15)
           ptr_nuc_thr = SMAFloatArrayAccess(16)
+          ptr_elmt_SDV = SMAFloatArrayAccess(17)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -524,9 +531,6 @@ C           b) shape functions and their derivatives wrt mid-step global coords
                   exit
                 end if
               end do
-
-              ! Initialize element average stress
-              elmt_stress(:, elmt_number) = 0.d0
             end if
 
             ! Evaluate twinID and twinning system flag
@@ -615,7 +619,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute Stress from existing UMAT
                 iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
                 iumatsven = offstatev(1) + l * nstatev(1)
-                call umat_stress(rStress,
+                call umat_stress(rStress(:, l),
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rDfgrd0, rDfgrd1,
      &                           props(stmprop:endmprop), nmprops, 
@@ -628,13 +632,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             'unlocalized region!', 0,0.d0,' ')
                 end if
 
-                ! Write to global element stress
-                !Fe_m = Fe_m + 1.d0 / iTIntPt * Fe(:, :, l)
-                if (kstep.gt.0) then
-                  elmt_stress(1:6, elmt_number) = rStress / iTIntPt +
-     &                                     elmt_stress(1:6, elmt_number)
-                end if
-
                 ! store same svars for twinned part which has not formed yet
                 iumatsvst2 = offstatev(2) + 1 + (l - 1) * nstatev(1)
                 iumatsven2 = offstatev(2) + l * nstatev(1)
@@ -643,8 +640,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 ! Check for twin nucleation
                 if (isGbElem.and.(iTwEmbStp.eq.0)) then
-                  call check_twin_nucleation(rStress, Smat, Fe(:,:,l),
-     &                                       iTwFlg, PtauMax, P_0)
+                  call check_twin_nucleation(rStress(:, l), Smat,
+     &                                       Fe(:,:,l), iTwFlg, PtauMax,
+     &                                       P_0)
                 end if
 
 C               Compute linear + quadratic bulk viscosity terms
@@ -668,9 +666,9 @@ C               Compute the internal force vector
                   DO i = 1, mcrd
                     DO j = 1, 6
                       if (j.le.3) then    ! add bulk viscosity
-                        rSigma = rStress(j) - rBVpress
+                        rSigma = rStress(j, l) - rBVpress
                       else
-                        rSigma = rStress(j)
+                        rSigma = rStress(j, l)
                       end if
                       rhs( kblock , (n-1)*mcrd + i ) =
      $                rhs( kblock , (n-1)*mcrd + i )
@@ -680,6 +678,53 @@ C               Compute the internal force vector
                 END DO
 
               end do
+
+              if (kstep.gt.0) then
+                ! Initialize element average stress and SDV
+                elmt_stress(:, elmt_number) = 0.d0
+                elmt_SDV(:, elmt_number) = 0.d0
+
+                ! Write avg global element stress
+                rStressCt = 0.d0
+                do l = 1, iTIntPt
+                  rStressCt = rStressCt + rStress(:, l)
+                end do
+
+                rStressCt = rStressCt / iTIntPt
+                elmt_stress(1:6, elmt_number) = rStressCt
+
+                ! Write avg state variables
+                outSDVM = 0.d0
+                do l = 1, iTIntPt
+                  iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+
+                  ! Temperature
+                  outSDVM(1) = outSDVM(1) + svars(kblock, iumatsvst)
+
+                  ! Euler angles
+                  outSDVM(2:4) = outSDVM(2:4) +
+     &                             svars(kblock, iumatsvst + 1:3)
+
+                  ! Cumulative dislocation density
+                  temp = 0.d0
+                  do i = 1, 18
+                    temp = temp + svars(kblock, iumatsvst + 36 + i)
+                  end do
+                  outSDVM(5) = outSDVM(5) + temp / 18
+
+                  ! Effective temperature
+                  outSDVM(6) = outSDVM(6) +
+     &                             svars(kblock, iumatsvst + 55)
+
+                  ! Angular Misorientation
+                  outSDVM(7) = outSDVM(7) +
+     &                             svars(kblock, iumatsvst + 56)
+
+                end do
+
+                outSDVM = outSDVM / iTIntPt
+                elmt_SDV(1:7, elmt_number) = outSDVM
+              end if
 
               ! Save max nucleation probability
               if ((kstep.gt.0).and.isGbElem) then
@@ -906,7 +951,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   ! Compute Stress (twinned region) from existing UMAT
                   iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
                   iumatsven = offstatev(2) + l * nstatev(1)
-                  call umat_stress(rStress_Z,
+                  call umat_stress(rStress_Z(:, l),
      &                             svars(kblock, iumatsvst:iumatsven),
      &                             rGsCoords, rFz0h, rFz1h,
      &                             props_tw, nmprops, nstatev(1), nnode,
@@ -919,10 +964,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                     call xplb_abqerr(-3,'UMAT Failed to Converge in '//
      &                             'fully twinned region!', 0,0.d0,' ')
                   end if
-
-                  ! Save element stress
-                  elmt_stress(7:12, elmt_number) = rStress_Z / iTIntPt +
-     &                                    elmt_stress(7:12, elmt_number)
 
                   theta = svars(kblock, iumatsvst)    ! Twinned Temperature
 
@@ -943,9 +984,9 @@ C                 Compute the internal force vector
                     do i = 1, mcrd
                       do j = 1, 6
                         if (j.le.3) then    ! add bulk viscosity
-                          rSigmaZ = rStress_Z(j) - rBVpress
+                          rSigmaZ = rStress_Z(j, l) - rBVpress
                         else
-                          rSigmaZ = rStress_Z(j)
+                          rSigmaZ = rStress_Z(j, l)
                         end if
                         rhs( kblock , (n-1)*mcrd + i ) =
      &                      rhs( kblock , (n-1)*mcrd + i ) +
@@ -1033,7 +1074,6 @@ C                 Compute the internal force vector
                   iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
                   iumatsven = offstatev(1) + l * nstatev(1)
                   print*, "svars = ", svars(kblock, iumatsvst:iumatsven)
-                  print*, "rStress_U = ", rStress_U
                   print*, "rFu1 = ", rFu1
                   print*, "rFz1 = ", rFz1
                   print*, "rFz1h = ", rFz1h
@@ -1137,7 +1177,7 @@ C                 Compute the internal force vector
                 ! Compute Final Stress (untwinned region) from existing UMAT
                 iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
                 iumatsven = offstatev(1) + l * nstatev(1)
-                call umat_stress(rStress_U,
+                call umat_stress(rStress_U(:, l),
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rFu0, rFu1,
      &                           props(stmprop:endmprop), nmprops,
@@ -1151,20 +1191,13 @@ C                 Compute the internal force vector
                 ! Compute Final Stress (twinned region) from existing UMAT
                 iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
                 iumatsven = offstatev(2) + l * nstatev(1)
-                call umat_stress(rStress_Z,
+                call umat_stress(rStress_Z(:, l),
      &                           svars(kblock, iumatsvst:iumatsven),
      &                           rGsCoords, rFz0h, rFz1h,
      &                           props_tw, nmprops, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWz, iterErr,
      &                           FeZ)
-
-
-                ! Save both regions stress
-                elmt_stress(1:6, elmt_number) = rStress_U / iTIntPt +
-     &                                     elmt_stress(1:6, elmt_number)
-                elmt_stress(7:12, elmt_number) = rStress_Z / iTIntPt +
-     &                                    elmt_stress(7:12, elmt_number)
 
                 theta = theta + svars(kblock, iumatsvst)*bhratio    ! Twinned Temperature
 
@@ -1189,11 +1222,11 @@ C               Compute the internal force vector
                   do i = 1, mcrd
                     do j = 1, 6
                       if (j.le.3) then    ! add bulk viscosity
-                        rSigmaU = rStress_U(j) - rBVpress
-                        rSigmaZ = rStress_Z(j) - rBVpress
+                        rSigmaU = rStress_U(j, l) - rBVpress
+                        rSigmaZ = rStress_Z(j, l) - rBVpress
                       else
-                        rSigmaU = rStress_U(j)
-                        rSigmaZ = rStress_Z(j)
+                        rSigmaU = rStress_U(j, l)
+                        rSigmaZ = rStress_Z(j, l)
                       end if
                       rhs( kblock , (n-1)*mcrd + i ) =
      &                rhs( kblock , (n-1)*mcrd + i ) +
@@ -1205,8 +1238,8 @@ C               Compute the internal force vector
                 end do
 
                 ! vector to matrix for stress in twinned and untwinned region
-                call vec_to_sym_mat(rStress_U, sigmaU)
-                call vec_to_sym_mat(rStress_Z, sigmaZ)
+                call vec_to_sym_mat(rStress_U(:, l), sigmaU)
+                call vec_to_sym_mat(rStress_Z(:, l), sigmaZ)
 
                 ! Compute twin length, width and thickness evolution
                 Smatc =
@@ -1236,6 +1269,86 @@ C               Compute the internal force vector
                 iTwEmbStp = 0
                 elmt_stat(2, elmt_number) = iTwEmbStp
               end if
+
+              if (kstep.gt.0) then
+                ! Initialize element average stress and SDV
+                elmt_stress(:, elmt_number) = 0.d0
+                elmt_SDV(:, elmt_number) = 0.d0
+
+                ! Write to avg global element stress for both regions
+                rStressCt = 0.d0
+                rStressCtZ = 0.d0
+                do l = 1, iTIntPt
+                  rStressCt = rStressCt + rStress_U(:, l)
+                  rStressCtZ = rStressCtZ + rStress_Z(:, l)
+                end do
+
+                rStressCt = rStressCt / iTIntPt
+                rStressCtZ = rStressCtZ / iTIntPt
+                elmt_stress(1:6, elmt_number) = rStressCt
+                elmt_stress(7:12, elmt_number) = rStressCtZ
+
+                ! Write avg state variables
+                outSDVM = 0.d0
+                outSDVMZ = 0.d0
+                do l = 1, iTIntPt
+                  iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+
+                  ! Temperature
+                  outSDVM(1) = outSDVM(1) + svars(kblock, iumatsvst)
+
+                  ! Euler angles
+                  outSDVM(2:4) = outSDVM(2:4) +
+     &                             svars(kblock, iumatsvst + 1:3)
+
+                  ! Cumulative dislocation density
+                  temp = 0.d0
+                  do i = 1, 18
+                    temp = temp + svars(kblock, iumatsvst + 36 + i)
+                  end do
+                  outSDVM(5) = outSDVM(5) + temp / 18
+
+                  ! Effective temperature
+                  outSDVM(6) = outSDVM(6) +
+     &                             svars(kblock, iumatsvst + 55)
+
+                  ! Angular Misorientation
+                  outSDVM(7) = outSDVM(7) +
+     &                             svars(kblock, iumatsvst + 56)
+
+                  ! Twinned Region
+                  iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
+
+                  ! Temperature
+                  outSDVMZ(1) = outSDVMZ(1) + svars(kblock, iumatsvst)
+
+                  ! Euler angles
+                  outSDVMZ(2:4) = outSDVMZ(2:4) +
+     &                             svars(kblock, iumatsvst + 1:3)
+
+                  ! Cumulative dislocation density
+                  temp = 0.d0
+                  do i = 1, 18
+                    temp = temp + svars(kblock, iumatsvst + 36 + i)
+                  end do
+                  outSDVMZ(5) = outSDVMZ(5) + temp / 18
+
+                  ! Effective temperature
+                  outSDVMZ(6) = outSDVMZ(6) +
+     &                             svars(kblock, iumatsvst + 55)
+
+                  ! Angular Misorientation
+                  outSDVMZ(7) = outSDVMZ(7) +
+     &                             svars(kblock, iumatsvst + 56)
+
+                end do
+
+                outSDVM = outSDVM / iTIntPt
+                outSDVMZ = outSDVMZ / iTIntPt
+                elmt_SDV(1:7, elmt_number) = outSDVM
+                elmt_SDV(8:14, elmt_number) = outSDVMZ
+              end if
+
             end if
 
             ! Compute stable time step increment
@@ -1358,6 +1471,7 @@ C       Contents of r_Array
             call SMAFloatArrayDelete(14)
             call SMAFloatArrayDelete(15)
             call SMAFloatArrayDelete(16)
+            call SMAFloatArrayDelete(17)
           end if
         end if
 
@@ -1406,6 +1520,8 @@ C       Contents of r_Array
         pointer (ptr_disp, disp)
         real*8 nuc_thr(*)
         pointer (ptr_nuc_thr, nuc_thr)
+        real*8 elmt_SDV(14, *)
+        pointer (ptr_elmt_SDV, elmt_SDV)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1.txt'
@@ -1513,6 +1629,9 @@ C       Contents of r_Array
           nuc_thr(i) = 0.85d0
         end do
         ! close(121)
+
+        ! Element state dependent variables
+        ptr_elmt_SDV = SMAFloatArrayCreate(17, 14*num_elems, 0.d0)
 
       end subroutine
 
@@ -1762,7 +1881,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         implicit none
 #include <SMAAspUserSubroutines.hdr>
         integer kInc
-        integer num_nodes, num_elems, iel, io, ind
+        integer num_nodes, num_elems, iel, io, ind, num_twins, itw
         integer size_list(*), elmt_stat(3, *)
         pointer (ptr_size_list, size_list)
         pointer (ptr_elmt_stat, elmt_stat)
@@ -1772,6 +1891,14 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         pointer (ptr_nuc_prob, nuc_prob)
         real*8 disp(3, *)
         pointer (ptr_disp, disp)
+        real*8 elmt_SDV(14, *)
+        pointer (ptr_elmt_SDV, elmt_SDV)
+        real*8 tw_geom(3, *)
+        pointer (ptr_tw_geom, tw_geom)
+        integer tw_flg(*)
+        pointer (ptr_tw_flg, tw_flg)
+        integer tw_dec(3, *)
+        pointer (ptr_tw_dec, tw_dec)
         character (len = 1) :: pathseperator = '/'
         character (len = 256) :: outdir, filepath
         integer :: lenoutdir
@@ -1782,11 +1909,16 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         ! Retrieve data from global shared arrays
         ptr_size_list = SMAIntArrayAccess(1)
         ptr_elmt_stat = SMAIntArrayAccess(6)
+        ptr_tw_flg = SMAIntArrayAccess(7)
+        ptr_tw_geom = SMAFloatArrayAccess(11)
+        ptr_tw_dec = SMAIntArrayAccess(12)
         ptr_elmt_stress = SMAFloatArrayAccess(13)
         ptr_nuc_prob = SMAFloatArrayAccess(14)
         ptr_disp = SMAFloatArrayAccess(15)
+        ptr_elmt_SDV = SMAFloatArrayAccess(17)
         num_elems = size_list(2)
         num_nodes = size_list(3)
+        num_twins = size_list(4)
 
         ! Write element status with twin id
         write(str_kinc, '(I0)') kInc
@@ -1845,6 +1977,43 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         end if
 
         write(io, *) kInc, time
+        close(io)
+
+        ! Write element SDV for both regions
+        filepath = trim(outdir)//pathseperator//'kinc_elmt_SDV_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+
+        open(newunit = io, file = filepath, status = 'new')
+        do iel=1,num_elems
+          write(io,1000) elmt_SDV(:, iel)
+        end do
+
+        close(io)
+
+1000  FORMAT (14(E26.16))
+
+        ! Write simulation information about twins
+        filepath = trim(outdir)//pathseperator//'kinc_twin_info.dat'
+        inquire(file=filepath, exist=exists)
+        if (exists) then
+          open(newunit = io, file = filepath, status = 'replace')
+        else
+          open(newunit = io, file = filepath, status = 'new')
+        end if
+
+        write(io, *) "Increment = ", kInc
+        write(io, *) "Time = ", time
+        write(io, *) "Number of twins = ", num_twins
+        do itw = 1, num_twins
+          write(io, *)
+          write(io, *) "Twin id = ", itw
+          write(io, *) "Twin system = ", tw_flg(itw)
+          write(io, *) "Twin length = ", tw_geom(1, itw)
+          write(io, *) "Twin width = ", tw_geom(2, itw)
+          write(io, *) "Twin thickness = ", tw_geom(3, itw)
+          ! write(io, *) "Twin decider = ", tw_dec(:, itw)
+        end do
+
         close(io)
 
       end subroutine

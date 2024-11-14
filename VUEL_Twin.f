@@ -846,20 +846,19 @@ C               Compute the internal force vector
               !if (bhratio.ge.0.9999d0) bhratio = 0.9999d0
               hbratio = 1.d0 / bhratio
 
-              print*, "length = ", rBLength
-              print*, "width = ", rBLatWidth
-              print*, "thickness = ", rBWidth
-              print*, "rBWidthOff = ", rBWidthOff
-
               ! DEBUGGING
-              print*, "time = ", time(2)
-              print*, "twinID = ", twinID
-              print*, "elmt no = ", elmt_number
-              print*, "iTwFlg = ", iTwFlg
-              print*, "iTwEmbStp = ", iTwEmbStp
-              print*, "rntw = ", rntw(:, iTwFlg)
-              print*, "rmtw = ", rmtw(:, iTwFlg)
-              print*, "twin_decider = ", tw_dec(:, twinID)
+              ! print*, "length = ", rBLength
+              ! print*, "width = ", rBLatWidth
+              ! print*, "thickness = ", rBWidth
+              ! print*, "rBWidthOff = ", rBWidthOff
+              ! print*, "time = ", time(2)
+              ! print*, "twinID = ", twinID
+              ! print*, "elmt no = ", elmt_number
+              ! print*, "iTwFlg = ", iTwFlg
+              ! print*, "iTwEmbStp = ", iTwEmbStp
+              ! print*, "rntw = ", rntw(:, iTwFlg)
+              ! print*, "rmtw = ", rmtw(:, iTwFlg)
+              ! print*, "twin_decider = ", tw_dec(:, twinID)
               ! Quadrature Loop
               do l = 1, iTIntPt
 C               Compute shape functs, their derivs (wrt global coords), and the Jacobian determinant
@@ -1019,7 +1018,7 @@ C                 Compute the internal force vector
                 end if
 
                 ! DEBUGGING
-                print*, "l = ", l
+                ! print*, "l = ", l
 
                 ! Initialization of variables and indices before traction continuity
                 nAltInit = 0
@@ -1039,7 +1038,7 @@ C                 Compute the internal force vector
      &                            nstatev, dtimeCur, rdVelGrd, rntwc,
      &                            hbratio, iTwFlg, iTwEmbStp)
 
-                  print*, "rmh = ", rmh
+                  ! print*, "rmh = ", rmh
                   ! Traction continuity Newton iterations
                   call traction_continuityNR(rntwc, rdVelGrd, hbratio,
      &                 rFu0, rFz0, rFz0h, del, nstatev(1),
@@ -1055,7 +1054,7 @@ C                 Compute the internal force vector
                   end if
 
                   nAltInit = nAltInit + 1
-                  print*, "nAltInit = ", nAltInit
+                  ! print*, "nAltInit = ", nAltInit
                 end do
 
                 ! End analysis if traction continuity fails
@@ -1271,10 +1270,6 @@ C               Compute the internal force vector
               end if
 
               if (kstep.gt.0) then
-                ! Initialize element average stress and SDV
-                elmt_stress(:, elmt_number) = 0.d0
-                elmt_SDV(:, elmt_number) = 0.d0
-
                 ! Write to avg global element stress for both regions
                 rStressCt = 0.d0
                 rStressCtZ = 0.d0

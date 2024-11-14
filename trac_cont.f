@@ -35,7 +35,7 @@ C     Traction Continuity Newton iterations
         ! Newton's iteration loop
         do iter = 1, maxiter
           ! DEBUGGING
-          print*, "iter = ", iter
+          ! print*, "iter = ", iter
 
           ! Compute m tensor product with n
           do j = 1, 3
@@ -111,9 +111,9 @@ C     Traction Continuity Newton iterations
           ! check for residual convergence
           g_tr_err = norm2(g_tr)      ! (absolute error)
           ! DEBUGGING
-          print*, "g_tr_err = ", g_tr_err
+          ! print*, "g_tr_err = ", g_tr_err
           if (g_tr_err.lt.rNRTol) then
-            print*, "converged rmh = ", rmh
+            ! print*, "converged rmh = ", rmh
             lNRerr = .false.
             return
           end if

@@ -1271,10 +1271,6 @@ C               Compute the internal force vector
               end if
 
               if (kstep.gt.0) then
-                ! Initialize element average stress and SDV
-                elmt_stress(:, elmt_number) = 0.d0
-                elmt_SDV(:, elmt_number) = 0.d0
-
                 ! Write to avg global element stress for both regions
                 rStressCt = 0.d0
                 rStressCtZ = 0.d0

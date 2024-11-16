@@ -1270,6 +1270,10 @@ C               Compute the internal force vector
               end if
 
               if (kstep.gt.0) then
+                ! Initialize element average stress and SDV
+                elmt_stress(:, elmt_number) = 0.d0
+                elmt_SDV(:, elmt_number) = 0.d0
+
                 ! Write to avg global element stress for both regions
                 rStressCt = 0.d0
                 rStressCtZ = 0.d0
@@ -1278,9 +1282,11 @@ C               Compute the internal force vector
                   rStressCtZ = rStressCtZ + rStress_Z(:, l)
                 end do
 
-                rStressCt = rStressCt / iTIntPt
+                if (bhratio.le.0.9999d0) then
+                  rStressCt = rStressCt / iTIntPt
+                  elmt_stress(1:6, elmt_number) = rStressCt
+                end if
                 rStressCtZ = rStressCtZ / iTIntPt
-                elmt_stress(1:6, elmt_number) = rStressCt
                 elmt_stress(7:12, elmt_number) = rStressCtZ
 
                 ! Write avg state variables
@@ -1338,9 +1344,11 @@ C               Compute the internal force vector
 
                 end do
 
-                outSDVM = outSDVM / iTIntPt
+                if (bhratio.le.0.9999d0) then
+                  outSDVM = outSDVM / iTIntPt
+                  elmt_SDV(1:7, elmt_number) = outSDVM
+                end if
                 outSDVMZ = outSDVMZ / iTIntPt
-                elmt_SDV(1:7, elmt_number) = outSDVM
                 elmt_SDV(8:14, elmt_number) = outSDVMZ
               end if
 

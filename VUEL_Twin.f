@@ -710,7 +710,7 @@ C               Compute the internal force vector
                   do i = 1, 18
                     temp = temp + svars(kblock, iumatsvst + 36 + i)
                   end do
-                  outSDVM(5) = outSDVM(5) + temp / 18
+                  outSDVM(5) = outSDVM(5) + temp
 
                   ! Effective temperature
                   outSDVM(6) = outSDVM(6) +
@@ -1307,7 +1307,7 @@ C               Compute the internal force vector
                   do i = 1, 18
                     temp = temp + svars(kblock, iumatsvst + 36 + i)
                   end do
-                  outSDVM(5) = outSDVM(5) + temp / 18
+                  outSDVM(5) = outSDVM(5) + temp
 
                   ! Effective temperature
                   outSDVM(6) = outSDVM(6) +

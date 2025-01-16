@@ -283,6 +283,8 @@ C       Twin Code Implementation Started
         real*8 outSDVM(7)
         real*8 outSDVMZ(7)
         real*8 temp
+        real*8 ru(mcrd, nnode)
+        real*8 rugrd(3, 3)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -484,6 +486,10 @@ C>>>        Get nodal coordinates, finite deformation
      &                                         u(kblock, (n-1)*mcrd + 2)
                 disp(3, elmt_conn(n, elmt_number)) =
      &                                         u(kblock, (n-1)*mcrd + 3)
+
+                ru(1, n) = u(kblock, (n-1)*mcrd + 1)
+                ru(2, n) = u(kblock, (n-1)*mcrd + 2)
+                ru(3, n) = u(kblock, (n-1)*mcrd + 3)
               end do
             end if
 
@@ -605,6 +611,9 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Get previous def gradients from svars and form current def grd
                 rDfgrd0 =
      &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
+
+                call GdefGrad_3D(rdNndXi, ru, mcrd, nnode, 1, rugrd)
+                call inverse_3x3(del - rugrd, rDfgrd1)
                 rDfgrd1 = matmul(del + rdVelGrd, rDfgrd0)
 
                 ! Save deformation gradients to both untwinned and twinned block

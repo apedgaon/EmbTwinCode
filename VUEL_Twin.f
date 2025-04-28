@@ -285,6 +285,8 @@ C       Twin Code Implementation Started
         real*8 temp
         real*8 ru(mcrd, nnode)
         real*8 rugrd(3, 3)
+        real*8 rugrdU(3, 3)
+        real*8 rugrdZ(3, 3)
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -606,6 +608,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 if (kinc.lt.1) then
                   svars(kblock, iumatsvst : iumatsven) =
      &                                    reshape(del, (/9/))
+                  ru = 0.d0
                 end if
 
                 ! Get previous def gradients from svars and form current def grd
@@ -614,7 +617,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
 
                 call GdefGrad_3D(rdNndXi, ru, mcrd, nnode, 1, rugrd)
                 call inverse_3x3(del - rugrd, rDfgrd1)
-                rDfgrd1 = matmul(del + rdVelGrd, rDfgrd0)
 
                 ! Save deformation gradients to both untwinned and twinned block
                 svars(kblock, iumatsvst : iumatsven) =
@@ -913,6 +915,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
+                call GdefGrad_3D(rdNndXi, ru, mcrd, nnode, 1, rugrd)
+
                 ! Retrieve previous untwinned and twinned deformation gradient
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
                 iumatsven = offstatev(3) + l * nstatev(2)
@@ -933,7 +937,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 if (iTwEmbStp.ne.0) then
                   ! No twinning part in previous step
                   rFz0h = rFz0
-                  rFz0 = matmul(rFz0, F_tw(:, :, iTwFlg))
                   iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
                   iumatsven = offstatev(2) + l * nstatev(1)
                   call rotate_twin_svars(svars(kblock,
@@ -1049,7 +1052,7 @@ C                 Compute the internal force vector
 
                   ! print*, "rmh = ", rmh
                   ! Traction continuity Newton iterations
-                  call traction_continuityNR(rntwc, rdVelGrd, hbratio,
+                  call traction_continuityNR(rntwc, rugrd, hbratio,
      &                 rFu0, rFz0, rFz0h, del, nstatev(1),
      &                 svars(kblock, iumatsvst:iumatsven),
      &                 svars(kblock, iumatsvst2:iumatsven2), nmprops,
@@ -1108,28 +1111,23 @@ C                 Compute the internal force vector
                 svars(kblock, iumatsvst + 3) = rntwc(3)
                 if (iTwEmbStp) then ! Set rmh and rmhdot to 0 since twin
                   ! embedding has a very different rmh from rest of analysis
-                  svars(kblock, iumatsvst + 4) = 0.d0
-                  svars(kblock, iumatsvst + 5) = 0.d0
-                  svars(kblock, iumatsvst + 6) = 0.d0
-
-                  svars(kblock, iumatsvst + 7) = 0.d0
-                  svars(kblock, iumatsvst + 8) = 0.d0
-                  svars(kblock, iumatsvst + 9) = 0.d0
+                  rmh0 = 0.d0
+                  rmhdot = 0.d0
                 else ! Store rmh and rmhdot
                   rmh0(1) = svars(kblock, iumatsvst + 4)
                   rmh0(2) = svars(kblock, iumatsvst + 5)
                   rmh0(3) = svars(kblock, iumatsvst + 6)
+
                   rmhdot = (rmh - rmh0) / dtimeCur
-
-                  svars(kblock, iumatsvst + 4) = rmh(1)
-                  svars(kblock, iumatsvst + 5) = rmh(2)
-                  svars(kblock, iumatsvst + 6) = rmh(3)
-
-                  svars(kblock, iumatsvst + 7) = rmhdot(1)
-                  svars(kblock, iumatsvst + 8) = rmhdot(2)
-                  svars(kblock, iumatsvst + 9) = rmhdot(3)
                 end if
 
+                svars(kblock, iumatsvst + 4) = rmh(1)
+                svars(kblock, iumatsvst + 5) = rmh(2)
+                svars(kblock, iumatsvst + 6) = rmh(3)
+
+                svars(kblock, iumatsvst + 7) = rmhdot(1)
+                svars(kblock, iumatsvst + 8) = rmhdot(2)
+                svars(kblock, iumatsvst + 9) = rmhdot(3)
 
                 ! Save deformation gradients to both untwinned and twinned block
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
@@ -1149,7 +1147,7 @@ C                 Compute the internal force vector
                 rTdL = 0.d0
                 do j = 1, 3
                   do i = 1, 3
-                    rTdL = rTdL + rmhu(i) * rntwc(j) * rdVelGrd(i, j)
+                    rTdL = rTdL + rmhu(i) * rntwc(j) * rugrd(i, j)
                   end do
                 end do
                 

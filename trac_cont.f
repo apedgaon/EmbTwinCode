@@ -1,5 +1,5 @@
 C     Traction Continuity Newton iterations
-      subroutine traction_continuityNR(rntwc, rdVelGrd, hbratio, rFu0,
+      subroutine traction_continuityNR(rntwc, rugrd, hbratio, rFu0,
      &                                 rFz0, rFz0h, del, nsvars, hvarsU,
      &                                 hvarsZ, nmprops, props, props_tw,
      &                                 Fe, nnode, elmt_number, l, mcrd,
@@ -11,19 +11,21 @@ C     Traction Continuity Newton iterations
         integer nsvars, nmprops, nnode, elmt_number, l, mcrd, kstep
         integer kinc
         logical lNRerr
-        real*8 rmh(3), rntwc(3), rdVelGrd(3, 3), hbratio
+        real*8 rmh(3), rntwc(3), rugrd(3, 3), hbratio
         real*8 rFu0(3, 3), rFz0(3, 3), rFz0h(3, 3), del(3, 3)
         real*8 hvarsU(nsvars), hvarsZ(nsvars), props(nmprops)
         real*8 props_tw(nmprops), Fe(3, 3), time(2), dtimeCur
         real*8 F_tw_inv(3, 3), rFu1(3, 3), rFz1(3, 3), rFz1h(3, 3)
 
         ! Local variables
-        integer iter, maxiter, i, j, iterErr, aidx, k, p
+        integer iter, maxiter, i, j, iterErr, aidx, k, m, n, p
         real*8 mtpn(3, 3), rdLu(3, 3), rdLz(3, 3), rstress_U(6)
         real*8 rGsCoords(3), rNRFac, rNRTol, rmh0(3), rdmh(3)
         real*8 rstress_Z(6), FeZ(3, 3), sigmaU(3, 3), sigmaZ(3, 3)
         real*8 g_tr(3), g_tr_err, z_tr(3, 3), z_tr_inv(3, 3)
         real*8 rWu(3, 3, 3, 3), rWz(3, 3, 3, 3)
+        real*8 rugrdU(3, 3), rugrdZ(3, 3)
+        real*8 rWut, rWzt
 
         ! Set NR parameters
         maxiter = 100
@@ -45,11 +47,11 @@ C     Traction Continuity Newton iterations
           end do
 
           ! Compute jump velocity gradient increments
-          rdLu = rdVelGrd - mtpn
-          rdLz = rdVelGrd + (hbratio - 1.d0) * mtpn
+          rugrdU = rugrd - mtpn
+          rugrdZ = rugrd + (hbratio - 1.d0) * mtpn
 
           ! Compute new deformation gradient in the untwinned region
-          rFu1 = matmul(del + rdLu, rFu0)
+          call inverse_3x3(del - rugrdU, rFu1)
 
           ! Compute Stress (untwinned region)
           call umat_stress(rStress_U, hvarsU, rGsCoords, rFu0, rFu1,
@@ -71,7 +73,7 @@ C     Traction Continuity Newton iterations
           end if
 
           ! Compute new deformation gradient in the twinned region
-          rFz1 = matmul(del + rdLz, rFz0)
+          call inverse_3x3(del - rugrdZ, rFz1)
 
           ! Compute elastoplastic part of twinned deformation gradient
           rFz1h = matmul(rFz1, F_tw_inv)
@@ -118,23 +120,46 @@ C     Traction Continuity Newton iterations
             return
           end if
 
+    !       ! Form residual tangent matrix
+    !       do j = 1, 3
+    !         do aidx = 1, 3
+    !           z_tr(aidx, j) = 0.d0
+    !           do i = 1, 3
+    !             do k = 1, 3
+    !               do p = 1, 3
+    !                 z_tr(aidx, j) = z_tr(aidx, j) +
+    !  &                      rntwc(i) * ((hbratio - 1.d0)*
+    !  &                      rWz(i,aidx,j,k)*rFz0h(p,k)+rWu(i,aidx,j,k)*
+    !  &                      rFu1sq(p,k)) * rntwc(p)
+    !               end do
+    !             end do
+    !           end do
+    !         end do
+    !       end do
+
+
           ! Form residual tangent matrix
           do j = 1, 3
             do aidx = 1, 3
               z_tr(aidx, j) = 0.d0
               do i = 1, 3
                 do k = 1, 3
-                  do p = 1, 3
-                    z_tr(aidx, j) = z_tr(aidx, j) +
-     &                      rntwc(i) * ((hbratio - 1.d0)*
-     &                      rWz(i,aidx,j,k)*rFz0h(p,k)+rWu(i,aidx,j,k)*
-     &                      rFu0(p,k)) * rntwc(p)
+                  rWzt = 0.d0
+                  rWut = 0.d0
+                  do n = 1, 3
+                    do m = 1, 3
+                      rWut = rWut + rWu(i,aidx,m,n)*rFu1(m,j)*rFu1(k,n)
+                      rWzt = rWzt + rWz(i,aidx,m,n)*rFz1(m,j)*rFz1h(k,n)
+                    end do
                   end do
+
+                  z_tr(aidx, j) = z_tr(aidx, j) +
+     &                    rntwc(i)*((hbratio-1.d0)*rWzt + rWut)*rntwc(k)
                 end do
               end do
             end do
           end do
-     
+
           ! Compute change in m hat
           call inverse_3x3(z_tr, z_tr_inv)
           rdmh = matmul(z_tr_inv, g_tr)

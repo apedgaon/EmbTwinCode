@@ -986,12 +986,12 @@ C     enforcing traction continuity between twinned and untwinned      C
 C                             region                                   C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       subroutine init_guess(nAltInit, rmh, svars, nblock, nsvars,
-     &                      kblock, l, offstatev, nstatev, dt, rdL,
+     &                      kblock, l, offstatev, nstatev, dt, dt0, rdL,
      &                      rntwc, hbratio, iTwFlg, iTwEmbStp)
         implicit none
         ! Define input variables
         real*8 rmh(3), svars(nblock, nsvars), dt, rdL(3, 3), rntwc(3)
-        real*8 hbratio
+        real*8 hbratio, dt0
         integer nAltInit, nblock, kblock, l, nsvars
         integer offstatev(7), nstatev(4), iTwFlg, iTwEmbStp
 
@@ -1025,9 +1025,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             rmh = rmhMag * rmh
             !rmh = 0.d0
           end if
-        else if (nAltInit.eq.1) then ! Second guess, try 0
-          rmh = 0.d0
-        else if (nAltInit.eq.2) then ! Third guess based on rate of rmh
+        else if (nAltInit.eq.1) then ! Second guess based on rate and previous dt
           ist = offstatev(5) + (l - 1) * nstatev(3)
           rmh(1) = svars(kblock, ist + 4)
           rmh(2) = svars(kblock, ist + 5)
@@ -1035,7 +1033,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
           rmhdot(1) = svars(kblock, ist + 7)
           rmhdot(2) = svars(kblock, ist + 8)
           rmhdot(3) = svars(kblock, ist + 9)
-          rmh = rmh + rmhdot * dt
+          rmh = rmh + rmhdot * dt0
+        else if (nAltInit.eq.2) then ! Third guess, try 0
+          rmh = 0.d0
         else if (nAltInit.eq.3) then  ! Fourth guess based on delta L projected on discontinuous mode
           ist = offstatev(5) + (l - 1) * nstatev(3)
           rmh(1) = svars(kblock, ist + 4)

@@ -810,6 +810,9 @@ C               Compute the internal force vector
                   svars(kblock, iumatsvst + 4) = rmtwc(1)
                   svars(kblock, iumatsvst + 5) = rmtwc(2)
                   svars(kblock, iumatsvst + 6) = rmtwc(3)
+                  svars(kblock, iumatsvst + 7) = 0.d0
+                  svars(kblock, iumatsvst + 8) = 0.d0
+                  svars(kblock, iumatsvst + 9) = 0.d0
                 end do
 
                 ! Twin band width offset
@@ -1047,8 +1050,9 @@ C                 Compute the internal force vector
                 do while(nAltInit.le.6)
                   call init_guess(nAltInit, rmh, svars, nblock,
      &                            nsvars, kblock, l, offstatev,
-     &                            nstatev, dtimeCur, rdVelGrd, rntwc,
-     &                            hbratio, iTwFlg, iTwEmbStp)
+     &                            nstatev, dtimeCur, dtimePrev,
+     &                            rdVelGrd, rntwc, hbratio, iTwFlg,
+     &                            iTwEmbStp)
 
                   ! print*, "rmh = ", rmh
                   ! Traction continuity Newton iterations
@@ -1266,6 +1270,15 @@ C               Compute the internal force vector
                 if (tw_dec(3, twinID).eq.elmt_number) then
                   tw_geom(3, twinID) = tw_geom(3, twinID) +
      &                                 1.d0 / iTIntPt * b_dot * dtimeCur
+                end if
+
+                ! After twin embedding, rmhdot based on bdot
+                if (iTwEmbStp) then
+                  iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
+                  rmhdot = rmh * b_dot / rBWidth
+                  svars(kblock, iumatsvst + 7) = rmhdot(1)
+                  svars(kblock, iumatsvst + 8) = rmhdot(2)
+                  svars(kblock, iumatsvst + 9) = rmhdot(3)
                 end if
 
               end do

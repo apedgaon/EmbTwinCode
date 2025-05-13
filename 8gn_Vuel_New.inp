@@ -7,21 +7,21 @@
 *Node
 *include, input=input_node_8gn.inp
 ** Variables = 217 + 16 * NSTATV per integration point, Properties = 13 + num of material props
-*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
-*USER ELEMENT, Nodes=8, Type=VU2, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU2, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
-*USER ELEMENT, Nodes=8, Type=VU3, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU3, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
-*USER ELEMENT, Nodes=8, Type=VU4, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU4, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
-*USER ELEMENT, Nodes=8, Type=VU5, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU5, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
-*USER ELEMENT, Nodes=8, Type=VU6, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU6, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
-*USER ELEMENT, Nodes=8, Type=VU7, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU7, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
-*USER ELEMENT, Nodes=8, Type=VU8, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU8, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
 *Element, elset=VU1_ELMT, type=VU1
        1,       1,      43,    3192,     423,     594,    2560,    3826,     667

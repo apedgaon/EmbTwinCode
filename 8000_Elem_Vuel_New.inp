@@ -9267,7 +9267,7 @@
 9260, 1.0, 1.0, 0.95
 9261, 1.0, 1.0, 1.0
 ** Variables = 217 + 16 * NSTATV per integration point, Properties = 13 + num of material props
-*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=71, Coordinates=3, Variables=2585
+*USER ELEMENT, Nodes=8, Type=VU1, Iproperties=4, Properties=71, Coordinates=3, Variables=2587
 1, 2, 3
 *Element, elset=VU1_ELMT, type=VU1
 1, 1, 2, 23, 22, 442, 443, 464, 463

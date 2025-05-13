@@ -288,6 +288,9 @@ C       Twin Code Implementation Started
         real*8 rugrdU(3, 3)
         real*8 rugrdZ(3, 3)
 
+        integer Nbw, ibw
+        real*8 rBwFac
+
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
 
@@ -313,7 +316,7 @@ C       Twin Code Implementation Started
         nstatev(1) = (nsvars - 9*8 - 9*8 - 9*8 - 1) / 16  ! svars for umat
         nstatev(2) = 9    ! svars for deformation gradient
         nstatev(3) = 9    ! svars for storing discontinuity vectors
-        nstatev(4) = 1    ! svars for storing band width offset
+        nstatev(4) = 3    ! svars for storing band width offset
         offstatev(1) = 0
         offstatev(2) = 8 * nstatev(1)                 ! umat svars for 8 gs pts
         offstatev(3) = offstatev(2) + 8 * nstatev(1)  ! umat svars for 8 gs pts for twinned region
@@ -321,7 +324,7 @@ C       Twin Code Implementation Started
         offstatev(5) = offstatev(4) + 8 * nstatev(2)  ! def grd svars for 8 gs pts for twinned region
         offstatev(6) = offstatev(5) + 8 * nstatev(3)  ! discontinuity vector for 8 gs pts
         offstatev(7) = offstatev(6) + nstatev(4)
-        ! 148*8 + 148*8 + 9*8 + 9*8 + 9*8 + 1 = 2585
+        ! 148*8 + 148*8 + 9*8 + 9*8 + 9*8 + 3 = 2587
         ! Set "variables=2585" for user elements in the input file
 
         ! Define PI
@@ -555,6 +558,7 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             end if
 
             PtauMax = 0.d0
+            rBwFac = 1.d0
 
             if((twinID.eq.0).or.(iTwEmbStp.ge.2)) then   ! No twinning detected in previous increment
               !Fe_m = 0.d0                                ! or twinning detected by tracking
@@ -824,6 +828,18 @@ C               Compute the internal force vector
                 iumatsvst = offstatev(6) + 1
                 svars(kblock, iumatsvst) = rBWidthOff
 
+                ibw = 1
+                Nbw = 1
+                if (iTwEmbStp.eq.2) then
+                  rBWidth = tw_geom(3, twinID)
+                  Nbw = ceiling(rBWidth/1.d-4)
+                end if
+
+                rBwFac = 1.d0 / Nbw
+                iumatsvst = offstatev(6) + 1
+                svars(kblock, iumatsvst + 1) = Nbw
+                svars(kblock, iumatsvst + 2) = ibw
+
                 ! Set twin embedding flag to 1
                 iTwEmbStp = 1
                 elmt_stat(2, elmt_number) = iTwEmbStp
@@ -854,6 +870,21 @@ C               Compute the internal force vector
               rBWidthOff = svars(kblock, iumatsvst)
               rBWidth = tw_geom(3, twinID) - rBWidthOff
               if (rBWidth.lt.1.d-4) rBWidth = 1.d-4
+
+              Nbw = int(svars(kblock, iumatsvst + 1))
+              ibw = int(svars(kblock, iumatsvst + 2))
+              if (Nbw.ne.1) then
+                rBwFac = 1.d0 / Nbw
+                rBWidth = ibw * rBwFac * rBWidth
+                if (ibw.eq.Nbw) then
+                  Nbw = 1
+                  ibw = 0
+                  svars(kblock, iumatsvst + 1) = Nbw
+                end if
+
+                ibw = ibw + 1
+                svars(kblock, iumatsvst + 2) = ibw
+              end if
 
               ! b/h ratio and handle b >= h
               bhratio = rBWidth / rElmtSize
@@ -1052,7 +1083,7 @@ C                 Compute the internal force vector
      &                            nsvars, kblock, l, offstatev,
      &                            nstatev, dtimeCur, dtimePrev,
      &                            rdVelGrd, rntwc, hbratio, iTwFlg,
-     &                            iTwEmbStp)
+     &                            iTwEmbStp, rmtw(:, iTwFlg))
 
                   ! print*, "rmh = ", rmh
                   ! Traction continuity Newton iterations
@@ -1273,13 +1304,16 @@ C               Compute the internal force vector
                 end if
 
                 ! After twin embedding, rmhdot based on bdot
-                if (iTwEmbStp) then
-                  iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
-                  rmhdot = rmh * b_dot / rBWidth
-                  svars(kblock, iumatsvst + 7) = rmhdot(1)
-                  svars(kblock, iumatsvst + 8) = rmhdot(2)
-                  svars(kblock, iumatsvst + 9) = rmhdot(3)
-                end if
+                ! if (iTwEmbStp) then
+                !   iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
+                !   if (Nbw.ne.1) then
+                !     b_dot = rBwFac * (rBWidth/dtimeCur + ibw * b_dot)
+                !   end if
+                !   rmhdot = rmh * b_dot / rBWidth
+                !   svars(kblock, iumatsvst + 7) = rmhdot(1)
+                !   svars(kblock, iumatsvst + 8) = rmhdot(2)
+                !   svars(kblock, iumatsvst + 9) = rmhdot(3)
+                ! end if
 
               end do
 
@@ -1376,10 +1410,10 @@ C               Compute the internal force vector
 
             ! Compute stable time step increment
             call Clength_3D_8N(rCoords, rLmin)
-            dtimeStable(kblock) = 0.7d0 * rLmin / rCd
-            if (iTwEmbStp) then
-              dtimeStable(kblock) = 0.07d0 * rLmin / rCd
-            end if
+            dtimeStable(kblock) = 0.7d0 * rBwFac * rLmin / rCd
+            ! if (iTwEmbStp) then
+            !   dtimeStable(kblock) = 0.07d0 * rBwFac rLmin / rCd
+            ! end if
           end do
         ENDIF
       END  ! Subroutine VUEL

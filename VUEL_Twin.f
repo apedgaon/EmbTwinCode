@@ -290,6 +290,8 @@ C       Twin Code Implementation Started
 
         integer Nbw, ibw
         real*8 rBwFac
+        real*8 rDetF1Bar, rDetF1
+        real*8, external :: determinant
 
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
@@ -531,6 +533,10 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             CALL SHP_FUNC_3D_8N(rXiEtaCt,rMSCoor,1,rNnCt,
      1                          rMSdNndXiCt,rMSJdetCt)
 
+            call calc_dfgrd2(rXiEtaCt, rOrigCoords, rCoords, mcrd,
+     &                       nnode, rDfgrd1, rGsCoords)
+            rDetF1Bar = determinant(rDfgrd1)
+
             ! GB Element detection and threshold probability
             P_0 = 0.85d0
             if (kstep.gt.0) then
@@ -619,8 +625,11 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rDfgrd0 =
      &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
 
+                ! Form current def gradient (I - grad u)^-1
                 call GdefGrad_3D(rdNndXi, ru, mcrd, nnode, 1, rugrd)
                 call inverse_3x3(del - rugrd, rDfgrd1)
+                rDetF1 = determinant(rDfgrd1)
+                rDfgrd1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rDfgrd1
 
                 ! Save deformation gradients to both untwinned and twinned block
                 svars(kblock, iumatsvst : iumatsven) =
@@ -949,7 +958,13 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! Compute Velocity Gradient
                 call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
+                ! Compute displacement gradient based on Fbar
                 call GdefGrad_3D(rdNndXi, ru, mcrd, nnode, 1, rugrd)
+                call inverse_3x3(del - rugrd, rDfgrd1)
+                rDetF1 = determinant(rDfgrd1)
+                rDfgrd1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rDfgrd1
+                call inverse_3x3(rDfgrd1, rDfgrd0)
+                rugrd = del - rDfgrd0
 
                 ! Retrieve previous untwinned and twinned deformation gradient
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)

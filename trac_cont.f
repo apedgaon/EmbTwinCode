@@ -31,7 +31,7 @@ C     Traction Continuity Newton iterations
         maxiter = 100
         rNRFac = 0.25d0
         rNRTol = 1.d-6
-        g_tr_err = 1.d3
+        g_tr_err = 1.d4
         lNRerr = .true.
 
         ! Newton's iteration loop
@@ -110,7 +110,14 @@ C     Traction Continuity Newton iterations
             end do
           end do
 
-          ! check for residual convergence
+          ! If residual is increasing, reduce step by correction factor
+          if (norm2(g_tr).gt.g_tr_err) then
+            rdmh = rNRFac * rdmh
+            rmh = rmh0 + rdmh
+            cycle
+          end if
+
+          ! Check for residual convergence
           g_tr_err = norm2(g_tr)      ! (absolute error)
           ! DEBUGGING
           ! print*, "g_tr_err = ", g_tr_err

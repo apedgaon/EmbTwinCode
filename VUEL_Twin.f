@@ -293,6 +293,10 @@ C       Twin Code Implementation Started
         real*8 rDetF1Bar, rDetF1
         real*8, external :: determinant
 
+        character (len = 256) :: outdir, dbgfp
+        character (len = 1) :: pathseperator = '/'
+        integer :: lenoutdir
+
         iVelmType = jprops(1)  ! 3D element type:  1 --> 3D Brick (8-node) Elmt
 
 
@@ -1140,6 +1144,43 @@ C                 Compute the internal force vector
                   print*, "rFz1h = ", rFz1h
                   print*, "kinc = ", kinc
 
+                  call vgetoutdir(outdir, lenoutdir)
+                  dbgfp = trim(outdir)//pathseperator//'debug_vars.txt'
+                  open(140, file = dbgfp, status = 'new',
+     &                 action = 'write')
+                  write(140, 5000) rntwc
+                  write(140, 5000) rugrd
+                  write(140, 5000) hbratio
+                  write(140, 5000) rFu0
+                  write(140, 5000) rFz0
+                  write(140, 5000) rFz0h
+                  write(140, 5000) del
+                  write(140, 5000) nstatev(1) * 1.d0
+                  write(140, 5000) svars(kblock, iumatsvst:iumatsven)
+                  write(140, 5000) svars(kblock, iumatsvst2:iumatsven2)
+                  write(140, 5000) nmprops * 1.d0
+                  write(140, 5000) props(stmprop:endmprop)
+                  write(140, 5000) props_tw
+                  write(140, 5000) nnode * 1.d0
+                  write(140, 5000) elmt_number * 1.d0
+                  write(140, 5000) l * 1.d0
+                  write(140, 5000) mcrd * 1.d0
+                  write(140, 5000) time
+                  write(140, 5000) dtimeCur
+                  write(140, 5000) kstep * 1.d0
+                  write(140, 5000) kinc * 1.d0
+                  write(140, 5000) F_tw_inv
+                  write(140, 5000) rmtwc
+                  write(140, 5000) rmtw(:, iTwflg)
+                  write(140, 5000) iTwFlg * 1.d0
+                  write(140, 5000) iTwEmbStp * 1.d0
+                  write(140, 5000) rElmtSize
+                  write(140, 5000) tw_geom(3, twinID) - rBWidthOff
+                  write(140, 5000) rntw(:, iTwFlg)
+
+                  close(140)
+
+5000              FORMAT (10(E26.16))
                   ! TODO: put mutexlock?
                   call write_vuel_results(kinc, time(2))
                   CALL XPLB_ABQERR(-3,'Traction Continuity failed! '//

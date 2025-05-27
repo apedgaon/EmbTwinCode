@@ -2135,7 +2135,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       include 'SHP_FUNC_3D_8N.f'
       include 'prep_umat.f'
       include 'gdefgrad_3D.f'
-      include 'hcp_umat_TDT_pq_Ti.f'
+      include 'hcp_umat_TDT_pq_Ti_2.f'
       include 'Gstrain_3D.f'
       include 'calc_new_jac.f'
       include 'Clength_3D_8N.f'

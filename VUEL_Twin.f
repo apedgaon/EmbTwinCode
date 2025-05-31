@@ -1356,18 +1356,6 @@ C               Compute the internal force vector
                 w_dot_m = w_dot_m + w_dot
                 b_dot_m = b_dot_m + b_dot
 
-                ! After twin embedding, rmhdot based on bdot
-                ! if (iTwEmbStp) then
-                !   iumatsvst = offstatev(5) + (l - 1) * nstatev(3)
-                !   if (Nbw.ne.1) then
-                !     b_dot = rBwFac * (rBWidth/dtimeCur + ibw * b_dot)
-                !   end if
-                !   rmhdot = rmh * b_dot / rBWidth
-                !   svars(kblock, iumatsvst + 7) = rmhdot(1)
-                !   svars(kblock, iumatsvst + 8) = rmhdot(2)
-                !   svars(kblock, iumatsvst + 9) = rmhdot(3)
-                ! end if
-
               end do
 
               ! Update twin velocities based on decider element

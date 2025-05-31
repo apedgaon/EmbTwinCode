@@ -1007,14 +1007,23 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
           rmh(3) = svars(kblock, ist + 6)
 
           if (iTwEmbStp.eq.0) then
+            ! Retrieve rmh rate
             rmhdot(1) = svars(kblock, ist + 7)
             rmhdot(2) = svars(kblock, ist + 8)
             rmhdot(3) = svars(kblock, ist + 9)
-            rmh = rmh + rmhdot * dt
-          end if
-
-          ! If twin embedding step, guess based on twin shear magnitude
-          if (iTwEmbStp.ne.0) then
+            if (norm2(rmhdot).lt.1.d-12) then ! If rmh rate is zero, then previous step was embedding step
+              if (iTwFlg.le.6) then
+                rmhMag = 0.175d0 / (hbratio - 1.d0)
+              else if ((iTwFlg.ge.7).and.(iTwFlg.le.12)) then
+                rmhMag = 0.218d0 / (hbratio - 1.d0)
+              else
+                rmhMag = 0.098d0 / (hbratio - 1.d0)
+              end if
+              rmh = rmhMag * rmtw
+            else  ! update based on rmh rate
+              rmh = rmh + rmhdot * dt
+            end if
+          else  ! If twin embedding step, guess based on twin shear magnitude
             if (iTwFlg.le.6) then
               rmhMag = 0.175d0 / (hbratio - 1.d0)
             else if ((iTwFlg.ge.7).and.(iTwFlg.le.12)) then

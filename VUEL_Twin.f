@@ -1132,24 +1132,6 @@ C                 Compute the internal force vector
                 ! End analysis if traction continuity fails
                 if (lNRerr) then
                   ! DEBUGGING
-                  print*, "twinID = ", twinID
-                  print*, "elmt_no = ", elmt_number
-                  print*, "itwflg = ", iTwFlg
-                  print*, "rntwc = ", rntwc
-                  print*, "rmtwc = ", rmtwc
-                  print*, "rmh = ", rmh
-                  print*, "rFu0 = ", rFu0
-                  print*, "rdVelGrd = ", rdVelGrd
-                  print*, "Ftwinv = ", F_tw_inv
-                  print*, "l = ", l
-                  iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
-                  iumatsven = offstatev(1) + l * nstatev(1)
-                  print*, "svars = ", svars(kblock, iumatsvst:iumatsven)
-                  print*, "rFu1 = ", rFu1
-                  print*, "rFz1 = ", rFz1
-                  print*, "rFz1h = ", rFz1h
-                  print*, "kinc = ", kinc
-
                   call vgetoutdir(outdir, lenoutdir)
                   dbgfp = trim(outdir)//pathseperator//'debug_vars.txt'
                   open(140, file = dbgfp, status = 'new',

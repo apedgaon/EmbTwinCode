@@ -269,8 +269,11 @@ C       Twin Code Implementation Started
         pointer (ptr_nuc_thr, nuc_thr)
         real*8 elmt_SDV(14, *)
         pointer (ptr_elmt_SDV, elmt_SDV)
+        real*8 tw_geom_vel(3, *)
+        pointer (ptr_tw_geom_vel, tw_geom_vel)
 
         real*8 l_dot, w_dot, b_dot, rBLatWidth
+        real*8 l_dot_m, w_dot_m, b_dot_m
         real*8 rNRFac, rNRTol
         integer nAltInit, max_twins, num_twins
         real*8 rmhMag, bhratio, hbratio
@@ -381,6 +384,7 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
           ptr_disp = SMAFloatArrayAccess(15)
           ptr_nuc_thr = SMAFloatArrayAccess(16)
           ptr_elmt_SDV = SMAFloatArrayAccess(17)
+          ptr_tw_geom_vel = SMAFloatArrayAccess(18)
 
           num_gb_elems = size_list(1)
           num_elems = size_list(2)
@@ -797,6 +801,11 @@ C               Compute the internal force vector
                     tw_geom(2, twinID) = 0.d0
                     tw_geom(3, twinID) = 1.d-4
 
+                    ! Initialize twin geometry velocity
+                    tw_geom_vel(1, twinID) = 0.d0
+                    tw_geom_vel(2, twinID) = 0.d0
+                    tw_geom_vel(3, twinID) = 0.d0
+
                     ! Store this element number as twin decider for all geometry paramters
                     tw_dec(:, twinID) = elmt_number
                   else
@@ -903,6 +912,11 @@ C               Compute the internal force vector
               bhratio = rBWidth / rElmtSize
               !if (bhratio.ge.0.9999d0) bhratio = 0.9999d0
               hbratio = 1.d0 / bhratio
+
+              ! Initialize twin velocities
+              l_dot_m = 0.d0
+              w_dot_m = 0.d0
+              b_dot_m = 0.d0
 
               ! DEBUGGING
               ! print*, "length = ", rBLength
@@ -1066,19 +1080,11 @@ C                 Compute the internal force vector
                   call compute_twin_velocities(props, nprops, tau_tw,
      &                                       theta, l_dot, w_dot, b_dot)
 
-                  ! Update length, width and thickness only if this element is a decider
-                  if (tw_dec(1, twinID).eq.elmt_number) then
-                    tw_geom(1, twinID) = tw_geom(1, twinID) +
-     &                                 1.d0 / iTIntPt * l_dot * dtimeCur
-                  end if
-                  if (tw_dec(2, twinID).eq.elmt_number) then
-                    tw_geom(2, twinID) = tw_geom(2, twinID) +
-     &                                 1.d0 / iTIntPt * w_dot * dtimeCur
-                  end if
-                  if (tw_dec(3, twinID).eq.elmt_number) then
-                    tw_geom(3, twinID) = tw_geom(3, twinID) +
-     &                                 1.d0 / iTIntPt * b_dot * dtimeCur
-                  end if
+                  ! Add to the average twin velocities
+                  l_dot_m = l_dot_m + l_dot
+                  w_dot_m = w_dot_m + w_dot
+                  b_dot_m = b_dot_m + b_dot
+
                   cycle   ! Loop, don't continue further
                 end if
 
@@ -1345,19 +1351,10 @@ C               Compute the internal force vector
                 call compute_twin_velocities(props, nprops, tau_tw,
      &                                       theta, l_dot, w_dot, b_dot)
 
-                ! Update length, width and thickness only if this element is a decider
-                if (tw_dec(1, twinID).eq.elmt_number) then
-                  tw_geom(1, twinID) = tw_geom(1, twinID) +
-     &                                 1.d0 / iTIntPt * l_dot * dtimeCur
-                end if
-                if (tw_dec(2, twinID).eq.elmt_number) then
-                  tw_geom(2, twinID) = tw_geom(2, twinID) +
-     &                                 1.d0 / iTIntPt * w_dot * dtimeCur
-                end if
-                if (tw_dec(3, twinID).eq.elmt_number) then
-                  tw_geom(3, twinID) = tw_geom(3, twinID) +
-     &                                 1.d0 / iTIntPt * b_dot * dtimeCur
-                end if
+                ! Compute average twin velocities
+                l_dot_m = l_dot_m + l_dot
+                w_dot_m = w_dot_m + w_dot
+                b_dot_m = b_dot_m + b_dot
 
                 ! After twin embedding, rmhdot based on bdot
                 ! if (iTwEmbStp) then
@@ -1372,6 +1369,20 @@ C               Compute the internal force vector
                 ! end if
 
               end do
+
+              ! Update twin velocities based on decider element
+              l_dot_m = l_dot_m / iTIntPt
+              w_dot_m = w_dot_m / iTIntPt
+              b_dot_m = b_dot_m / iTIntPt
+              if (tw_dec(1, twinID).eq.elmt_number) then
+                tw_geom_vel(1, twinID) = l_dot_m
+              end if
+              if (tw_dec(2, twinID).eq.elmt_number) then
+                tw_geom_vel(2, twinID) = w_dot_m
+              end if
+              if (tw_dec(3, twinID).eq.elmt_number) then
+                tw_geom_vel(3, twinID) = b_dot_m
+              end if
 
               ! Twin is embedded in this step, unset the flag
               if (iTwEmbStp.ne.0) then
@@ -1540,12 +1551,13 @@ C       Contents of r_Array
         integer kStep
         integer kInc
         integer myThreadID
-        real*8 time
+        real*8 time, dtime
 
         kStep = i_Array(i_int_kStep)
         kInc  = i_Array(i_int_kInc)
         myThreadID = get_thread_id()
         time = r_Array(i_flt_TotalTime)
+        dtime = r_Array(i_flt_dTime)
 
         if (lop.eq.j_int_StartAnalysis) then
           call MutexInit(1)      ! initialize Mutex #1
@@ -1554,6 +1566,10 @@ C       Contents of r_Array
             print *, 'Total number of threads = ', GETNUMTHREADS()
             print *, 'Start of the analysis'
             call read_gb_elements()
+          end if
+        else if (lop.eq.j_int_StartIncrement) then
+          if (myThreadID.eq.0) then
+            call update_twin_geometry(dtime)
           end if
         else if (lop.eq.j_int_EndIncrement) then
           !if (mod(kInc,400).eq.0) then
@@ -1585,6 +1601,7 @@ C       Contents of r_Array
             call SMAFloatArrayDelete(15)
             call SMAFloatArrayDelete(16)
             call SMAFloatArrayDelete(17)
+            call SMAFloatArrayDelete(18)
           end if
         end if
 
@@ -1635,6 +1652,8 @@ C       Contents of r_Array
         pointer (ptr_nuc_thr, nuc_thr)
         real*8 elmt_SDV(14, *)
         pointer (ptr_elmt_SDV, elmt_SDV)
+        real*8 tw_geom_vel(3, *)
+        pointer (ptr_tw_geom_vel, tw_geom_vel)
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1.txt'
@@ -1745,6 +1764,8 @@ C       Contents of r_Array
 
         ! Element state dependent variables
         ptr_elmt_SDV = SMAFloatArrayCreate(17, 14*num_elems, 0.d0)
+
+        ptr_tw_geom_vel = SMAFloatArrayCreate(18, 3*100, 0.d0)
 
       end subroutine
 
@@ -2130,12 +2151,39 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         close(io)
 
       end subroutine
+
+      subroutine update_twin_geometry(dtime)
+        implicit none
+#include <SMAAspUserSubroutines.hdr>
+        real*8 dtime
+
+        real*8 tw_geom(3, *), tw_geom_vel(3, *)
+        pointer (ptr_tw_geom, tw_geom)
+        pointer (ptr_tw_geom_vel, tw_geom_vel)
+        integer num_twins, i
+        integer size_list(*)
+        pointer (ptr_size_list, size_list)
+
+        ! Access number of twins from Abaqus SMA array
+        ptr_size_list = SMAIntArrayAccess(1)
+        num_twins = size_list(4)
+        if (num_twins.eq.0) return ! if no twins yet, return
+
+        ptr_tw_geom = SMAFloatArrayAccess(11)
+        ptr_tw_geom_vel = SMAFloatArrayAccess(18)
+        do i = 1, num_twins
+          ! Update twin geometry based on velocity
+          tw_geom(1, i) = tw_geom(1, i) + tw_geom_vel(1, i) * dtime
+          tw_geom(2, i) = tw_geom(2, i) + tw_geom_vel(2, i) * dtime
+          tw_geom(3, i) = tw_geom(3, i) + tw_geom_vel(3, i) * dtime
+        end do
+      end subroutine
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       include 'GSPT_3D_8N.f'
       include 'SHP_FUNC_3D_8N.f'
       include 'prep_umat.f'
       include 'gdefgrad_3D.f'
-      include 'hcp_umat_TDT_pq_Ti_2.f'
+      include 'hcp_umat_TDT_pq_Ti.f'
       include 'Gstrain_3D.f'
       include 'calc_new_jac.f'
       include 'Clength_3D_8N.f'

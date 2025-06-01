@@ -255,7 +255,7 @@ C       Twin Code Implementation Started
         pointer (ptr_tw_nuc, tw_nuc)
         pointer (ptr_tw_nor, tw_nor)
         pointer (ptr_tw_dir, tw_dir)
-        real*8 tw_geom(3, *)
+        real*8 tw_geom(4, *)
         pointer (ptr_tw_geom, tw_geom)
         integer tw_dec(3, *)
         pointer (ptr_tw_dec, tw_dec)
@@ -900,10 +900,12 @@ C               Compute the internal force vector
               iumatsvst = offstatev(6) + 1
               rBWidthOff = svars(kblock, iumatsvst)
               rBWidth = tw_geom(3, twinID) - rBWidthOff
-              rdLtwfac = tw_geom_vel(3, twinID) * dtimeCur / rBwidth
+              rdLtwfac = tw_geom(4, twinID) / rBwidth
               if (rBWidth.lt.1.d-4) then
                 rBWidth = 1.d-4
-                rdLTwfac = 1.d0
+                rdLTwfac = 0.d0
+              else if ((rBWidth - tw_geom(4, twinID)).lt.1.d-4) then
+                rdLtwfac = (rBwidth - 1.d-4) / rBWidth
               end if
               if (iTwEmbStp.eq.1) then
                 rdLtwfac = 1.d0
@@ -1625,7 +1627,7 @@ C       Contents of r_Array
         pointer (ptr_tw_nuc, tw_nuc)
         pointer (ptr_tw_nor, tw_nor)
         pointer (ptr_tw_dir, tw_dir)
-        real*8 tw_geom(3, *)
+        real*8 tw_geom(4, *)
         pointer (ptr_tw_geom, tw_geom)
         integer tw_dec(3, *)
         pointer (ptr_tw_dec, tw_dec)
@@ -1641,6 +1643,7 @@ C       Contents of r_Array
         pointer (ptr_elmt_SDV, elmt_SDV)
         real*8 tw_geom_vel(3, *)
         pointer (ptr_tw_geom_vel, tw_geom_vel)
+        integer max_twins
 
         ! Read and store grain boundary elements
         gbfilename = 'gb_elems_1.txt'
@@ -1718,15 +1721,18 @@ C       Contents of r_Array
         ! Create element status for twinning ID and embedding step flag
         ptr_elmt_stat = SMAIntArrayCreate(6, 3*num_elems, 0)
 
+        ! Set maximum number of twins allowable in the simulation
+        max_twins = 100
+
         ! Create arrays for twin type, nucleation coords, normal and direction
-        ptr_tw_flg = SMAIntArrayCreate(7, 100, 0)
-        ptr_tw_nuc = SMAFloatArrayCreate(8, 3*100, 0.d0)
-        ptr_tw_nor = SMAFloatArrayCreate(9, 3*100, 0.d0)
-        ptr_tw_dir = SMAFloatArrayCreate(10, 3*100, 0.d0)
+        ptr_tw_flg = SMAIntArrayCreate(7, max_twins, 0)
+        ptr_tw_nuc = SMAFloatArrayCreate(8, 3*max_twins, 0.d0)
+        ptr_tw_nor = SMAFloatArrayCreate(9, 3*max_twins, 0.d0)
+        ptr_tw_dir = SMAFloatArrayCreate(10, 3*max_twins, 0.d0)
 
         ! Create global twin size array and the decider element id array
-        ptr_tw_geom = SMAFloatArrayCreate(11, 3*100, 0.d0)
-        ptr_tw_dec = SMAIntArrayCreate(12, 3*100, 0)
+        ptr_tw_geom = SMAFloatArrayCreate(11, 4*max_twins, 0.d0)
+        ptr_tw_dec = SMAIntArrayCreate(12, 3*max_twins, 0)
 
         ! Elmt average stress components
         ptr_elmt_stress = SMAFloatArrayCreate(13, 12*num_elems, 0.d0)
@@ -1752,7 +1758,8 @@ C       Contents of r_Array
         ! Element state dependent variables
         ptr_elmt_SDV = SMAFloatArrayCreate(17, 14*num_elems, 0.d0)
 
-        ptr_tw_geom_vel = SMAFloatArrayCreate(18, 3*100, 0.d0)
+        ! Twin geometry velocities
+        ptr_tw_geom_vel = SMAFloatArrayCreate(18, 3*max_twins, 0.d0)
 
       end subroutine
 
@@ -1778,7 +1785,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         pointer (ptr_tw_nuc, tw_nuc)
         pointer (ptr_tw_nor, tw_nor)
         pointer (ptr_tw_dir, tw_dir)
-        real*8 tw_geom(3, *)
+        real*8 tw_geom(4, *)
         pointer (ptr_tw_geom, tw_geom)
         integer tw_dec(3, *)
         pointer (ptr_tw_dec, tw_dec)
@@ -2014,7 +2021,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         pointer (ptr_disp, disp)
         real*8 elmt_SDV(14, *)
         pointer (ptr_elmt_SDV, elmt_SDV)
-        real*8 tw_geom(3, *)
+        real*8 tw_geom(4, *)
         pointer (ptr_tw_geom, tw_geom)
         integer tw_flg(*)
         pointer (ptr_tw_flg, tw_flg)
@@ -2144,7 +2151,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 #include <SMAAspUserSubroutines.hdr>
         real*8 dtime
 
-        real*8 tw_geom(3, *), tw_geom_vel(3, *)
+        real*8 tw_geom(4, *), tw_geom_vel(3, *)
         pointer (ptr_tw_geom, tw_geom)
         pointer (ptr_tw_geom_vel, tw_geom_vel)
         integer num_twins, i
@@ -2163,6 +2170,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
           tw_geom(1, i) = tw_geom(1, i) + tw_geom_vel(1, i) * dtime
           tw_geom(2, i) = tw_geom(2, i) + tw_geom_vel(2, i) * dtime
           tw_geom(3, i) = tw_geom(3, i) + tw_geom_vel(3, i) * dtime
+          tw_geom(4, i) = tw_geom_vel(3, i) * dtime
         end do
       end subroutine
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

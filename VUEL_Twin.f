@@ -185,6 +185,7 @@ C       Twin Code Implementation Started
         real*8 rFz1h(3, 3)         ! Fe Fp part of current twinned deformation gradient
         real*8 rBWidth             ! Band width of twin
         real*8 rBWidthOff          ! Band width offset
+        real*8 rBWidth0            ! Previous band width
         real*8 F_tw_inv(3, 3)      ! Inverse of twinned deformation gradient
         real*8 rStress_U(6, 8)     ! Stress in untwinned region
         real*8 rStress_Z(6, 8)     ! Stress in twinned region
@@ -860,7 +861,7 @@ C               Compute the internal force vector
                 Nbw = 1
                 if (iTwEmbStp.eq.2) then
                   rBWidth = tw_geom(3, twinID)
-                  Nbw = ceiling(rBWidth/1.d-4)
+                  Nbw = floor(rBWidth/1.d-4)
                 end if
 
                 rBwFac = 1.d0 / Nbw
@@ -907,15 +908,14 @@ C               Compute the internal force vector
               else if ((rBWidth - tw_geom(4, twinID)).lt.1.d-4) then
                 rdLtwfac = (rBwidth - 1.d-4) / rBWidth
               end if
-              if (iTwEmbStp.eq.1) then
-                rdLtwfac = 1.d0
-              end if
 
               Nbw = int(svars(kblock, iumatsvst + 1))
               ibw = int(svars(kblock, iumatsvst + 2))
               if (Nbw.ne.1) then
                 rBwFac = 1.d0 / Nbw
+                rBWidth0 = (ibw-1)*rBwFac*(rBWidth - tw_geom(4, twinID))
                 rBWidth = ibw * rBwFac * rBWidth
+                rdLtwfac = (rBWidth - rBWidth0) / rBwidth
                 if (ibw.eq.Nbw) then
                   Nbw = 1
                   ibw = 0
@@ -924,6 +924,10 @@ C               Compute the internal force vector
 
                 ibw = ibw + 1
                 svars(kblock, iumatsvst + 2) = ibw
+              end if
+
+              if (iTwEmbStp.eq.1) then
+                rdLtwfac = 1.d0
               end if
 
               ! b/h ratio and handle b >= h

@@ -309,7 +309,7 @@ C         See UMAT Deformation Gradient Documentation for more details
       subroutine umat_stress(rStress, hvars, rGsCoords, rDfgrd0,
      &                      rDfgrd1, props, nprops, nsvars, nnode, noel,
      &                      npt, mcrd, time, dtime, kstep, kinc,
-     &                      lEditSvars, rW, iterErr, Fe)
+     &                      lEditSvars, rW, iterErr, Fe, rdLtw)
           
           implicit none
 C         input arguments declaration
@@ -321,6 +321,7 @@ C         input arguments declaration
           real*8 dtime
           integer idx, jdx
           logical lEditSvars
+          real*8 rdLtw(3, 3)
 
 C         additional arguments for umat
           real*8 ddsdde(6, 6), ddsddt(6), drplde(6), stran(6)
@@ -350,7 +351,7 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars)
+     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars, rdLtw)
           else    ! Required during iterative updates when hvars should not be edited
             tmphvars = hvars
             call umat_crys(rUmatStress,  tmphvars,  ddsdde,  sse,  spd,
@@ -360,7 +361,7 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars)
+     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars, rdLtw)
 
             ! Update init spk2 guess
             hvars(14) = tmphvars(14)

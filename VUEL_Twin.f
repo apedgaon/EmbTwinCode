@@ -290,6 +290,7 @@ C       Twin Code Implementation Started
         real*8 rugrd(3, 3)
         real*8 rugrdU(3, 3)
         real*8 rugrdZ(3, 3)
+        real*8 rdLTw(3, 3), rdLtwU(3, 3)
 
         integer Nbw, ibw
         real*8 rBwFac
@@ -413,6 +414,10 @@ C       Compute equivalent Schmid Tensor and Deformation gradient for Deformatio
         ! Newton raphson correction factor and tolerance for traction continuity
         rNRFac = 0.25d0
         rNRTol = 1.d-6
+
+        ! Dummy zero shear increment
+        rdLtwU = 0.d0
+
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                      MASS MATRIX CONSTRUCTION                        C
@@ -657,7 +662,8 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           props(stmprop:endmprop), nmprops, 
      &                           nstatev(1), nnode, elmt_number, l,
      &                           mcrd, time, dtimeCur, kstep, kinc,
-     &                           .true., rWu, iterErr, Fe(:, :, l))
+     &                           .true., rWu, iterErr, Fe(:, :, l),
+     &                           rdLtwU)
 
                 if (iterErr.eq.1) then
                   CALL XPLB_ABQERR(-3,'UMAT Failed to Converge in '//
@@ -885,6 +891,9 @@ C               Compute the internal force vector
                 end do
               end do
 
+              ! Twin shear increment tensor
+              rdLtw = F_tw(:, :, iTwFlg) - del
+
               ! Retrieve twin geometry
               rBLength = tw_geom(1, twinID)
               rBLatWidth = tw_geom(2, twinID)
@@ -1035,7 +1044,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             props_tw, nmprops, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .true., rWz, iterErr,
-     &                             FeZ)
+     &                             FeZ, rdLtw)
 
                   if (iterErr.eq.1) then
                     print*, "kinc = ", kinc
@@ -1118,8 +1127,8 @@ C                 Compute the internal force vector
      &                 svars(kblock, iumatsvst2:iumatsven2), nmprops,
      &                 props(stmprop:endmprop), props_tw, Fe(:, :, l),
      &                 nnode, elmt_number, l, mcrd, time, dtimeCur,
-     &                 kstep, kinc, F_tw_inv, rmh, rFu1, rFz1, rFz1h,
-     &                 lNRerr)
+     &                 kstep, kinc, F_tw_inv, rdLtw, rmh, rFu1, rFz1,
+     &                 rFz1h, lNRerr)
 
                   if (lNRerr.eq..false.) then
                     exit
@@ -1268,7 +1277,8 @@ C                 Compute the internal force vector
      &                           props(stmprop:endmprop), nmprops,
      &                           nstatev(1), nnode, elmt_number, l,
      &                           mcrd, time, dtimeCur, kstep, kinc,
-     &                          .true., rWu, iterErr, Fe(:, :, l))
+     &                          .true., rWu, iterErr, Fe(:, :, l),
+     &                           rdLtwU)
 
                 theta = theta + svars(kblock, iumatsvst)*(1.d0-bhratio) ! Untwinned Temperature
 
@@ -1282,7 +1292,7 @@ C                 Compute the internal force vector
      &                           props_tw, nmprops, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWz, iterErr,
-     &                           FeZ)
+     &                           FeZ, rdLtw)
 
                 theta = theta + svars(kblock, iumatsvst)*bhratio    ! Twinned Temperature
 
@@ -2153,7 +2163,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       include 'SHP_FUNC_3D_8N.f'
       include 'prep_umat.f'
       include 'gdefgrad_3D.f'
-      include 'hcp_umat_TDT_pq_Ti.f'
+      include 'hcp_umat_TDT_pq_Ti_5.f'
       include 'Gstrain_3D.f'
       include 'calc_new_jac.f'
       include 'Clength_3D_8N.f'

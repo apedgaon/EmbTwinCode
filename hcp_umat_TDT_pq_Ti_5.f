@@ -4,7 +4,7 @@
      &                 nshr, ntens, nstatv, props, nprops, coords, drot,
      &                 pnewdt, celent, dfgrd0, dfgrd1, noel, npt, layer,
      &                 kspt, jstep, kinc, rW, iterErr, Fe, lEditSvars,
-     &                 rdLtw)
+     &                 rdLtw, rdLtwfac)
 
         implicit none
 !------------------------------------------------------------------
@@ -138,6 +138,8 @@
         real*8 theta_old, theta_n, theta_err
         real*8 dfgrdinv1(3, 3)
         real*8 rdLtwc(3, 3)
+        real*8 rdLtwfac
+        real*8 dWtw_n, dWtw
 
         real*8, external :: determinant
 
@@ -248,6 +250,7 @@
           Spk2_n = 0.d0
           rhossd_n = props(14)
           chi_n = props(15)
+          dWtw_n = 0.d0
         else  ! time /= 0
           theta_n = statev(1)
 
@@ -281,6 +284,7 @@
           end do
 
           chi_n = statev(56)
+          dWtw_n = statev(58)
         end if
 
         ! Initialize current temperature and effective temperature
@@ -453,12 +457,12 @@
 
           ! Compute plastic work
           dWp = dot_product(tau, dgamma)
-          dWp = dWp + sum(sigma * rdLtwc)
+          dWtw = dWtw_n + rdLtwfac * (sum(sigma * rdLtwc) - dWtw_n)
 
           ! Update thermal and effective temperature
           betaT = chi / chi_ss  ! TQ coeff
           theta_old = theta
-          theta = theta_n + betaT * dWp / (rho * cp)
+          theta = theta_n + (betaT * dWp + dWtw - dWtw_n) / (rho * cp)
           chi = chi_n + kappax * e_D * (1.d0 - betaT) * dWp / mu
 
           ! If temperature change is less than 0.1 K, exit iteration
@@ -548,6 +552,10 @@
         ! Store misorientation angle
         n = n + 1
         statev(n) = angMis
+
+        ! Store twin shear work
+        n = n + 1
+        statev(n) = dWtw
 
         ! Calculate Stress Jacobian ddsdde
 C        call calc_jac(nslip, props, nprops, C, dfgrd0, dfgrd1, Fpinv_n,

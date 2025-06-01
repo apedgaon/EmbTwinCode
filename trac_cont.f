@@ -4,8 +4,8 @@ C     Traction Continuity Newton iterations
      &                                 hvarsZ, nmprops, props, props_tw,
      &                                 Fe, nnode, elmt_number, l, mcrd,
      &                                 time, dtimeCur, kstep, kinc,
-     &                                 F_tw_inv, rdLtw, rmh, rFu1, rFz1,
-     &                                 rFz1h, lNRerr)
+     &                                 F_tw_inv, rdLtw, rdLtwfac, rmh,
+     &                                 rFu1, rFz1, rFz1h, lNRerr)
         implicit none
         ! Global variables
         integer nsvars, nmprops, nnode, elmt_number, l, mcrd, kstep
@@ -16,7 +16,7 @@ C     Traction Continuity Newton iterations
         real*8 hvarsU(nsvars), hvarsZ(nsvars), props(nmprops)
         real*8 props_tw(nmprops), Fe(3, 3), time(2), dtimeCur
         real*8 F_tw_inv(3, 3), rFu1(3, 3), rFz1(3, 3), rFz1h(3, 3)
-        real*8 rdLtw(3, 3)
+        real*8 rdLtw(3, 3), rdLtwfac
 
         ! Local variables
         integer iter, maxiter, i, j, iterErr, aidx, k, m, n, p
@@ -59,7 +59,8 @@ C     Traction Continuity Newton iterations
           call umat_stress(rStress_U, hvarsU, rGsCoords, rFu0, rFu1,
      &                     props, nmprops, nsvars, nnode,
      &                     elmt_number, l, mcrd, time, dtimeCur, kstep,
-     &                     kinc, .false., rWu, iterErr, Fe, rdLtwU)
+     &                     kinc, .false., rWu, iterErr, Fe, rdLtwU,
+     &                     0.d0)
 
           ! Large change suggested by NR, reduce step by correction factor
           if (iterErr.eq.1) then
@@ -84,7 +85,8 @@ C     Traction Continuity Newton iterations
           call umat_stress(rStress_Z, hvarsZ, rGsCoords, rFz0h, rFz1h,
      &                     props_tw, nmprops, nsvars, nnode, 
      &                     elmt_number, l, mcrd, time, dtimeCur, kstep,
-     &                     kinc, .false., rWz, iterErr, FeZ, rdLtw)
+     &                     kinc, .false., rWz, iterErr, FeZ, rdLtw,
+     &                     rdLtwfac)
 
           ! Large change suggested by NR, reduce step by correction factor
           if (iterErr.eq.1) then

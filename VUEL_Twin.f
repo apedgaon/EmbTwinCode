@@ -290,7 +290,7 @@ C       Twin Code Implementation Started
         real*8 rugrd(3, 3)
         real*8 rugrdU(3, 3)
         real*8 rugrdZ(3, 3)
-        real*8 rdLTw(3, 3), rdLtwU(3, 3)
+        real*8 rdLTw(3, 3), rdLtwU(3, 3), rdLTwfac
 
         integer Nbw, ibw
         real*8 rBwFac
@@ -663,7 +663,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                           nstatev(1), nnode, elmt_number, l,
      &                           mcrd, time, dtimeCur, kstep, kinc,
      &                           .true., rWu, iterErr, Fe(:, :, l),
-     &                           rdLtwU)
+     &                           rdLtwU, 0.d0)
 
                 if (iterErr.eq.1) then
                   CALL XPLB_ABQERR(-3,'UMAT Failed to Converge in '//
@@ -900,7 +900,14 @@ C               Compute the internal force vector
               iumatsvst = offstatev(6) + 1
               rBWidthOff = svars(kblock, iumatsvst)
               rBWidth = tw_geom(3, twinID) - rBWidthOff
-              if (rBWidth.lt.1.d-4) rBWidth = 1.d-4
+              rdLtwfac = tw_geom_vel(3, twinID) * dtimeCur / rBwidth
+              if (rBWidth.lt.1.d-4) then
+                rBWidth = 1.d-4
+                rdLTwfac = 1.d0
+              end if
+              if (iTwEmbStp.eq.1) then
+                rdLtwfac = 1.d0
+              end if
 
               Nbw = int(svars(kblock, iumatsvst + 1))
               ibw = int(svars(kblock, iumatsvst + 2))
@@ -1044,7 +1051,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &                             props_tw, nmprops, nstatev(1), nnode,
      &                             elmt_number, l, mcrd, time, dtimeCur,
      &                             kstep, kinc, .true., rWz, iterErr,
-     &                             FeZ, rdLtw)
+     &                             FeZ, rdLtw, 0.d0)
 
                   if (iterErr.eq.1) then
                     print*, "kinc = ", kinc
@@ -1127,8 +1134,8 @@ C                 Compute the internal force vector
      &                 svars(kblock, iumatsvst2:iumatsven2), nmprops,
      &                 props(stmprop:endmprop), props_tw, Fe(:, :, l),
      &                 nnode, elmt_number, l, mcrd, time, dtimeCur,
-     &                 kstep, kinc, F_tw_inv, rdLtw, rmh, rFu1, rFz1,
-     &                 rFz1h, lNRerr)
+     &                 kstep, kinc, F_tw_inv, rdLtw, rdLtwfac, rmh,
+     &                 rFu1, rFz1, rFz1h, lNRerr)
 
                   if (lNRerr.eq..false.) then
                     exit
@@ -1278,7 +1285,7 @@ C                 Compute the internal force vector
      &                           nstatev(1), nnode, elmt_number, l,
      &                           mcrd, time, dtimeCur, kstep, kinc,
      &                          .true., rWu, iterErr, Fe(:, :, l),
-     &                           rdLtwU)
+     &                           rdLtwU, 0.d0)
 
                 theta = theta + svars(kblock, iumatsvst)*(1.d0-bhratio) ! Untwinned Temperature
 
@@ -1292,7 +1299,7 @@ C                 Compute the internal force vector
      &                           props_tw, nmprops, nstatev(1), nnode,
      &                           elmt_number, l, mcrd, time, dtimeCur,
      &                           kstep, kinc, .true., rWz, iterErr,
-     &                           FeZ, rdLtw)
+     &                           FeZ, rdLtw, rdLTwfac)
 
                 theta = theta + svars(kblock, iumatsvst)*bhratio    ! Twinned Temperature
 

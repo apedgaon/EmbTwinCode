@@ -1039,7 +1039,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 ! The element has completely twinned
                 if (bhratio.gt.0.9999d0) then
                   ! Compute new deformation gradient and save
-                  rFz1 = matmul(del + rdVelGrd, rFz0)
+                  call inverse_3x3(del - rugrd, rFz1)
+                  rDetF1 = determinant(rFz1)
+                  rFz1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rFz1
+
                   iumatsvst = offstatev(4) + 1 + (l - 1) * nstatev(2)
                   iumatsven = offstatev(4) + l * nstatev(2)
                   svars(kblock, iumatsvst : iumatsven) =

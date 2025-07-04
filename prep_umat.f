@@ -567,7 +567,8 @@ C         for umat stress to vuel stress
         call inverse_3x3(dfgrd, dfgrdinv)
 
         ! Resolved stress and probabilistic twin nucleation
-        do i = 1, 18
+        !do i = 1, 18
+        do i = 1, 6 ! Only nucleate tensile twins for now
           SmatC = matmul(dfgrd, matmul(Smat(:, :, i), dfgrdinv))
           tau = sum(sigma * SmatC)    ! rss
           if (tau.lt.0.d0) then       ! if rss is negative, then continue

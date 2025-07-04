@@ -806,7 +806,7 @@ C               Compute the internal force vector
                     ! Initialize global twin geometry parameters (length, width, thickness)
                     tw_geom(1, twinID) = 0.d0
                     tw_geom(2, twinID) = 0.d0
-                    tw_geom(3, twinID) = 1.d-4
+                    tw_geom(3, twinID) = 1.d-6
 
                     ! Initialize twin geometry velocity
                     tw_geom_vel(1, twinID) = 0.d0
@@ -861,7 +861,7 @@ C               Compute the internal force vector
                 Nbw = 1
                 if (iTwEmbStp.eq.2) then
                   rBWidth = tw_geom(3, twinID)
-                  Nbw = floor(rBWidth/1.d-4)
+                  Nbw = floor(rBWidth/1.d-6)
                 end if
 
                 rBwFac = 1.d0 / Nbw
@@ -902,11 +902,11 @@ C               Compute the internal force vector
               rBWidthOff = svars(kblock, iumatsvst)
               rBWidth = tw_geom(3, twinID) - rBWidthOff
               rdLtwfac = tw_geom(4, twinID) / rBwidth
-              if (rBWidth.lt.1.d-4) then
-                rBWidth = 1.d-4
+              if (rBWidth.lt.1.d-6) then
+                rBWidth = 1.d-6
                 rdLTwfac = 0.d0
-              else if ((rBWidth - tw_geom(4, twinID)).lt.1.d-4) then
-                rdLtwfac = (rBwidth - 1.d-4) / rBWidth
+              else if ((rBWidth - tw_geom(4, twinID)).lt.1.d-6) then
+                rdLtwfac = (rBwidth - 1.d-6) / rBWidth
               end if
 
               Nbw = int(svars(kblock, iumatsvst + 1))
@@ -1358,6 +1358,12 @@ C               Compute the internal force vector
                 tau_tw = sum(sigmaU * Smatc)
                 call compute_twin_velocities(props, nprops, tau_tw,
      &                                       theta, l_dot, w_dot, b_dot)
+
+                iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
+                iumatsven = offstatev(1) + l * nstatev(1)
+                call calc_twin_growth(svars(kblock,iumatsvst:iumatsven),
+     &                                nstatev(1), props, nprops, tau_tw,
+     &                                iTwFlg, b_dot)
 
                 ! Compute average twin velocities
                 l_dot_m = l_dot_m + l_dot

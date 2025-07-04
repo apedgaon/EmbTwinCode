@@ -557,6 +557,12 @@
         n = n + 1
         statev(n) = dWtw
 
+        ! Store the slip strain rate
+        do i = 1,nslip
+          n = n + 1
+          statev(n) = abs(dgamma(i)) / dtime
+        enddo
+
         ! Calculate Stress Jacobian ddsdde
 C        call calc_jac(nslip, props, nprops, C, dfgrd0, dfgrd1, Fpinv_n,
 C     &                FpInv, Smat, Pmat, Cmat, dgamma, dgamdtau, del,

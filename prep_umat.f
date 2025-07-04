@@ -1167,3 +1167,88 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         props_tw(eulidx(3)) = om_tw * 180.d0 / pi
 
       end subroutine
+
+      subroutine calc_twin_growth(hvars, nsvars, props, nprops, tau_tw,
+     &                            iTwFlg, b_dot)
+        implicit none
+        integer nsvars, iTwFlg, nprops
+        real*8 hvars(nsvars), tau_tw, b_dot, props(nprops)
+
+        integer idx1, idx2, idx3, idx4, offset
+        real*8 d_ip, rho1, rho2, rho3, rho4
+        real*8 g_dot1, g_dot2, g_dot3, g_dot4
+        real*8 dmfp1, dmfp2, dmfp3, dmfp4, b_slip
+        real*8 v_gl1, v_gl2, v_gl3, v_gl4, k_i, A_int
+
+        if (iTwFlg.le.6) then
+          d_ip = 1.7267362526423028d-7
+        end if
+
+        offset = 13
+        b_slip = props(44 + offset)
+
+        offset = 37
+        if ((iTwFlg.eq.1).or.(iTwFlg.eq.4)) then
+          idx1 = 16 + offset
+          idx2 = 18 + offset
+          idx3 = 13 + offset
+          idx4 = 15 + offset
+        else if ((iTwFlg.eq.2).or.(iTwFlg.eq.5)) then
+          idx1 = 17 + offset
+          idx2 = 18 + offset
+          idx3 = 14 + offset
+          idx4 = 15 + offset
+        else if ((iTwFlg.eq.3).or.(iTwFlg.eq.6)) then
+          idx1 = 16 + offset
+          idx2 = 17 + offset
+          idx3 = 13 + offset
+          idx4 = 14 + offset
+        end if
+        rho1 = hvars(idx1)
+        rho2 = hvars(idx2)
+        rho3 = hvars(idx3)
+        rho4 = hvars(idx4)
+        dmfp1 = 1.d0 / sqrt(rho1)
+        dmfp2 = 1.d0 / sqrt(rho2)
+        dmfp3 = 1.d0 / sqrt(rho3)
+        dmfp4 = 1.d0 / sqrt(rho4)
+
+        offset = 58
+        if ((iTwFlg.eq.1).or.(iTwFlg.eq.4)) then
+          idx1 = 16 + offset
+          idx2 = 18 + offset
+          idx3 = 13 + offset
+          idx4 = 15 + offset
+        else if ((iTwFlg.eq.2).or.(iTwFlg.eq.5)) then
+          idx1 = 17 + offset
+          idx2 = 18 + offset
+          idx3 = 14 + offset
+          idx4 = 15 + offset
+        else if ((iTwFlg.eq.3).or.(iTwFlg.eq.6)) then
+          idx1 = 16 + offset
+          idx2 = 17 + offset
+          idx3 = 13 + offset
+          idx4 = 14 + offset
+        end if
+        g_dot1 = hvars(idx1)
+        g_dot2 = hvars(idx2)
+        g_dot3 = hvars(idx3)
+        g_dot4 = hvars(idx4)
+        v_gl1 = g_dot1 / (rho1 * b_slip)
+        v_gl2 = g_dot2 / (rho2 * b_slip)
+        v_gl3 = g_dot3 / (rho3 * b_slip)
+        v_gl4 = g_dot4 / (rho4 * b_slip)
+
+        k_i = 1.d0
+        !A_int = (1000 * b_slip)**2
+        A_int = 1.64d-5
+
+        b_dot = 0.d0
+        if (iTwFlg.le.6) then
+          b_dot = 5 * d_ip * k_i * A_int * (rho1 * v_gl1 / dmfp1 +
+     &                                      rho2 * v_gl2 / dmfp2 +
+     &                                      rho3 * v_gl3 / dmfp3 +
+     &                                      rho4 * v_gl4 / dmfp4)
+        end if
+
+      end subroutine

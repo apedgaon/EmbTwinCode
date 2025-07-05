@@ -2187,6 +2187,42 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         end do
       end subroutine
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+      subroutine vdisp(
+c Read only variables -
+     1  nblock, nDof, nCoord, kstep, kinc,
+     2  stepTime, totalTime, dtNext, dt,
+     3  cbname, jBCType, jDof, jNodeUid, amp,
+     4  coordNp, u, v, a, rf, rmass, rotaryI,
+c Write only variable -
+     5  rval )
+        implicit none
+c
+        integer nblock, nDof, nCoord, kstep, kinc
+        real*8 stepTime, totalTime, dtNext, dt
+        character*80 cbname
+        integer jBCType, jDof(nDof), jNodeUid(nblock)
+        real*8 amp(nblock), coordNp(nCoord,nblock)
+        real*8 u(nDof,nblock), v(nDof,nblock), a(nDof,nblock)
+        real*8 rf(nDof,nblock), rmass(nblock)
+        real*8 rotaryI(3,3,nblock)
+        real*8 rval(nDof,nblock)
+
+        ! Local variables
+        integer j, k
+        real*8 l_0, edot
+
+        ! Set length and true strain rate
+        l_0 = 3.d0
+        edot = -1.d0
+
+        ! Set displacement corresponding to true strain rate
+        do k = 1, nblock
+          rval(2, k) = l_0 * (exp(edot * totalTime) - 1.d0)
+        end do
+      end subroutine
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
       include 'GSPT_3D_8N.f'
       include 'SHP_FUNC_3D_8N.f'
       include 'prep_umat.f'

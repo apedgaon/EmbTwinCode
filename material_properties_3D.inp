@@ -6,7 +6,7 @@
 **
 ** Elastic and general properties (input)
 *PARAMETER
-density      =  4.54e-09
+density      =  4.51e-09
 Young        =  162094.0
 Poisson      =  0.3
 bandwidth    =  40.0E-3
@@ -18,7 +18,7 @@ Gtw          =  2.76e-19
 vl           =  3190000.0
 vw           =  2712000.0
 vb           =  10000.0
-sl           =  250.0
+sl           =  140.0
 p_exp        =  0.6
 q_exp        =  1.4
 

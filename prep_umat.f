@@ -713,6 +713,31 @@ C         for umat stress to vuel stress
         w_dot = vw * fac
         b_dot = vb * fac
       end subroutine
+
+      subroutine calc_twin_propagation(props, nprops, tau_tw, theta,
+     &                                 l_dot, w_dot)
+       implicit none
+        integer nprops
+        real*8 props(nprops), tau_tw, theta, l_dot, w_dot, b_dot
+        real*8 bk, Gtw, vl, btw, dtw, ltw, fac
+        real*8, external :: ramp
+
+        bk = props(6)
+        Gtw = props(7)
+        vl = props(8)
+
+        ! {10-12} twin burgers vector, ip spacing and length segment (mm)
+        btw = 6.034971964914695d-8
+        dtw = 1.7267362526423028d-7
+        ltw = 1.d-8
+
+        ! Thermaly activated barrier for twinning dislocations
+        fac = exp(-ramp(Gtw - tau_tw * btw * dtw * ltw) / (bk * theta))
+        l_dot = vl * fac
+        w_dot = vl * fac
+
+      end subroutine
+
       subroutine find_next_twin_elem(elmt_number, elmt_conn, num_elems,
      &                        nodal_coords, num_nodes, st_coord, rn, rm,
      &                        elmt_neighbour, tw_length, nxt_elmt_num)

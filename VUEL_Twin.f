@@ -1037,7 +1037,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 end if
 
                 ! The element has completely twinned
-                if (bhratio.gt.0.9999d0) then
+                if (bhratio.gt.0.99999d0) then
                   ! Compute new deformation gradient and save
                   call inverse_3x3(del - rugrd, rFz1)
                   rDetF1 = determinant(rFz1)
@@ -1102,8 +1102,13 @@ C                 Compute the internal force vector
                   Smatc =
      &                  matmul(FeZ, matmul(Smat(:, :, iTwFlg), Fe_inv))
                   tau_tw = sum(sigmaZ * Smatc)
-                  call compute_twin_velocities(props, nprops, tau_tw,
-     &                                       theta, l_dot, w_dot, b_dot)
+
+                call calc_twin_propagation(props, nprops, tau_tw, theta,
+     &                                     l_dot, w_dot)
+
+                call calc_twin_growth(svars(kblock,iumatsvst:iumatsven),
+     &                                nstatev(1), props, nprops, tau_tw,
+     &                                iTwFlg, b_dot)
 
                   ! Add to the average twin velocities
                   l_dot_m = l_dot_m + l_dot
@@ -1352,12 +1357,12 @@ C               Compute the internal force vector
                 call vec_to_sym_mat(rStress_U(:, l), sigmaU)
                 call vec_to_sym_mat(rStress_Z(:, l), sigmaZ)
 
-                ! Compute twin length, width and thickness evolution
+                ! Compute twin length, width (propagation) and thickness (growth) evolution
                 Smatc =
      &             matmul(Fe(:,:,l), matmul(Smat(:, :, iTwFlg), Fe_inv))
                 tau_tw = sum(sigmaU * Smatc)
-                call compute_twin_velocities(props, nprops, tau_tw,
-     &                                       theta, l_dot, w_dot, b_dot)
+                call calc_twin_propagation(props, nprops, tau_tw, theta,
+     &                                     l_dot, w_dot)
 
                 iumatsvst = offstatev(1) + 1 + (l - 1) * nstatev(1)
                 iumatsven = offstatev(1) + l * nstatev(1)

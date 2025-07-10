@@ -1410,7 +1410,7 @@ C               Compute the internal force vector
                   rStressCtZ = rStressCtZ + rStress_Z(:, l)
                 end do
 
-                if (bhratio.le.0.9999d0) then
+                if (bhratio.le.0.99999d0) then
                   rStressCt = rStressCt / iTIntPt
                   elmt_stress(1:6, elmt_number) = rStressCt
                 end if
@@ -1472,7 +1472,7 @@ C               Compute the internal force vector
 
                 end do
 
-                if (bhratio.le.0.9999d0) then
+                if (bhratio.le.0.99999d0) then
                   outSDVM = outSDVM / iTIntPt
                   elmt_SDV(1:7, elmt_number) = outSDVM
                 end if

@@ -530,14 +530,13 @@ C         for umat stress to vuel stress
         statev(1) = theta
       end subroutine
 
-      subroutine check_twin_nucleation(stress, Smat, dfgrd, iTwinFlag,
-     &                                 PtauMax, P_0)
+      subroutine check_twin_nucleation(stress, rmtw, rntw, dfgrd,
+     &                                 iTwinFlag, PtauMax, P_0)
         implicit none
 
-        integer :: iTwinFlag, i ! Twinning nucleation flag
+        integer :: iTwinFlag ! Twinning nucleation flag
         real*8 stress(6)      ! Input stress vector
         real*8 Smat(3, 3, 18) ! Twinning Schmid Tensor
-        real*8 SmatC(3, 3)    ! Twinning Scmid Tensor in current configuration
         real*8 sigma(3, 3)    ! Stress Tensor (3, 3)
         real*8 tau            ! Twinning Resolved shear stress
         real*8 Lambda_tau     ! Twinning Probability Distribution
@@ -548,6 +547,9 @@ C         for umat stress to vuel stress
         real*8 dfgrd(3, 3)    ! Deformation Gradient
         real*8 dfgrdinv(3, 3) ! Deformation Gradient Inverse
         real*8 PtauMax        ! Max probability in an element
+        real*8 rmtw(3, 18)
+        real*8 rntw(3, 18)
+        integer i, j
 
         ! Set material parameters
         tau_c = 200.d0      ! TODO: Different critical stress for different types of twin
@@ -564,13 +566,26 @@ C         for umat stress to vuel stress
         sigma(1, 2) = stress(6)
         sigma(2, 1) = stress(6)
 
+        ! Push forward vectors and normalize
         call inverse_3x3(dfgrd, dfgrdinv)
+        rmtw = matmul(dfgrd, rmtw)
+        rntw = matmul(transpose(dfgrdinv), rntw)
+        do i = 1, 18
+          rmtw(:, i) = rmtw(:, i) / norm2(rmtw(:, i))
+          rntw(:, i) = rntw(:, i) / norm2(rntw(:, i))
+        end do
+
+        ! Twin Schmid tensor
+        do j = 1, 3
+          do i = 1, 3
+            Smat(i, j, :) = rmtw(i, :) * rntw(j, :)
+          end do
+        end do
 
         ! Resolved stress and probabilistic twin nucleation
         !do i = 1, 18
         do i = 1, 6 ! Only nucleate tensile twins for now
-          SmatC = matmul(dfgrd, matmul(Smat(:, :, i), dfgrdinv))
-          tau = sum(sigma * SmatC)    ! rss
+          tau = sum(sigma * Smat(:, :, i))    ! rss
           if (tau.lt.0.d0) then       ! if rss is negative, then continue
             cycle
           end if      ! TODO check for compression twins!

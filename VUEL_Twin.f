@@ -2162,6 +2162,18 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         close(io)
 
+        ! Twin geometry info at specified increments
+        if (num_twins.ge.1) then
+          filepath = trim(outdir)//pathseperator//'kinc_geom_twin_'
+     &                  //trim(adjustl(str_kinc))//'.dat'
+          open(newunit = io, file = filepath, status = 'new')
+          do itw = 1, num_twins
+            write(io, '(4E26.16)') tw_geom(:, itw)
+          end do
+
+          close(io)
+        end if
+
       end subroutine
 
       subroutine update_twin_geometry(dtime)

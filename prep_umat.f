@@ -83,6 +83,41 @@ C         Compute Point Coordinates
 
       end subroutine
 
+      subroutine calc_dfgrd3(rXiEtaPt, rRefCoords, rCurrCoords, ru,
+     &                       mcrd, nnode, del, rDfgrd, rPtCoords, rdetF)
+        implicit none
+
+        ! Input and output arguments
+        integer mcrd, nnode
+        real*8 rXiEtaPt(3), rRefCoords(mcrd, nnode)
+        real*8 rCurrCoords(mcrd, nnode), ru(mcrd, nnode), del(3, 3)
+        real*8 rDfgrd(3, 3), rPtCoords(3), rdetF
+
+        ! Local variables
+        integer idx, jdx
+        real*8 rN(8), rdNdXRef(3, nnode), rJdet, rdudX(3, 3)
+        real*8, external :: determinant ! external function
+
+        ! Construct Shape Functions and Derivatives w.r.t Reference Coordinates
+        call SHP_FUNC_3D_8N(rXiEtaPt, rRefCoords, 1, rN, rdNdXRef,
+     &                      rJdet)
+
+        ! Deformation Gradient and its determinant
+        call GdefGrad_3D(rdNdXRef, ru, mcrd, nnode, 1, rdudX)
+        rDfgrd = del + rdudX
+        rdetF = determinant(rDfgrd)
+
+        ! Compute Point Coordinates
+        rPtCoords = 0.d0
+        do idx = 1, nnode
+          do jdx = 1, mcrd
+            rPtCoords(jdx) = rPtCoords(jdx) +
+     &                       rN(idx) * rCurrCoords(jdx, idx)
+          end do
+        end do
+
+      end subroutine
+
 C     This subroutine prepares deformation gradient and gauss point
 C     coordinates for umat using selectively reduced integration
       subroutine dfgrd_prep2(rRefCoords, rCurrCoords, rXiEtaPt, mcrd,

@@ -296,7 +296,6 @@ C       Twin Code Implementation Started
         integer Nbw, ibw
         real*8 rBwFac
         real*8 rDetF1Bar, rDetF1
-        real*8, external :: determinant
 
         character (len = 256) :: outdir, dbgfp
         character (len = 1) :: pathseperator = '/'
@@ -547,9 +546,8 @@ C           b) shape functions and their derivatives wrt mid-step global coords
             CALL SHP_FUNC_3D_8N(rXiEtaCt,rMSCoor,1,rNnCt,
      1                          rMSdNndXiCt,rMSJdetCt)
 
-            call calc_dfgrd2(rXiEtaCt, rOrigCoords, rCoords, mcrd,
-     &                       nnode, rDfgrd1, rGsCoords)
-            rDetF1Bar = determinant(rDfgrd1)
+            call calc_dfgrd3(rXiEtaCt, rOrigCoords, rCoords, ru, mcrd,
+     &                       nnode, del, rDfgrd1, rGsCoords, rDetF1Bar)
 
             ! GB Element detection and threshold probability
             P_0 = 0.85d0
@@ -589,12 +587,12 @@ C               Compute shape functs, their derivs (wrt global coords), and the 
      &                              rNn,rdNndXi,rJdet)
 
 C               Compute Quadrature Point Current Coordinates
-                rGsCoords = 0.d0
-                do i = 1, mcrd
-                  do j = 1, nnode
-                    rGsCoords(i) = rGsCoords(i) + rNn(j) * rCoords(i, j)
-                  end do
-                end do
+                ! rGsCoords = 0.d0
+                ! do i = 1, mcrd
+                !   do j = 1, nnode
+                !     rGsCoords(i) = rGsCoords(i) + rNn(j) * rCoords(i, j)
+                !   end do
+                ! end do
 
 C               Check Jacobian
                 IF ( rJdet .LE. 0.d0) THEN
@@ -624,7 +622,7 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rEpVolInc = rStrain(1) + rStrain(2) + rStrain(3)
 
                 ! Compute Velocity Gradient
-                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
+C                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
                 ! Step 1, Inc 1, set def gradient to identity
                 iumatsvst = offstatev(3) + 1 + (l - 1) * nstatev(2)
@@ -640,10 +638,15 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
      &            reshape(svars(kblock, iumatsvst : iumatsven), (/3,3/))
 
                 ! Form current def gradient (I - grad u)^-1
-                call GdefGrad_3D(rdNndXi, ru, mcrd, nnode, 1, rugrd)
-                call inverse_3x3(del - rugrd, rDfgrd1)
-                rDetF1 = determinant(rDfgrd1)
-                rDfgrd1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rDfgrd1
+                ! call GdefGrad_3D(rdNndXi, ru, mcrd, nnode, 1, rugrd)
+                ! call inverse_3x3(del - rugrd, rDfgrd1)
+                ! rDetF1 = determinant(rDfgrd1)
+
+                ! Calculate current deformation gradient
+                call calc_dfgrd3(rXiEtaPt(:, l), rOrigCoords, rCoords,
+     &                           ru, mcrd, nnode, del, rDfgrd1,
+     &                           rGsCoords, rDetF1)
+                rDfgrd1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rDfgrd1  ! F-bar to alleviate vol locking
 
                 ! Save deformation gradients to both untwinned and twinned block
                 svars(kblock, iumatsvst : iumatsven) =
@@ -960,12 +963,12 @@ C               Compute shape functs, their derivs (wrt global coords), and the 
      &                              rNn,rdNndXi,rJdet)
 
 C               Compute Quadrature Point Current Coordinates
-                rGsCoords = 0.d0
-                do i = 1, mcrd
-                  do j = 1, nnode
-                    rGsCoords(i) = rGsCoords(i) + rNn(j) * rCoords(i, j)
-                  end do
-                end do
+                ! rGsCoords = 0.d0
+                ! do i = 1, mcrd
+                !   do j = 1, nnode
+                !     rGsCoords(i) = rGsCoords(i) + rNn(j) * rCoords(i, j)
+                !   end do
+                ! end do
 
 C               Check Jacobian
                 IF ( rJdet .LE. 0.d0) THEN
@@ -996,13 +999,13 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rEpVolInc = rStrain(1) + rStrain(2) + rStrain(3)
 
                 ! Compute Velocity Gradient
-                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
+C                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
-                ! Compute displacement gradient based on Fbar
-                call GdefGrad_3D(rdNndXi, ru, mcrd, nnode, 1, rugrd)
-                call inverse_3x3(del - rugrd, rDfgrd1)
-                rDetF1 = determinant(rDfgrd1)
-                rDfgrd1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rDfgrd1
+                ! Compute deformation and displacement gradient
+                call calc_dfgrd3(rXiEtaPt(:, l), rOrigCoords, rCoords,
+     &                           ru, mcrd, nnode, del, rDfgrd1,
+     &                           rGsCoords, rDetF1)
+                rDfgrd1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rDfgrd1  ! F-bar to alleviate vol locking
                 call inverse_3x3(rDfgrd1, rDfgrd0)
                 rugrd = del - rDfgrd0
 
@@ -1022,7 +1025,6 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                 rntwc(2) = svars(kblock, iumatsvst + 2)
                 rntwc(3) = svars(kblock, iumatsvst + 3)
 
-                ! If fully twinned don't perform traction continuity
                 if (iTwEmbStp.ne.0) then
                   ! No twinning part in previous step
                   rFz0h = rFz0
@@ -1036,12 +1038,10 @@ C               Compute volumetric strain increment (for bulk viscosity calculat
                   rFz0h = matmul(rFz0, F_tw_inv)
                 end if
 
-                ! The element has completely twinned
+                ! The element has completely twinned. Don't perform traction continuity
                 if (bhratio.gt.0.99999d0) then
-                  ! Compute new deformation gradient and save
-                  call inverse_3x3(del - rugrd, rFz1)
-                  rDetF1 = determinant(rFz1)
-                  rFz1 = (rDetF1Bar/rDetF1)**(1.d0/3) * rFz1
+                  ! Assign the full deformation gradient and save
+                  rFz1 = rDfgrd1
 
                   iumatsvst = offstatev(4) + 1 + (l - 1) * nstatev(2)
                   iumatsven = offstatev(4) + l * nstatev(2)
@@ -1103,10 +1103,11 @@ C                 Compute the internal force vector
      &                  matmul(FeZ, matmul(Smat(:, :, iTwFlg), Fe_inv))
                   tau_tw = sum(sigmaZ * Smatc)
 
-                call calc_twin_propagation(props, nprops, tau_tw, theta,
-     &                                     l_dot, w_dot)
+                  call calc_twin_propagation(props, nprops, tau_tw,
+     &                                       theta, l_dot, w_dot)
 
-                call calc_twin_growth(svars(kblock,iumatsvst:iumatsven),
+                  call calc_twin_growth(
+     &                                svars(kblock,iumatsvst:iumatsven),
      &                                nstatev(1), props, nprops, tau_tw,
      &                                iTwFlg, b_dot)
 
@@ -1137,7 +1138,7 @@ C                 Compute the internal force vector
                   call init_guess(nAltInit, rmh, svars, nblock,
      &                            nsvars, kblock, l, offstatev,
      &                            nstatev, dtimeCur, dtimePrev,
-     &                            rdVelGrd, rntwc, hbratio, iTwFlg,
+     &                            rugrd, rntwc, hbratio, iTwFlg,
      &                            iTwEmbStp, rmtw(:, iTwFlg))
 
                   ! print*, "rmh = ", rmh

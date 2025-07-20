@@ -484,11 +484,13 @@ C>>>        Get nodal coordinates, finite deformation
      $                         - 0.5d0 * du(kblock, (n-1)*mcrd + i )
                   rPrevCoords(i,n) = rCoords(i,n)
      &                            - du(kblock, (n-1)*mcrd + i )
+                  ru(i, n) = u(kblock, (n-1)*mcrd + i)
                 ELSE
                   rOrigCoords(i,n) = coords(kblock,n,i)
                   rCoords(i,n) = coords(kblock,n,i)       ! original coords
                   rMSCoor(i,n) = coords(kblock,n,i)       ! original coords
                   rPrevCoords(i,n) = coords(kblock, n, i)
+                  ru(i, n) = 0.d0
                 END IF
               END DO
             END DO
@@ -506,10 +508,6 @@ C>>>        Get nodal coordinates, finite deformation
      &                                         u(kblock, (n-1)*mcrd + 2)
                 disp(3, elmt_conn(n, elmt_number)) =
      &                                         u(kblock, (n-1)*mcrd + 3)
-
-                ru(1, n) = u(kblock, (n-1)*mcrd + 1)
-                ru(2, n) = u(kblock, (n-1)*mcrd + 2)
-                ru(3, n) = u(kblock, (n-1)*mcrd + 3)
               end do
             end if
 
@@ -630,7 +628,6 @@ C                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
                 if (kinc.lt.1) then
                   svars(kblock, iumatsvst : iumatsven) =
      &                                    reshape(del, (/9/))
-                  ru = 0.d0
                 end if
 
                 ! Get previous def gradients from svars and form current def grd

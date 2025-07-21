@@ -1,11 +1,13 @@
-# Finds max twin nucleation probability at a given increment number
-# Usage: python max_prob.py 142000
+# Finds max twin nucleation probability at the latest increment
+# Helpful for quickly querrying current max probability
+# Usage: python max_prob.py
 import numpy as np
-import sys
 
-fnum = sys.argv[1]
-fpath = 'kinc_nuc_prob_' + fnum + '.dat'
+t = np.loadtxt('kinc_time.dat')
+kinc = int(t[-1, 0])
 
-p = np.loadtxt(fpath)
-print('Max nucleation probability = ', np.max(p))
+fnuc = 'kinc_nuc_prob_' + str(kinc) + '.dat'
+p = np.loadtxt(fnuc)
+print('kinc = ', kinc)
+print('Max probability = ', np.max(p))
 print('Element number = ', np.argmax(p) + 1)

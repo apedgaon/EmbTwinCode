@@ -1024,6 +1024,9 @@ C                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
 
                 if (iTwEmbStp.ne.0) then
                   ! No twinning part in previous step
+                  rmtwc(1) = svars(kblock, iumatsvst + 4)
+                  rmtwc(2) = svars(kblock, iumatsvst + 5)
+                  rmtwc(3) = svars(kblock, iumatsvst + 6)
                   rFz0h = rFz0
                   iumatsvst = offstatev(2) + 1 + (l - 1) * nstatev(1)
                   iumatsven = offstatev(2) + l * nstatev(1)
@@ -1193,6 +1196,7 @@ C                 Compute the internal force vector
                   write(140, 5000) rElmtSize
                   write(140, 5000) tw_geom(3, twinID) - rBWidthOff
                   write(140, 5000) rntw(:, iTwFlg)
+                  write(140, 5000) rdLTwfac
 
                   close(140)
 

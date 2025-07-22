@@ -10,7 +10,7 @@
         integer :: mcrd, kstep, kinc, iTwFlg, iTwEmbStp
         integer i, j
         real*8 :: rtemp, rmhMag, rElmtSize, rBWidth, rntw(3)
-        real*8 R_tw(3, 3)
+        real*8 R_tw(3, 3), F_tw(3, 3), rdLtw(3, 3), rdLtwfac
         logical lNRerr
 
         open(10, file='../debug_vars.txt', status='old', action='read')
@@ -53,6 +53,7 @@
         read(10, *) rElmtSize
         read(10, *) rBWidth
         read(10, *) rntw
+        read(10, *) rdLtwfac
 
         close(10)
 
@@ -85,6 +86,7 @@
         print *, 'rElmtSize = ', rElmtSize
         print *, 'rBWidth = ', rBWidth
         print *, 'rntw = ', rntw
+        print *, 'rdLtwfac = ', rdLtwfac
 
     !     rntw = (/0.7327380113307633d0, 0.5330353418564765d0,
     !  &           0.4230464880872873d0/)
@@ -105,16 +107,20 @@
         call rotate_twin_svars(hvarsZ, nsvars, R_tw)
         print *, 'hvarsZ = ', hvarsZ
 
-        rmhMag = 0.218d0 / (hbratio - 1.d0)
-        rmh = rmtwc * rmhMag
+        call inverse_3x3(F_tw_inv, F_tw)
+        rdLtw = F_tw - del
+
+        rmhMag = 0.175d0 / (hbratio - 1.d0)
+        rmh = rmhMag * rmtw
         print*, 'rmh = ', rmh
 
         call traction_continuityNR(rntwc, rugrd, hbratio, rFu0, rFz0,
      &                             rFz0h, del, nsvars, hvarsU, hvarsZ,
      &                             nmprops, props, props_tw, Fe, nnode,
      &                             elmt_number,l, mcrd, time, dtimeCur,
-     &                             kstep, kinc, F_tw_inv, rmh, rFu1,
-     &                             rFz1, rFz1h, lNRerr)
+     &                             kstep, kinc, F_tw_inv, rdLtw,
+     &                             rdLtwfac, rmh, rFu1, rFz1, rFz1h,
+     &                             lNRerr)
 
         print *, 'rmh = ', rmh
         print *, 'rFu1 = ', rFu1
@@ -127,7 +133,8 @@
       subroutine umat_stress(rStress, hvars, rGsCoords, rDfgrd0,
      &                      rDfgrd1, props, nprops, nsvars, nnode, noel,
      &                      npt, mcrd, time, dtime, kstep, kinc,
-     &                      lEditSvars, rW, iterErr, Fe)
+     &                      lEditSvars, rW, iterErr, Fe, rdLtw,
+     &                      rdLtwfac)
           
           implicit none
 C         input arguments declaration
@@ -139,6 +146,7 @@ C         input arguments declaration
           real*8 dtime
           integer idx, jdx
           logical lEditSvars
+          real*8 rdLtw(3, 3), rdLtwfac
 
 C         additional arguments for umat
           real*8 ddsdde(6, 6), ddsddt(6), drplde(6), stran(6)
@@ -168,7 +176,8 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars)
+     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars,  rdLtw,
+     &               rdLtwfac)
           else    ! Required during iterative updates when hvars should not be edited
             tmphvars = hvars
             call umat_crys(rUmatStress,  tmphvars,  ddsdde,  sse,  spd,
@@ -178,7 +187,8 @@ C         for umat stress to vuel stress
      &               nshr,    ntens,   nsvars,  props,   nprops,
      &               rGsCoords,  drot,    pnewdt,  celent,  rDfgrd0,
      &               rDfgrd1,  noel,    npt,     layer,   kspt,
-     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars)
+     &               kstep,   kinc, rW, iterErr, Fe, lEditSvars, rdLtw,
+     &               rdLtwfac)
 
             ! Update init spk2 guess
             hvars(14) = tmphvars(14)

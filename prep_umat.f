@@ -565,7 +565,7 @@ C         for umat stress to vuel stress
         statev(1) = theta
       end subroutine
 
-      subroutine check_twin_nucleation(stress, rmtw, rntw, dfgrd,
+      subroutine check_twin_nucleation(stress, rmtwC, rntwC, dfgrd,
      &                                 iTwinFlag, PtauMax, P_0)
         implicit none
 
@@ -582,8 +582,8 @@ C         for umat stress to vuel stress
         real*8 dfgrd(3, 3)    ! Deformation Gradient
         real*8 dfgrdinv(3, 3) ! Deformation Gradient Inverse
         real*8 PtauMax        ! Max probability in an element
-        real*8 rmtw(3, 18)
-        real*8 rntw(3, 18)
+        real*8 rmtwC(3, 18), rntwC(3, 18) ! Twin basis vectors
+        real*8 rntw(3, 18), rmtw(3, 18) ! Deformed twin basis vectors
         integer i, j
 
         ! Set material parameters
@@ -603,8 +603,8 @@ C         for umat stress to vuel stress
 
         ! Push forward vectors and normalize
         call inverse_3x3(dfgrd, dfgrdinv)
-        rmtw = matmul(dfgrd, rmtw)
-        rntw = matmul(transpose(dfgrdinv), rntw)
+        rmtw = matmul(dfgrd, rmtwC)
+        rntw = matmul(transpose(dfgrdinv), rntwC)
         do i = 1, 18
           rmtw(:, i) = rmtw(:, i) / norm2(rmtw(:, i))
           rntw(:, i) = rntw(:, i) / norm2(rntw(:, i))

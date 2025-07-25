@@ -820,6 +820,9 @@ C               Compute the internal force vector
                     iTwFlg = 0
                   end if
                   call MutexUnlock(2)
+                else
+                  ! We have maxed out twins, shut of the flag
+                  iTwFlg = 0
                 end if
               end if
 

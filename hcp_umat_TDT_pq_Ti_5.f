@@ -140,6 +140,8 @@
         real*8 rdLtwc(3, 3)
         real*8 rdLtwfac
         real*8 dWtw_n, dWtw
+        real*8 dtheta1, dtheta2, dchi1, dchi2, theta_tol
+        real*8 drhossd(int(props(34)))
 
         real*8, external :: determinant
 
@@ -356,6 +358,7 @@
         kappax = props(5)
         chi_ss = props(16)
         e_D = props(23)
+        theta_tol = 1.d-4
 
         ! Third level iteration (temp and eff temp update)
         do mt = 1, 1000
@@ -459,15 +462,22 @@
           dWp = dot_product(tau, dgamma)
           dWtw = dWtw_n + rdLtwfac * (sum(sigma * rdLtwc) - dWtw_n)
 
-          ! Update thermal and effective temperature
+          ! Update thermal temperature
           betaT = chi / chi_ss  ! TQ coeff
           theta_old = theta
-          theta = theta_n + (betaT * dWp + dWtw - dWtw_n) / (rho * cp)
-          chi = chi_n + kappax * e_D * (1.d0 - betaT) * dWp / mu
+          dtheta1 = (betaT * dWp + dWtw - dWtw_n) / (rho * cp)  ! Plastic work term
+          !dtheta2 = 1.3d0 * theta * (detFe - determinant(Fe_n)) / detFe ! Gruneisen term
+          theta = theta_n + dtheta1! - dtheta2
 
-          ! If temperature change is less than 0.1 K, exit iteration
+          ! Update effective temperature
+          drhossd = rhossd - rhossd_n
+          dchi1 = kappax * (1.d0 - betaT) * dWp / mu  ! Stored energy from plastic work
+          dchi2 = kappax * dot_product(burg**2, drhossd) / (4*pi) ! Dislocation formation energy
+          chi = chi_n + dchi1 - dchi2
+
+          ! If temperature change is less than tolerance, exit iteration
           theta_err = abs(theta - theta_old)
-          if (theta_err.lt.1.d-2) then
+          if (theta_err.lt.theta_tol) then
             exit
           end if
 

@@ -587,8 +587,8 @@ C         for umat stress to vuel stress
         integer i, j
 
         ! Set material parameters
-        tau_c = 200.d0      ! TODO: Different critical stress for different types of twin
-        beta = 11.1d0
+        tau_c = 118.d0      ! TODO: Different critical stress for different types of twin
+        beta = 2.d0
 
         ! Stress vector to matrix
         sigma(1, 1) = stress(1)
@@ -769,7 +769,7 @@ C         for umat stress to vuel stress
        implicit none
         integer nprops
         real*8 props(nprops), tau_tw, theta, l_dot, w_dot, b_dot
-        real*8 bk, Gtw, vl, btw, dtw, ltw, fac
+        real*8 bk, Gtw, vl, btw, dtw, ltw, fac, dip
         real*8, external :: ramp
 
         bk = props(6)
@@ -778,8 +778,9 @@ C         for umat stress to vuel stress
 
         ! {10-12} twin burgers vector, ip spacing and length segment (mm)
         btw = 6.034971964914695d-8
-        dtw = 1.7267362526423028d-7
-        ltw = 1.d-8
+        dip = 1.7267362526423028d-7
+        dtw = 2.d0 * dip
+        ltw = 2.5d-7
 
         ! Thermaly activated barrier for twinning dislocations
         fac = exp(-ramp(Gtw - tau_tw * btw * dtw * ltw) / (bk * theta))
@@ -1244,6 +1245,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       end subroutine
 
+      ! Slip assisted twin growth rate calculation
       subroutine calc_twin_growth(hvars, nsvars, props, nprops, tau_tw,
      &                            iTwFlg, b_dot)
         implicit none
@@ -1251,18 +1253,20 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         real*8 hvars(nsvars), tau_tw, b_dot, props(nprops)
 
         integer idx1, idx2, idx3, idx4, offset
-        real*8 d_ip, rho1, rho2, rho3, rho4
+        real*8 d_ip, d_tw, rho1, rho2, rho3, rho4
         real*8 g_dot1, g_dot2, g_dot3, g_dot4
         real*8 dmfp1, dmfp2, dmfp3, dmfp4, b_slip
         real*8 v_gl1, v_gl2, v_gl3, v_gl4, k_i, A_int
 
         if (iTwFlg.le.6) then
-          d_ip = 1.7267362526423028d-7
+          d_ip = 1.7267362526423028d-7 ! Interplanar spacing
+          d_tw = 2.d0 * d_ip  ! Twin step height
         end if
 
         offset = 13
-        b_slip = props(44 + offset)
+        b_slip = props(44 + offset) ! Slip burgers vector
 
+        ! Select indices for correct dislocation densities
         offset = 37
         if ((iTwFlg.eq.1).or.(iTwFlg.eq.4)) then
           idx1 = 16 + offset
@@ -1284,11 +1288,14 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         rho2 = hvars(idx2)
         rho3 = hvars(idx3)
         rho4 = hvars(idx4)
+
+        ! Calculate dislocation mean free paths
         dmfp1 = 1.d0 / sqrt(rho1)
         dmfp2 = 1.d0 / sqrt(rho2)
         dmfp3 = 1.d0 / sqrt(rho3)
         dmfp4 = 1.d0 / sqrt(rho4)
 
+        ! Select indices for correct slip rates
         offset = 58
         if ((iTwFlg.eq.1).or.(iTwFlg.eq.4)) then
           idx1 = 16 + offset
@@ -1310,18 +1317,21 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         g_dot2 = hvars(idx2)
         g_dot3 = hvars(idx3)
         g_dot4 = hvars(idx4)
+
+        ! Calculate gliding velocities based on Orowan's law
         v_gl1 = g_dot1 / (rho1 * b_slip)
         v_gl2 = g_dot2 / (rho2 * b_slip)
         v_gl3 = g_dot3 / (rho3 * b_slip)
         v_gl4 = g_dot4 / (rho4 * b_slip)
 
+        ! Factor of dislocations undergoing dissocation and area adjacent to TB
         k_i = 1.d0
-        !A_int = (1000 * b_slip)**2
-        A_int = 1.64d-5
+        A_int = 1.d-5
 
+        ! Compute twin growth rate (5 reactions from basal and prismatic)
         b_dot = 0.d0
         if (iTwFlg.le.6) then
-          b_dot = 5 * d_ip * k_i * A_int * (rho1 * v_gl1 / dmfp1 +
+          b_dot = 5 * d_tw * k_i * A_int * (rho1 * v_gl1 / dmfp1 +
      &                                      rho2 * v_gl2 / dmfp2 +
      &                                      rho3 * v_gl3 / dmfp3 +
      &                                      rho4 * v_gl4 / dmfp4)

@@ -282,7 +282,7 @@ C       Twin Code Implementation Started
         integer stmprop, nmprops, endmprop, eulidx(3)
         real*8 R_tw(3, 3)      ! Rotation due to twinning
         integer num_twins_gr, max_twins_gr
-        real*8 P_0
+        real*8 tau_c
         logical lNRerr
         real*8 outSDVM(7)
         real*8 outSDVMZ(7)
@@ -548,13 +548,13 @@ C           b) shape functions and their derivatives wrt mid-step global coords
      &                       nnode, del, rDfgrd1, rGsCoords, rDetF1Bar)
 
             ! GB Element detection and threshold probability
-            P_0 = 0.85d0
+            tau_c = 118.d0
             if (kstep.gt.0) then
               isGbElem = .false.
               do i = 1, num_gb_elems
                 if (elmt_number.eq.gb_elems(i)) then
                   isGbElem = .true.
-                  P_0 = nuc_thr(i)
+                  tau_c = nuc_thr(i)
                   exit
                 end if
               end do
@@ -681,7 +681,7 @@ C                call comp_vel_gr(rdVelGrd, rStrain, rSpin)
                 if (isGbElem.and.(iTwEmbStp.eq.0)) then
                   call check_twin_nucleation(rStress(:, l), rmtw, rntw,
      &                                       Fe(:,:,l), iTwFlg, PtauMax,
-     &                                       P_0)
+     &                                       tau_c)
                 end if
 
 C               Compute linear + quadratic bulk viscosity terms
@@ -1774,7 +1774,7 @@ C       Contents of r_Array
         ptr_nuc_thr = SMAFloatArrayCreate(16, num_gb_elems, 0.d0)
         do i = 1, num_gb_elems
           ! read(121, *) nuc_thr(i)
-          nuc_thr(i) = 0.85d0
+          nuc_thr(i) = 118.d0
         end do
         ! close(121)
 

@@ -566,7 +566,7 @@ C         for umat stress to vuel stress
       end subroutine
 
       subroutine check_twin_nucleation(stress, rmtwC, rntwC, dfgrd,
-     &                                 iTwinFlag, PtauMax, P_0)
+     &                                 iTwinFlag, PtauMax, tau_c)
         implicit none
 
         integer :: iTwinFlag ! Twinning nucleation flag
@@ -587,8 +587,8 @@ C         for umat stress to vuel stress
         integer i, j
 
         ! Set material parameters
-        tau_c = 118.d0      ! TODO: Different critical stress for different types of twin
-        beta = 2.d0
+        beta = 11.1d0
+        P_0 = 0.85d0
 
         ! Stress vector to matrix
         sigma(1, 1) = stress(1)

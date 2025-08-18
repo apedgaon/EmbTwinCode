@@ -766,7 +766,7 @@ C               Compute the internal force vector
               end if
 
               ! Save max nucleation probability
-              if ((kstep.gt.0).and.isGbElem) then
+              if ((kstep.gt.0).and.isGbElem.and.(iTwEmbStp.eq.0)) then
                 nuc_prob(elmt_number) = PtauMax
               end if
 

@@ -780,7 +780,7 @@ C         for umat stress to vuel stress
         btw = 6.034971964914695d-8
         dip = 1.7267362526423028d-7
         dtw = 2.d0 * dip
-        ltw = 2.5d-7
+        ltw = 2.8d-7
 
         ! Thermaly activated barrier for twinning dislocations
         fac = exp(-ramp(Gtw - tau_tw * btw * dtw * ltw) / (bk * theta))

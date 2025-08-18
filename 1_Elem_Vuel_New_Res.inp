@@ -1,0 +1,29 @@
+*Heading
+*restart, read, step=1
+*Step, name=Compression2, nlgeom=YES
+*Dynamic, Explicit
+, 0.1
+*Bulk Viscosity
+0.06, 1.2
+** 
+** BOUNDARY CONDITIONS
+** 
+** Name: Comp_BC Type: User displacement
+*Boundary, type=displacement, user
+TopNodeRF, 2, 2, 1.0
+** 
+** OUTPUT REQUESTS
+** 
+*Restart, write, overlay, number interval=100
+** 
+** FIELD OUTPUT: F-Output-1
+** 
+*Output, field, number interval=1000, variable=PRESELECT
+** 
+** HISTORY OUTPUT: H-Output-1
+** 
+*Output, history, variable=PRESELECT
+*NODE OUTPUT, NSET=TopNodeRF, VARIABLE=PRESELECT
+U
+RF
+*End Step

@@ -1289,12 +1289,6 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         rho3 = hvars(idx3)
         rho4 = hvars(idx4)
 
-        ! Calculate dislocation mean free paths
-        dmfp1 = 1.d0 / sqrt(rho1)
-        dmfp2 = 1.d0 / sqrt(rho2)
-        dmfp3 = 1.d0 / sqrt(rho3)
-        dmfp4 = 1.d0 / sqrt(rho4)
-
         ! Select indices for correct slip rates
         offset = 58
         if ((iTwFlg.eq.1).or.(iTwFlg.eq.4)) then
@@ -1324,9 +1318,32 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
         v_gl3 = g_dot3 / (rho3 * b_slip)
         v_gl4 = g_dot4 / (rho4 * b_slip)
 
+        ! Calculate dislocation mean free paths
+        offset = 76
+        if ((iTwFlg.eq.1).or.(iTwFlg.eq.4)) then
+          idx1 = 16 + offset
+          idx2 = 18 + offset
+          idx3 = 13 + offset
+          idx4 = 15 + offset
+        else if ((iTwFlg.eq.2).or.(iTwFlg.eq.5)) then
+          idx1 = 17 + offset
+          idx2 = 18 + offset
+          idx3 = 14 + offset
+          idx4 = 15 + offset
+        else if ((iTwFlg.eq.3).or.(iTwFlg.eq.6)) then
+          idx1 = 16 + offset
+          idx2 = 17 + offset
+          idx3 = 13 + offset
+          idx4 = 14 + offset
+        end if
+        dmfp1 = hvars(idx1)
+        dmfp2 = hvars(idx2)
+        dmfp3 = hvars(idx3)
+        dmfp4 = hvars(idx4)
+
         ! Factor of dislocations undergoing dissocation and area adjacent to TB
         k_i = 1.d0
-        A_int = 1.d-5
+        A_int = 3.75d-4
 
         ! Compute twin growth rate (5 reactions from basal and prismatic)
         b_dot = 0.d0

@@ -1343,7 +1343,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
         ! Factor of dislocations undergoing dissocation and area adjacent to TB
         k_i = 1.d0
-        A_int = 3.75d-4
+        A_int = 3.d-4
 
         ! Compute twin growth rate (5 reactions from basal and prismatic)
         b_dot = 0.d0

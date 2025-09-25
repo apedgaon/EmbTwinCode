@@ -2,6 +2,36 @@ import os
 import glob
 import numpy as np
 
+def get_twin_basis(twbasisfile, ngr, ntwvar):
+    basis = np.loadtxt(twbasisfile)
+    ntw = np.empty([ntwvar, 3, ngr], dtype=float)
+    mtw = np.empty([ntwvar, 3, ngr], dtype=float)
+    for i in np.arange(ngr):
+        ntw[:, :, i] = basis[2*i*ntwvar:(2*i + 1)*ntwvar, :]
+        mtw[:, :, i] = basis[(2*i + 1)*ntwvar:(2*i + 2)*ntwvar, :]
+
+    return ntw, mtw
+
+# Compute resolved shear stress on a twin system for stress vector based on symmetric stress tensor
+def compute_rss(stressv, mtw, ntw, ntwvar):
+    Stwv = np.empty([6, ntwvar], dtype=float)
+    for i in np.arange(ntwvar):
+        Stwv[0, i] = mtw[i, 0] * ntw[i, 0]
+        Stwv[1, i] = mtw[i, 1] * ntw[i, 1]
+        Stwv[2, i] = mtw[i, 2] * ntw[i, 2]
+        Stwv[3, i] = mtw[i, 1] * ntw[i, 2] + mtw[i, 2] * ntw[i, 1]
+        Stwv[4, i] = mtw[i, 0] * ntw[i, 2] + mtw[i, 2] * ntw[i, 0]
+        Stwv[5, i] = mtw[i, 0] * ntw[i, 1] + mtw[i, 1] * ntw[i, 0]
+    rss = np.dot(stressv, Stwv)
+    return rss
+
+# twbasisfile = 'vectors_synth_29.txt'
+# gridfile = 'grid_synth_29.txt'
+# ntwvar = 6
+# grid = np.loadtxt(gridfile, dtype=int)
+# ngr = len(grid)
+# ntw, mtw = get_twin_basis(twbasisfile, ngr, ntwvar)
+
 # Load mesh
 elem_conn2 = np.loadtxt('input_elmt_1000.inp', delimiter=',', dtype=int)
 elem_conn = elem_conn2[:, 1:]
@@ -134,6 +164,32 @@ for file in glob.glob(directory + os.sep + "kinc_elmt_stat_*.dat"):
         vtk_stream.write(str(stress_vm[i]) + "\n")
     
     vtk_stream.write("</DataArray>\n")
+
+    # Write RSS on all twin systems in the untwinned and twinned regions
+    # rssU = np.empty([num_elems, ntwvar], dtype=float)
+    # rssZ = np.empty([num_elems, ntwvar], dtype=float)
+    # for i in np.arange(ngr):
+    #     stdidx = grid[i, 0]-1
+    #     endidx = grid[i, 1]
+    #     rssU[stdidx:endidx, :] = compute_rss(stress[stdidx:endidx, 0:6], mtw[:, :, i], ntw[:, :, i], ntwvar)
+    #     rssZ[stdidx:endidx, :] = compute_rss(stress[stdidx:endidx, 6:12], mtw[:, :, i], ntw[:, :, i], ntwvar)
+
+    # for itw in np.arange(ntwvar):
+    #     scalar_name = 'RSS' + str(itw + 1) + 'U'
+    #     vtk_stream.write("<DataArray  type=\"Float32\"  Name=\"" + scalar_name + 
+    #                      "\"  NumberOfComponents=\"" + str(1) + "\"  format=\"ascii\">\n")
+    #     for i in np.arange(num_elems):
+    #         vtk_stream.write(str(rssU[i, itw]) + "\n")
+        
+    #     vtk_stream.write("</DataArray>\n")
+
+    #     scalar_name = 'RSS' + str(itw + 1) + 'Z'
+    #     vtk_stream.write("<DataArray  type=\"Float32\"  Name=\"" + scalar_name + 
+    #                      "\"  NumberOfComponents=\"" + str(1) + "\"  format=\"ascii\">\n")
+    #     for i in np.arange(num_elems):
+    #         vtk_stream.write(str(rssZ[i, itw]) + "\n")
+        
+    #     vtk_stream.write("</DataArray>\n")
 
     # Write Von Mises Stress in the twinned region
     stress_vm = np.sqrt(1.0/2 * ((stress[:,6] - stress[:,7])**2 + (stress[:,7] - stress[:,8])**2 + (stress[:,8] - stress[:,6])**2)

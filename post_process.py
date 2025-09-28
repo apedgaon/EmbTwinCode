@@ -2,42 +2,37 @@ import os
 import glob
 import numpy as np
 
-def get_twin_basis(twbasisfile, ngr, ntwvar):
-    basis = np.loadtxt(twbasisfile)
-    ntw = np.empty([ntwvar, 3, ngr], dtype=float)
-    mtw = np.empty([ntwvar, 3, ngr], dtype=float)
-    for i in np.arange(ngr):
-        ntw[:, :, i] = basis[2*i*ntwvar:(2*i + 1)*ntwvar, :]
-        mtw[:, :, i] = basis[(2*i + 1)*ntwvar:(2*i + 2)*ntwvar, :]
-
-    return ntw, mtw
+# rotation matrix from ZXZ Euler angles (crystal to specimen)
+def rotmat(phi, th, om):
+    cph = np.cos(phi)
+    cth = np.cos(th)
+    com = np.cos(om)
+    sph = np.sin(phi)
+    sth = np.sin(th)
+    som = np.sin(om)
+    r = np.array([[cph*com - sph*cth*som, -cph*som - sph*cth*com, sph*sth],
+                  [sph*com + cph*cth*som, -sph*som + cph*cth*com, -cph*sth],
+                  [sth*som, sth*com, cth]])
+    return r
 
 # Compute resolved shear stress on a twin system for stress vector based on symmetric stress tensor
 def compute_rss(stressv, mtw, ntw, ntwvar):
     Stwv = np.empty([6, ntwvar], dtype=float)
-    for i in np.arange(ntwvar):
-        Stwv[0, i] = mtw[i, 0] * ntw[i, 0]
-        Stwv[1, i] = mtw[i, 1] * ntw[i, 1]
-        Stwv[2, i] = mtw[i, 2] * ntw[i, 2]
-        Stwv[3, i] = mtw[i, 1] * ntw[i, 2] + mtw[i, 2] * ntw[i, 1]
-        Stwv[4, i] = mtw[i, 0] * ntw[i, 2] + mtw[i, 2] * ntw[i, 0]
-        Stwv[5, i] = mtw[i, 0] * ntw[i, 1] + mtw[i, 1] * ntw[i, 0]
+    Stwv[0, :] = mtw[0, :] * ntw[0, :]
+    Stwv[1, :] = mtw[1, :] * ntw[1, :]
+    Stwv[2, :] = mtw[2, :] * ntw[2, :]
+    Stwv[3, :] = mtw[1, :] * ntw[2, :] + mtw[2, :] * ntw[1, :]
+    Stwv[4, :] = mtw[0, :] * ntw[2, :] + mtw[2, :] * ntw[0, :]
+    Stwv[5, :] = mtw[0, :] * ntw[1, :] + mtw[1, :] * ntw[0, :]
     rss = np.dot(stressv, Stwv)
     return rss
 
-# twbasisfile = 'vectors_synth_29.txt'
-# gridfile = 'grid_synth_29.txt'
-# ntwvar = 6
-# grid = np.loadtxt(gridfile, dtype=int)
-# ngr = len(grid)
-# ntw, mtw = get_twin_basis(twbasisfile, ngr, ntwvar)
-
 # Load mesh
-elem_conn2 = np.loadtxt('input_elmt_1000.inp', delimiter=',', dtype=int)
+elem_conn2 = np.loadtxt('input_elmt_29_synth.inp', delimiter=',', dtype=int)
 elem_conn = elem_conn2[:, 1:]
 elem_conn = elem_conn - 1
 
-nodal_coords = np.loadtxt('input_node_1000.inp', delimiter=',')
+nodal_coords = np.loadtxt('input_node_29_synth.inp', delimiter=',')
 nodal_coords = nodal_coords[:, 1:]
 
 # Load time and create its dictionary
@@ -46,6 +41,22 @@ num_frames = len(time)
 time_dict = dict()
 for i in np.arange(num_frames):
     time_dict[int(time[i, 0])] = time[i, 1]
+
+# {1 0 -1 2} twinning plane normals and <10-11> twinning shear directions in crystal frame
+ntwvar = 6      # num twin variants for RSS
+ntw = np.array([[0.5851141613299073, 0.33781581855048415, 0.7372393715397092],
+                [0.0, 0.6756316371009683, 0.7372393715397092],
+                [-0.5851141613299073, 0.33781581855048415, 0.7372393715397092],
+                [-0.5851141613299073, -0.33781581855048415, 0.7372393715397092],
+                [0.0, -0.6756316371009683, 0.7372393715397092],
+                [0.5851141613299073, -0.33781581855048415, 0.7372393715397092]]).transpose()
+
+mtw = np.array([[-0.6384680244234624, -0.3686196857698546, 0.6756316371009683],
+                [0.0, -0.7372393715397092, 0.6756316371009683],
+                [0.6384680244234624, -0.3686196857698546, 0.6756316371009683],
+                [0.6384680244234624, 0.3686196857698546, 0.6756316371009683],
+                [0.0, 0.7372393715397092, 0.6756316371009683],
+                [-0.6384680244234624, 0.3686196857698546, 0.6756316371009683]]).transpose()
 
 # Loop over vuel element status files and generate vtk for all results
 directory = os.getcwd()
@@ -165,32 +176,6 @@ for file in glob.glob(directory + os.sep + "kinc_elmt_stat_*.dat"):
     
     vtk_stream.write("</DataArray>\n")
 
-    # Write RSS on all twin systems in the untwinned and twinned regions
-    # rssU = np.empty([num_elems, ntwvar], dtype=float)
-    # rssZ = np.empty([num_elems, ntwvar], dtype=float)
-    # for i in np.arange(ngr):
-    #     stdidx = grid[i, 0]-1
-    #     endidx = grid[i, 1]
-    #     rssU[stdidx:endidx, :] = compute_rss(stress[stdidx:endidx, 0:6], mtw[:, :, i], ntw[:, :, i], ntwvar)
-    #     rssZ[stdidx:endidx, :] = compute_rss(stress[stdidx:endidx, 6:12], mtw[:, :, i], ntw[:, :, i], ntwvar)
-
-    # for itw in np.arange(ntwvar):
-    #     scalar_name = 'RSS' + str(itw + 1) + 'U'
-    #     vtk_stream.write("<DataArray  type=\"Float32\"  Name=\"" + scalar_name + 
-    #                      "\"  NumberOfComponents=\"" + str(1) + "\"  format=\"ascii\">\n")
-    #     for i in np.arange(num_elems):
-    #         vtk_stream.write(str(rssU[i, itw]) + "\n")
-        
-    #     vtk_stream.write("</DataArray>\n")
-
-    #     scalar_name = 'RSS' + str(itw + 1) + 'Z'
-    #     vtk_stream.write("<DataArray  type=\"Float32\"  Name=\"" + scalar_name + 
-    #                      "\"  NumberOfComponents=\"" + str(1) + "\"  format=\"ascii\">\n")
-    #     for i in np.arange(num_elems):
-    #         vtk_stream.write(str(rssZ[i, itw]) + "\n")
-        
-    #     vtk_stream.write("</DataArray>\n")
-
     # Write Von Mises Stress in the twinned region
     stress_vm = np.sqrt(1.0/2 * ((stress[:,6] - stress[:,7])**2 + (stress[:,7] - stress[:,8])**2 + (stress[:,8] - stress[:,6])**2)
                     + 3 * (stress[:,9]**2 + stress[:,10]**2 + stress[:,11]**2))
@@ -277,6 +262,47 @@ for file in glob.glob(directory + os.sep + "kinc_elmt_stat_*.dat"):
         vtk_stream.write(str(SDV[i, 13]) + "\n")
     
     vtk_stream.write("</DataArray>\n")
+
+    # Compute Twin RSS in the untwinned and twinned regions and write results
+    trssU = np.empty([num_elems, ntwvar], dtype=float)
+    trssZ = np.empty([num_elems, ntwvar], dtype=float)
+    for i in np.arange(num_elems):
+        th = SDV[i, 1] * np.pi / 180.0
+        phi = SDV[i, 2] * np.pi / 180.0
+        om = SDV[i, 3] * np.pi / 180.0
+        R = rotmat(phi, th, om)
+        ntw0 = R.dot(ntw)
+        mtw0 = R.dot(mtw)
+        trssU[i, :] = compute_rss(stress[i, 0:6], mtw0, ntw0, ntwvar)
+
+        if elem_stat[i] == 0:
+            trssZ[i, :] = 0.0
+            continue
+
+        th = SDV[i, 8] * np.pi / 180.0
+        phi = SDV[i, 9] * np.pi / 180.0
+        om = SDV[i, 10] * np.pi / 180.0
+        R = rotmat(phi, th, om)
+        ntw0 = R.dot(ntw)
+        mtw0 = -R.dot(mtw)  # twin shear direction reverses sign after twinning
+        trssZ[i, :] = compute_rss(stress[i, 6:12], mtw0, ntw0, ntwvar)
+
+    for itw in np.arange(ntwvar):
+        scalar_name = 'TRSS' + str(itw + 1) + 'U'
+        vtk_stream.write("<DataArray  type=\"Float32\"  Name=\"" + scalar_name + 
+                         "\"  NumberOfComponents=\"" + str(1) + "\"  format=\"ascii\">\n")
+        for i in np.arange(num_elems):
+            vtk_stream.write(str(trssU[i, itw]) + "\n")
+        
+        vtk_stream.write("</DataArray>\n")
+
+        scalar_name = 'TRSS' + str(itw + 1) + 'Z'
+        vtk_stream.write("<DataArray  type=\"Float32\"  Name=\"" + scalar_name + 
+                         "\"  NumberOfComponents=\"" + str(1) + "\"  format=\"ascii\">\n")
+        for i in np.arange(num_elems):
+            vtk_stream.write(str(trssZ[i, itw]) + "\n")
+        
+        vtk_stream.write("</DataArray>\n")
 
     # Load twin nucleation probability
     input_file = os.path.join(directory, 'kinc_nuc_prob_' + sval + '.dat')

@@ -10,9 +10,9 @@ def rotmat(phi, th, om):
     sph = np.sin(phi)
     sth = np.sin(th)
     som = np.sin(om)
-    r = np.array([[cph*com - sph*cth*som, -cph*som - sph*cth*com, sph*sth],
-                  [sph*com + cph*cth*som, -sph*som + cph*cth*com, -cph*sth],
-                  [sth*som, sth*com, cth]])
+    r = np.array([[cph*com - sph*cth*som, sph*com + cph*cth*som, sth*som],
+                  [-cph*som - sph*cth*com, -sph*som + cph*cth*com, sth*com],
+                  [sph*sth , -cph*sth , cth]])
     return r
 
 # Compute resolved shear stress on a twin system for stress vector based on symmetric stress tensor

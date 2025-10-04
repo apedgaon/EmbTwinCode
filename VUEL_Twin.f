@@ -1137,12 +1137,12 @@ C                 Compute the internal force vector
                 iumatsven2 = offstatev(2) + l * nstatev(1)
 
                 ! Initial guess loop for traction continuity
-                do while(nAltInit.le.6)
+                do while(nAltInit.le.7)
                   call init_guess(nAltInit, rmh, svars, nblock,
      &                            nsvars, kblock, l, offstatev,
      &                            nstatev, dtimeCur, dtimePrev,
      &                            rugrd, rntwc, hbratio, iTwFlg,
-     &                            iTwEmbStp, rmtw(:, iTwFlg))
+     &                            iTwEmbStp, rmtw(:, iTwFlg), rFz0h)
 
                   ! print*, "rmh = ", rmh
                   ! Traction continuity Newton iterations

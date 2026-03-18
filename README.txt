@@ -1,6 +1,14 @@
-This code implements explicit modelling of deformation twinning within a crystal plasticity framework.
-The framework is implemented in a user element subroutine VUEL within Abaqus Explicit. To run this code run following command:
-	abaqus job=twnbndBfull input=1000_Elem_Vuel_New.inp user=VUEL_Twin.f double=both mp_mode=threads cpus=8 gpus=0 inter
+This code implements explicit modelling of deformation twinning within a crystal plasticity framework. 
+The framework is implemented in a user element subroutine VUEL within Abaqus Explicit.
+
+Run:
+To run this code run following command:
+	abaqus job=twnbndBfull input=1000_Elem_Vuel_New.inp user=VUEL_Twin.f double=both mp_mode=threads cpus=10 inter
+
+Post Process:
+There is a post processing script written in python which writes vtk files based on outputs of simulation.
+
+python post_process.py
 
 
 Hooking up another UMAT with the twinning VUEL

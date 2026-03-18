@@ -362,7 +362,7 @@
         kappax = props(5)
         chi_ss = props(16)
         e_D = props(23)
-        theta_tol = 1.d-4
+        theta_tol = 1.d-8
 
         ! Third level iteration (temp and eff temp update)
         do mt = 1, 1000
@@ -774,8 +774,8 @@ C     Implicit solve for crystal stress, slip rate and hardening (Balasubramania
         dgmax = 0.d0
         tol = 1.d-8
         tols = 1.d-8
-        maxit1 = 100
-        maxit2 = 20
+        maxit1 = 1000
+        maxit2 = 1000
         corrbeta = 4.d0
         iterErr = 0
 
